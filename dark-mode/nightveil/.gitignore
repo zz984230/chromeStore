@@ -1,0 +1,4 @@
+node_modules/
+extension/
+.DS_Store
+*.log

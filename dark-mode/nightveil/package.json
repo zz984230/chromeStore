@@ -1,0 +1,20 @@
+{
+  "name": "nightveil",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A global dark theme for the web.",
+  "type": "module",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "fixtures": "node scripts/serve-fixtures.mjs",
+    "icons": "node scripts/gen-icons.mjs",
+    "test": "node --test tests/"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
