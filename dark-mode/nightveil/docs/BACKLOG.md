@@ -4,7 +4,7 @@
 
 ## 站点主题补齐（M1 仅交付 10/32）
 
-原版共 32 个站点主题。M1 已做：google、github、wikipedia、stackoverflow、reddit、amazon、facebook、instagram、twitter、bing。
+原版共 32 个站点主题。M1 计划交付：google、github、wikipedia、stackoverflow、reddit、amazon、facebook、instagram、twitter、bing。
 
 待补 22 个（建议按需求热度排序，可追加）：
 - [ ] youtube（精简自写选择器，不逐行对等原版 2482 行混淆类名）

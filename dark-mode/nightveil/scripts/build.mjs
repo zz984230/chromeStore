@@ -22,9 +22,8 @@ const OPTIONS = {
   logLevel: 'info',
 };
 
-await rm('extension', { recursive: true, force: true });
-
 if (!WATCH) {
+  await rm('extension', { recursive: true, force: true });
   await build(OPTIONS);
   await cp('public', 'extension', { recursive: true });
 } else {

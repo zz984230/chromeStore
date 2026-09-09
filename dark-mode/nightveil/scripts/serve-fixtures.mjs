@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const ROOT = path.resolve('tests/fixtures');
-const PORT = 8123;
+const PORT = Number(process.env.FIXTURES_PORT ?? 8123);
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -28,6 +28,11 @@ const server = createServer(async (req, res) => {
     res.writeHead(404);
     res.end('not found');
   }
+});
+
+server.on('error', (err) => {
+  console.error(`[nightveil] fixtures server error on port ${PORT}:`, err.message);
+  process.exit(1);
 });
 
 server.listen(PORT, () => console.log(`[nightveil] fixtures on http://localhost:${PORT}`));
