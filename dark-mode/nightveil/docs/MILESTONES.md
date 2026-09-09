@@ -2,13 +2,13 @@
 
 > 状态图例：⬜ 未开始 ｜ 🟨 进行中 ｜ ✅ 已验收（/tabbit 逐条通过）｜ ⏸ 暂停
 > 变更纪律：任务只能从上级拆出或追加于「追加记录」节；验收标准变更需同步更新自主迭代.md 的里程碑条目。
-> 总览最新更新：2026-09-08
+> 总览最新更新：2026-09-09
 
 ## 总览
 
 | 里程碑 | 范围 | 状态 | 验收轮次 |
 |---|---|---|---|
-| M0 | 文档与项目骨架（本表、ADR、协议、目录、构建链） | 🟨 | — |
+| M0 | 文档与项目骨架（本表、ADR、协议、目录、构建链） | ✅ | /tabbit 1 轮通过（含 1 次人工加载扩展） |
 | M1 | 骨架 + 经典主题 + 生效边界 | ⬜ | — |
 | M2 | 自适应引擎（Adaptive Engine） | ⬜ | — |
 | M3 | 完整选项（色温/防白闪/定时/用户样式） | ⬜ | — |
@@ -18,13 +18,14 @@
 
 ## M0 · 文档与项目骨架
 
-- [ ] 目录结构与 .gitignore（src/ extension/ tests/ docs/）
-- [ ] package.json + esbuild 构建脚本（build / watch / fixtures 三命令）
-- [ ] manifest.json 骨架（权限对齐原版：storage、contextMenus、host `<all_urls>`、optional alarms）
-- [ ] 图标初版（程序化自绘 light/dark 两套，16/32/48/64/128）
-- [ ] 最小可加载空壳（content.js / background.js / options.html 占位）通过 /tabbit 加载验证
+- [x] 目录结构与 .gitignore（src/ extension/ tests/ docs/）
+- [x] package.json + esbuild 构建脚本（build / watch / fixtures 三命令）
+- [x] manifest.json 骨架（权限对齐原版：storage、contextMenus、host `<all_urls>`、optional alarms）
+- [x] 图标初版（程序化自绘 light/dark 两套，16/32/48/64/128）
+- [x] 最小可加载空壳（content.js / background.js / options.html 占位）通过 /tabbit 加载验证
 
 **验收**：chrome://extensions 无报错加载；自主迭代.md 通用条目 1~3 通过。
+✅ 2026-09-09 通过。证据：①卡片无 Errors——用户人工确认（workspace 拦 chrome:// 无法截图）；②content script 注入——tabbit 断言 `[NightVeil] content script active` 且 pageErrors=[]；③SW 无报错——卡片证据覆盖（SW debug 行在隔离 context 不可捕获）；④options 渲染——同一构建产物经 fixtures 服务 http 挂载断言标题/说明文案；⑤`npm test` 4/4。
 
 ## M1 · 骨架 + 经典主题 + 生效边界
 
