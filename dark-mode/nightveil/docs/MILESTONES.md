@@ -74,3 +74,4 @@
 > 新增任务按日期追加于此，不改动上方已验收内容。
 
 - 2026-09-08：建档。
+- 2026-09-09：M0 全分支终审通过（Ready to merge: Yes，0 Critical / 1 Important / 5 Minor；Important 与代码类 Minor 已当日修复）。M1 规划需注意两条：①"文案只能来自 strings.js"约束的范围要澄清——manifest/options.html 等静态文件无法 import JS 模块，建议把约束限定为"src/ 运行时文案"，并在 M1 加一条 `manifest.name === STRINGS.extensionName` 之类的单源断言测试；②fixture 套件扩到 6 页时补一行路径遍历回归断言（如 `/..%2fpackage.json` → 403），把安全守卫钉进测试。
