@@ -502,6 +502,7 @@ body button {
 body img, body video, body canvas, body iframe, body embed, body object, body picture, body svg {
   background-color: transparent !important;
 }
+body [data-nv-stage], body [data-nv-stage] * { background-color: transparent !important; }
 `.trim();
 }
 
@@ -640,6 +641,7 @@ import { compileThemeById } from '../shared/themes.js';
 const CLASSIC_STYLE_ID = 'nv-classic';
 const GUARD_STYLE_ID = 'nv-guard';
 const GUARD_REMOVE_DELAY_MS = 200;
+const STAGE_ATTR = 'data-nv-stage';
 
 console.log(STRINGS.contentActiveLog);
 
@@ -669,14 +671,38 @@ function armGuard() {
   }
 }
 
+function clearVideoStages() {
+  for (const el of document.querySelectorAll(`[${STAGE_ATTR}]`)) el.removeAttribute(STAGE_ATTR);
+}
+
+// Mark the wrapper layers directly around <video> so overlay flattening keeps
+// them transparent (otherwise originally-transparent player layers — danmaku,
+// subtitles, controls — paint opaque over the video). Known v1 limitation:
+// videos added later by an SPA are only marked on the next render.
+function markVideoStages() {
+  clearVideoStages();
+  for (const v of document.querySelectorAll('video')) {
+    const vw = v.getBoundingClientRect().width || 1;
+    let el = v.parentElement;
+    for (let i = 0; i < 8 && el && el !== document.body; i++) {
+      const r = el.getBoundingClientRect();
+      if (r.width > vw * 1.5) break;
+      el.setAttribute(STAGE_ATTR, '');
+      el = el.parentElement;
+    }
+  }
+}
+
 function render(settings) {
   const active = settings.state === 'dark';
   if (active) {
     armGuard();
     injectStyle(CLASSIC_STYLE_ID, compileThemeById(settings.themeId));
+    markVideoStages();
   } else {
     removeStyle(CLASSIC_STYLE_ID);
     removeStyle(GUARD_STYLE_ID);
+    clearVideoStages();
   }
 }
 

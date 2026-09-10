@@ -42,6 +42,7 @@ body button {
 body img, body video, body canvas, body iframe, body embed, body object, body picture, body svg {
   background-color: transparent !important;
 }
+body [data-nv-stage], body [data-nv-stage] * { background-color: transparent !important; }
 `.trim();
 }
 

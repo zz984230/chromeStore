@@ -15,6 +15,7 @@ test('overlay compilation embeds all 9 palette colors and core selectors', () =>
   assert.match(css, /body input,\s*body textarea,\s*body select/);
   assert.match(css, /background-image:\s*none\s*!important/);
   assert.match(css, /body \* {[^}]*background-color/s);
+  assert.match(css, /body \[data-nv-stage\], body \[data-nv-stage\] \* \{ background-color: transparent !important; \}/);
 });
 
 test('invert compilation carries filter params and protection list', () => {
