@@ -604,6 +604,7 @@ Run: `node --test tests/unit/icons-map.test.mjs` → Expected: 1 pass
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <link rel="icon" href="data:,">
     <title>NightVeil plain fixture</title>
     <style>
       body { font-family: system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; }

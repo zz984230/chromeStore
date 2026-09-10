@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "NightVeil",
   "version": "0.1.0",
-  "description": "A global dark theme for the web.",
+  "description": "Wrap the web in a gentle dark veil.",
   "icons": {
     "16": "icons/toolbar/16.png",
     "32": "icons/toolbar/32.png",

@@ -79,3 +79,4 @@
 
 - 2026-09-08：建档。
 - 2026-09-09：M0 全分支终审通过（Ready to merge: Yes，0 Critical / 1 Important / 5 Minor；Important 与代码类 Minor 已当日修复）。M1 规划需注意两条：①"文案只能来自 strings.js"约束的范围要澄清——manifest/options.html 等静态文件无法 import JS 模块，建议把约束限定为"src/ 运行时文案"，并在 M1 加一条 `manifest.name === STRINGS.extensionName` 之类的单源断言测试；②fixture 套件扩到 6 页时补一行路径遍历回归断言（如 `/..%2fpackage.json` → 403），把安全守卫钉进测试。
+- 2026-09-10：M1a 终审通过（With fixes，两条 Important 当日修复：description 文案抄袭重写、onStartup 图标同步）。M1b 计划需注意：①invert 家族目前零运行时验证，M1b 基线须加一条 invert 主题的 tabbit 断言；②验收清单加"浏览器重启后图标仍同步"步骤（扩展重载≠浏览器重启）；③guard 颜色硬编码为 nv-simple bg，主题可切换后需按当前 palette 取值；④M1b 引入第二写者（options 页）后，falsy-newValue 丢弃与读-改-写竞态两条台账注记需重新评估。

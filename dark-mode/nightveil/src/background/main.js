@@ -19,4 +19,7 @@ chrome.action.onClicked.addListener(async () => {
 });
 
 loadSettings().then(refreshToolbar);
+chrome.runtime.onStartup.addListener(() => {
+  loadSettings().then(refreshToolbar);
+});
 subscribeSettings(refreshToolbar);

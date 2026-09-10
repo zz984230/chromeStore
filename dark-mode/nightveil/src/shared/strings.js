@@ -4,7 +4,7 @@
 // strings-source test keeps them locked to this module.
 export const STRINGS = Object.freeze({
   extensionName: 'NightVeil',
-  extensionDescription: 'A global dark theme for the web.',
+  extensionDescription: 'Wrap the web in a gentle dark veil.',
   swStartedDebug: '[NightVeil] service worker started',
   contentActiveLog: '[NightVeil] content script active',
   optionsHeading: 'NightVeil Options',
