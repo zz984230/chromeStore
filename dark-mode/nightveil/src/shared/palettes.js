@@ -4,19 +4,27 @@
 // night-sky inspired names and hue families. Compact tuples keep the data
 // scannable; overlay() expands them.
 
-const overlay = (id, label, [bg, surface, fg, muted, link, visited, cite, inputBg, border]) => ({
-  id, family: 'overlay', label,
-  colors: { bg, surface, fg, muted, link, visited, cite, inputBg, border },
-});
+const overlay = (id, label, tuple) => {
+  if (tuple.length !== 9) throw new Error(`overlay ${id}: expected 9 colors, got ${tuple.length}`);
+  const [bg, surface, fg, muted, link, visited, cite, inputBg, border] = tuple;
+  return {
+    id, family: 'overlay', label,
+    colors: { bg, surface, fg, muted, link, visited, cite, inputBg, border },
+  };
+};
 
-const invert = (id, label, [brightness, contrast, grayscale]) => ({
-  id, family: 'invert', label,
-  params: { brightness, contrast, grayscale },
-});
+const invert = (id, label, tuple) => {
+  if (tuple.length !== 3) throw new Error(`invert ${id}: expected 3 params, got ${tuple.length}`);
+  const [brightness, contrast, grayscale] = tuple;
+  return {
+    id, family: 'invert', label,
+    params: { brightness, contrast, grayscale },
+  };
+};
 
 export const PALETTES = [
   // ---- 26 overlay palettes ----
-  overlay('nv-simple',   'Simple Dark',  ['#1e2229', '#262b33', '#e8e6e0', '#a8a49c', '#8db2e5', '#c76ed7', '#92de92', '#2b303a', '#3a4049']),
+  overlay('nv-simple',   'Evening',      ['#1e2229', '#262b33', '#e8e6e0', '#a8a49c', '#7fabec', '#d293c8', '#82d4a4', '#2b303a', '#3a4049']),
   overlay('nv-midnight', 'Midnight',     ['#12141d', '#181b26', '#dfe3ee', '#9aa0b5', '#8ea2d8', '#b48ecf', '#8fd4b0', '#171a24', '#2c3040']),
   overlay('nv-pitch',    'Pitch',        ['#0a0a0b', '#101012', '#e6e6e6', '#9c9c9c', '#9aa8ff', '#c9a0e8', '#8fd8a8', '#101013', '#2a2a2e']),
   overlay('nv-amoled',   'AMOLED',       ['#000000', '#0c0c0c', '#f0f0f0', '#a6a6a6', '#88aaff', '#cf9de0', '#90e0a8', '#0d0d0d', '#262626']),
