@@ -45,11 +45,13 @@
 - [ ] invert 家族不保护非媒体元素上的 background-image
 - [ ] html 级 filter 会使 position:fixed 后代随滚动（含 svg image 保护行为简化）
 
-## 已知局限（overlay 压平 + 视频舞台标记，2026-09-10 B 站调试引入）
+## 已知局限（overlay 压平 + 媒体舞台标记，2026-09-10/11 B 站调试引入）
 
 - [ ] 舞台恢复规则只豁免 background-color，不豁免 background-image——站点若用背景图画控制栏/封面且恰在舞台层上会丢图（M1b 若遇真例再扩规则）
-- [ ] window load 之后 SPA 新插入的 video 要等下一次 render（切换/改设置）才标记；需持续追踪时上 MutationObserver（与 M2 引擎的变更追踪合并考虑）
-- [ ] 标记启发式（同宽祖先链 ≤8 层、1.5× 阈值）为 DOM 经验值，未经单测锁定（DOM 逻辑随 tabbit 验收覆盖；如复杂化可抽 shouldMark 纯函数）
+- [ ] window load 之后 SPA 新插入的 video/img 要等下一次 render（切换/改设置）才标记；需持续追踪时上 MutationObserver（与 M2 引擎的变更追踪合并考虑）
+- [ ] 标记启发式（video 宽 1.5× 不限高；img 封面宽 1.5× 且高 1.1×、≥80px 已加载、深度 ≤8）为 DOM 经验值，未经单测锁定（DOM 逻辑随 tabbit 验收覆盖；如复杂化可抽 shouldMark 纯函数）
+- [ ] 极端布局：与图片同尺寸且含文字的包裹层（hero 图+标题同盒）会被误标为封面——文字色仍被强制为浅色，仅背景回原样，影响温和；未见真例
+- [ ] 命名债：clearVideoStages 实际清理全部媒体舞台标记，下次触碰时改名 clearMediaStages
 
 ## 未来增强（可选）
 
