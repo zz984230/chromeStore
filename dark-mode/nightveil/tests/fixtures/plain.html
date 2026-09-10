@@ -1,0 +1,25 @@
+<!-- tests/fixtures/plain.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>NightVeil plain fixture</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; }
+      #nv-probe { background: #ffffff; color: #111111; padding: 1rem; border: 1px solid #cccccc; }
+      blockquote { border-left: 3px solid #999; margin-left: 0; padding-left: 1rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Plain fixture</h1>
+    <div id="nv-probe">
+      <p>Probe paragraph with a <a href="https://example.com/">link</a> and a <a href="https://example.com/">visited-style placeholder</a>.</p>
+      <p>Text colors, borders, inputs and buttons below are the assertion targets.</p>
+    </div>
+    <blockquote id="nv-quote">A quotation for cite styling.</blockquote>
+    <form id="nv-form">
+      <input id="nv-input" type="text" placeholder="type here">
+      <button id="nv-button" type="button">Button</button>
+    </form>
+  </body>
+</html>
