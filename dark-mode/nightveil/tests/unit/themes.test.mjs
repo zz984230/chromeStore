@@ -10,10 +10,11 @@ test('overlay compilation embeds all 9 palette colors and core selectors', () =>
     assert.ok(css.includes(value), `missing color ${value}`);
   }
   assert.match(css, /color-scheme:\s*dark/);
-  assert.match(css, /a:link/);
-  assert.match(css, /a:visited/);
-  assert.match(css, /input,\s*textarea,\s*select/);
+  assert.match(css, /body a:link/);
+  assert.match(css, /body a:visited/);
+  assert.match(css, /body input,\s*body textarea,\s*body select/);
   assert.match(css, /background-image:\s*none\s*!important/);
+  assert.match(css, /body \* {[^}]*background-color/s);
 });
 
 test('invert compilation carries filter params and protection list', () => {
