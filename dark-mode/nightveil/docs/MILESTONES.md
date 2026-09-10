@@ -2,14 +2,16 @@
 
 > 状态图例：⬜ 未开始 ｜ 🟨 进行中 ｜ ✅ 已验收（/tabbit 逐条通过）｜ ⏸ 暂停
 > 变更纪律：任务只能从上级拆出或追加于「追加记录」节；验收标准变更需同步更新自主迭代.md 的里程碑条目。
-> 总览最新更新：2026-09-09
+> 总览最新更新：2026-09-10
 
 ## 总览
 
 | 里程碑 | 范围 | 状态 | 验收轮次 |
 |---|---|---|---|
 | M0 | 文档与项目骨架（本表、ADR、协议、目录、构建链） | ✅ | /tabbit 1 轮通过（含 1 次人工加载扩展） |
-| M1 | 骨架 + 经典主题 + 生效边界 | 🟨 | — |
+| M1 | 骨架 + 经典主题 + 生效边界（伞行，见 M1a/M1b） | 🟨 | M1a ✅ / M1b 未开始 |
+| M1a | 核心切换与主题引擎 | ✅ | /tabbit 1 轮 + 验收迭代 1 次（overlay 压平修复）；终审 With fixes 当日闭环 |
+| M1b | 生效边界与选项页 | ⬜ | — |
 | M2 | 自适应引擎（Adaptive Engine） | ⬜ | — |
 | M3 | 完整选项（色温/防白闪/定时/用户样式） | ⬜ | — |
 | M3+ | Backlog 消化（站点补齐、差评修复、增强） | ⬜ | — |
@@ -29,19 +31,19 @@
 
 ## M1 · 骨架 + 经典主题 + 生效边界
 
-**功能**
-- [ ] 工具栏点击全局切换 Light/Dark；图标 + 标题随状态更新（全 tab 同步）
-- [ ] 右键菜单：按状态显示 Exclude / Include（行为忠实原版；"Exclude from Color Temperature" 入口属 M3 色温功能，M1 不做）
-- [ ] 参数化调色板引擎：Overlay 基础样式 + Invert 基础样式（ADR-0002）
-- [ ] 40 个 Classic Theme（26 Overlay + 14 Invert），选项页单选
-- [ ] 10 个 Site Theme（google、github、wikipedia、stackoverflow、reddit、amazon、facebook、instagram、twitter、bing），默认全开
-- [ ] Exclusion List（域名）+ Exclusion Rules（属性/类名/cookie 检测；meta color-scheme；暗背景亮度阈值）
-- [ ] Inclusion Mode + Per-site Toggle
-- [ ] options.html 七分区框架（I 主题 / II 选项 / III 用户样式占位 / IV 引擎占位 / V 排除 / VI 包含 / VII 定时占位）+ 自动保存 + Reset
-- [ ] 防白闪基础版（Flash Guard：默认简单暗样式 + 200ms 延迟）
-- [ ] 验收 fixture 页 6 张（plain / media / frames / vars / native-dark / heavy）+ localhost 托管
-- [ ] 文案单源断言测试（`manifest.name === STRINGS.extensionName` 等），"文案集中管理"约束范围澄清为 src/ 运行时文案（2026-09-09 终审遗留）
-- [ ] fixtures 服务路径遍历回归断言（如 `/..%2fpackage.json` → 403）钉进测试（2026-09-09 终审遗留）
+**功能**（标注 🅰 = M1a 已验收交付；🅱 = M1b 范围）
+- [x] 🅰 工具栏点击全局切换 Light/Dark；图标 + 标题随状态更新（含 onStartup 重启同步；"全 tab 同步"的逐 tab 域名区分部分依赖 M1b Inclusion Mode）
+- [ ] 🅱 右键菜单：按状态显示 Exclude / Include（行为忠实原版；"Exclude from Color Temperature" 入口属 M3 色温功能，M1 不做）
+- [x] 🅰 参数化调色板引擎：Overlay 基础样式 + Invert 基础样式（ADR-0002）
+- [ ] 40 个 Classic Theme（26 Overlay + 14 Invert）——🅰 引擎与 40 主题编译已验收（单测全覆盖）；🅱 选项页单选 UI 待做，主题当前固定为默认 Evening
+- [ ] 🅱 10 个 Site Theme（google、github、wikipedia、stackoverflow、reddit、amazon、facebook、instagram、twitter、bing），默认全开
+- [ ] 🅱 Exclusion List（域名）+ Exclusion Rules（属性/类名/cookie 检测；meta color-scheme；暗背景亮度阈值）
+- [ ] 🅱 Inclusion Mode + Per-site Toggle
+- [ ] 🅱 options.html 七分区框架（I 主题 / II 选项 / III 用户样式占位 / IV 引擎占位 / V 排除 / VI 包含 / VII 定时占位）+ 自动保存 + Reset
+- [x] 🅰 防白闪基础版（Flash Guard：默认简单暗样式 + 200ms 延迟）
+- [ ] 验收 fixture 页 6 张 + localhost 托管——🅰 plain 已交付；🅱 补 media / frames / vars / native-dark / heavy 五张
+- [x] 🅰 文案单源断言测试（manifest + options.html 双锁定，`fa0174e` 加宽至 options.html）
+- [ ] 🅱 fixtures 服务路径遍历回归断言（如 `/..%2fpackage.json` → 403）钉进测试（2026-09-09 终审遗留）
 
 **验收**：自主迭代.md 通用条目 1~4 + 里程碑条目 5~8；收尾真实站点抽查（github.com、wikipedia.org、stackoverflow.com 各截图对比）
 
