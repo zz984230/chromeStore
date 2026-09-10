@@ -45,6 +45,12 @@
 - [ ] invert 家族不保护非媒体元素上的 background-image
 - [ ] html 级 filter 会使 position:fixed 后代随滚动（含 svg image 保护行为简化）
 
+## 已知局限（overlay 压平 + 视频舞台标记，2026-09-10 B 站调试引入）
+
+- [ ] 舞台恢复规则只豁免 background-color，不豁免 background-image——站点若用背景图画控制栏/封面且恰在舞台层上会丢图（M1b 若遇真例再扩规则）
+- [ ] window load 之后 SPA 新插入的 video 要等下一次 render（切换/改设置）才标记；需持续追踪时上 MutationObserver（与 M2 引擎的变更追踪合并考虑）
+- [ ] 标记启发式（同宽祖先链 ≤8 层、1.5× 阈值）为 DOM 经验值，未经单测锁定（DOM 逻辑随 tabbit 验收覆盖；如复杂化可抽 shouldMark 纯函数）
+
 ## 未来增强（可选）
 
 - [ ] 图标小尺寸优化：16/32px 下月牙偏"厚实"、辨识度一般，可为小尺寸用加粗几何变体（M0 视觉抽查结论 2026-09-09）。已知成因：边缘像素未做颜色混合——`aMoon > 0` 即取纯月牙色而 alpha 取 `max(aPlate, aMoon)`，1/16 月牙覆盖的边缘像素渲染为纯月牙色而非混合色（T2 审查 Minor #1）
