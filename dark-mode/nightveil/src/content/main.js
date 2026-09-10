@@ -42,21 +42,31 @@ function clearVideoStages() {
   for (const el of document.querySelectorAll(`[${STAGE_ATTR}]`)) el.removeAttribute(STAGE_ATTR);
 }
 
-// Mark the wrapper layers directly around <video> so overlay flattening keeps
-// them transparent (otherwise originally-transparent player layers — danmaku,
-// subtitles, controls — paint opaque over the video). Known v1 limitation:
-// videos added later by an SPA are only marked on the next render.
-function markVideoStages() {
+// Mark the wrapper layers directly around media (<video> players and <img>
+// cover cards) so overlay flattening keeps them transparent — otherwise
+// originally-transparent layers (player danmaku/subtitles/controls, or card
+// stats strips whose gradient background-IMAGE needs a transparent backdrop)
+// paint opaque over the media. Known v1 limitation: media added later by an
+// SPA are only marked on the next render.
+function markMediaStages() {
   clearVideoStages();
-  for (const v of document.querySelectorAll('video')) {
-    const vw = v.getBoundingClientRect().width || 1;
-    let el = v.parentElement;
+  const mark = (start, maxW, maxH) => {
+    let el = start;
     for (let i = 0; i < 8 && el && el !== document.body; i++) {
       const r = el.getBoundingClientRect();
-      if (r.width > vw * 1.5) break;
+      if (r.width > maxW || r.height > maxH) break;
       el.setAttribute(STAGE_ATTR, '');
       el = el.parentElement;
     }
+  };
+  for (const v of document.querySelectorAll('video')) {
+    const vr = v.getBoundingClientRect();
+    mark(v.parentElement, (vr.width || 1) * 1.5, Infinity);
+  }
+  for (const img of document.querySelectorAll('img')) {
+    const r = img.getBoundingClientRect();
+    if (r.width < 80 || !(img.complete && img.naturalWidth > 0)) continue;
+    mark(img.parentElement, r.width * 1.5, r.height * 1.1);
   }
 }
 
@@ -65,11 +75,11 @@ function render(settings) {
   if (active) {
     armGuard();
     injectStyle(CLASSIC_STYLE_ID, compileThemeById(settings.themeId));
-    markVideoStages();
+    markMediaStages();
     // re-mark once the page finished loading — SPA players mount late;
     // videos added after load still wait for the next render.
     window.addEventListener('load', () => {
-      if (document.getElementById(CLASSIC_STYLE_ID)) markVideoStages();
+      if (document.getElementById(CLASSIC_STYLE_ID)) markMediaStages();
     }, { once: true });
   } else {
     removeStyle(CLASSIC_STYLE_ID);
