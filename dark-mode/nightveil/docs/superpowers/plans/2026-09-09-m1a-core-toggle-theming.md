@@ -431,9 +431,12 @@ test('invert compilation carries filter params and protection list', () => {
   assert.match(css, /filter:\s*invert\(100%\)/);
   assert.match(css, /brightness\(105%\)/);
   assert.match(css, /contrast\(105%\)/);
-  assert.ok(css.includes('img'), 'media protection missing');
-  assert.ok(css.includes('canvas'), 'canvas protection missing');
-  assert.ok(css.includes('iframe'), 'iframe protection missing');
+  assert.match(css, /img, video, canvas, iframe, embed, object, picture, svg image/, 'media protection list missing');
+  assert.equal(
+    css.split('filter: invert(100%) hue-rotate(180deg);').length - 1,
+    1,
+    'media protection must re-apply inversion only (no tone params)',
+  );
 });
 
 test('every palette compiles to non-empty css; unknown family throws; id helper works', () => {
@@ -477,7 +480,7 @@ html, body {
   background-color: ${c.bg} !important;
   background-image: none !important;
 }
-html *, body *:not(svg):not(img):not(video):not(canvas):not(picture) {
+body *:not(svg):not(img):not(video):not(canvas):not(picture) {
   color: ${c.fg} !important;
   border-color: ${c.border} !important;
 }
@@ -508,7 +511,7 @@ html {
 }
 body { background-color: #ffffff !important; }
 img, video, canvas, iframe, embed, object, picture, svg image {
-  filter: ${filter};
+  filter: invert(100%) hue-rotate(180deg);
 }
 `.trim();
 }

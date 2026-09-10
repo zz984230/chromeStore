@@ -21,7 +21,7 @@ html, body {
   background-color: ${c.bg} !important;
   background-image: none !important;
 }
-html *, body *:not(svg):not(img):not(video):not(canvas):not(picture) {
+body *:not(svg):not(img):not(video):not(canvas):not(picture) {
   color: ${c.fg} !important;
   border-color: ${c.border} !important;
 }
@@ -52,7 +52,7 @@ html {
 }
 body { background-color: #ffffff !important; }
 img, video, canvas, iframe, embed, object, picture, svg image {
-  filter: ${filter};
+  filter: invert(100%) hue-rotate(180deg);
 }
 `.trim();
 }
