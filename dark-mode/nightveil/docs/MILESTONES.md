@@ -45,6 +45,8 @@
 
 **验收**：自主迭代.md 通用条目 1~4 + 里程碑条目 5~8；收尾真实站点抽查（github.com、wikipedia.org、stackoverflow.com 各截图对比）
 
+**M1a（2026-09-10 完成子阶段）**：核心切换与主题引擎已验收。覆盖条目：工具栏切换+图标标题（标题/图标以 toggle 生效 + SW 无错为证据，工具栏像素本身不可从 workspace 断言）、参数化引擎（Overlay+Invert）、40 主题编译、Flash Guard 基础版、文案单源、plain fixture。验收证据：①用户两次重载卡片无 Errors；②tabbit：dark 即时生效（不刷新）+ 持久化 + guard 200ms 移除 + 压平背景（probe `#1e2229`、input `#2b303a`、button `#262b33`、cite `#82d4a4`）；③light 还原（nv-classic/nv-guard 双移除 + 持久化）；④`npm test` 15/15。验收迭代 1 次：overlay 未压平元素背景（浅字白底不可读）→ `d2d6fab` 修复后复验通过（T3 审查 Minor #5 实证升级为缺陷的案例）。
+
 ## M2 · 自适应引擎（Adaptive Engine）
 
 **功能**
