@@ -225,7 +225,7 @@ Expected: 4 pass
 
 - [ ] **Step 9: 全量回归 + 提交**
 
-Run: `npm test` → Expected: 6 pass, 0 fail（原 4 + 新 2 文件）
+Run: `npm test` → Expected: 8 pass, 0 fail（原 4 测试 + 新 4 测试：settings 3 + strings-source 1）
 
 ```bash
 git add src/shared/settings.js src/shared/strings.js tests/unit/settings.test.mjs tests/unit/strings-source.test.mjs
@@ -376,7 +376,7 @@ Expected: 3 pass
 
 - [ ] **Step 5: 全量回归 + 提交**
 
-Run: `npm test` → Expected: 9 pass
+Run: `npm test` → Expected: 11 pass
 
 ```bash
 git add src/shared/palettes.js tests/unit/palettes.test.mjs
@@ -513,7 +513,7 @@ Expected: 3 pass
 
 - [ ] **Step 5: 全量回归 + 提交**
 
-Run: `npm test` → Expected: 12 pass
+Run: `npm test` → Expected: 14 pass
 
 ```bash
 git add src/shared/themes.js tests/unit/themes.test.mjs
@@ -671,7 +671,7 @@ subscribeSettings(render);
 - [ ] **Step 7: 构建 + 全量回归**
 
 Run: `npm run build && npm test`
-Expected: build 输出 3 个 bundle；13 pass, 0 fail
+Expected: build 输出 3 个 bundle；15 pass, 0 fail
 
 - [ ] **Step 8: 提交**
 
@@ -724,7 +724,7 @@ subscribeSettings(refreshToolbar);
 - [ ] **Step 2: 构建 + 全量回归**
 
 Run: `npm run build && npm test`
-Expected: build 正常；13 pass, 0 fail
+Expected: build 正常；15 pass, 0 fail
 
 - [ ] **Step 3: 提交**
 
@@ -787,7 +787,7 @@ tabbit 断言（不 reload）：`#nv-classic` count === 0、probe 恢复 `rgb(25
 
 - [ ] **Step 5: 回归与判定**
 
-Run: `npm test` → 13 pass。
+Run: `npm test` → 15 pass。
 对照验收：①无报错加载（用户确认）②console 无未捕获异常（tabbit pageErrors）③dark/light 切换与持久化 ✅ ④回归绿。任一失败 → 按自主迭代协议回到代码修改；同问题 3 次失败停止上报。
 
 - [ ] **Step 6: 收口**
@@ -807,5 +807,5 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 - **覆盖核对**（MILESTONES M1 条目 ↔ M1a 范围）：工具栏切换+图标标题→T5；参数化引擎（Overlay+Invert）→T3；40 主题→T2；Flash Guard 基础版→T4；文案单源断言→T1；plain fixture→T4；端到端验收→T6。**明确不在 M1a**（留 M1b）：右键菜单、排除/包含、站点主题、options 页、其余 5 张 fixture、真实站点抽查。
 - **占位符扫描**：Task 3 曾写出动态 import 版 `compileThemeById` 又自我否决——已在正文标注"实现只写静态导入版本"，执行者有唯一可抄版本；其余无 TBD/TODO/无代码步骤。
-- **类型/命名一致性**：`STORAGE_KEY='nightveil.settings'`（T1 定义、T1 测试用）；`findPalette`（T2 定义、T3/T4 用）；`compileThemeById(id)` 静态版（T3 定义、T4 用）；`iconPathsFor(state)`（T4 定义、T5 用）；strings 键 `stateTitleDark/stateTitleLight`（T1 定义、T5 用）；style 元素 id `nv-classic`/`nv-guard`（T4 定义、T6 断言用）。测试计数链：6→9→12→13 逐任务递增无冲突。
+- **类型/命名一致性**：`STORAGE_KEY='nightveil.settings'`（T1 定义、T1 测试用）；`findPalette`（T2 定义、T3/T4 用）；`compileThemeById(id)` 静态版（T3 定义、T4 用）；`iconPathsFor(state)`（T4 定义、T5 用）；strings 键 `stateTitleDark/stateTitleLight`（T1 定义、T5 用）；style 元素 id `nv-classic`/`nv-guard`（T4 定义、T6 断言用）。测试计数链（按测试数而非文件数）：4→8→11→14→15 逐任务递增无冲突（2026-09-10 依 T1 实测修正，原 6→9→12→13 误按文件数预测）。
 - **已知取舍**：切换的浏览器内触发无法自动化（tabbit 限制），T6 设计了两次人工点击 + tabbit 双向断言补偿；主题切换 UI（换 themeId）在 M1b options 页落地，M1a 以 40 主题全量编译单测覆盖正确性。
