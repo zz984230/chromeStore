@@ -51,7 +51,7 @@ html {
   filter: ${filter};
 }
 body { background-color: #ffffff !important; }
-img, video, canvas, iframe, embed, object, picture, svg image {
+img, video, canvas, iframe, embed, object, svg image {
   filter: invert(100%) hue-rotate(180deg);
 }
 `.trim();

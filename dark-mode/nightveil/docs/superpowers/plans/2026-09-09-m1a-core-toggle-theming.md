@@ -431,7 +431,7 @@ test('invert compilation carries filter params and protection list', () => {
   assert.match(css, /filter:\s*invert\(100%\)/);
   assert.match(css, /brightness\(105%\)/);
   assert.match(css, /contrast\(105%\)/);
-  assert.match(css, /img, video, canvas, iframe, embed, object, picture, svg image/, 'media protection list missing');
+  assert.match(css, /img, video, canvas, iframe, embed, object, svg image/, 'media protection list missing');
   assert.equal(
     css.split('filter: invert(100%) hue-rotate(180deg);').length - 1,
     1,
@@ -510,7 +510,7 @@ html {
   filter: ${filter};
 }
 body { background-color: #ffffff !important; }
-img, video, canvas, iframe, embed, object, picture, svg image {
+img, video, canvas, iframe, embed, object, svg image {
   filter: invert(100%) hue-rotate(180deg);
 }
 `.trim();
