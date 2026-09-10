@@ -699,6 +699,11 @@ function render(settings) {
     armGuard();
     injectStyle(CLASSIC_STYLE_ID, compileThemeById(settings.themeId));
     markVideoStages();
+    // re-mark once the page finished loading — SPA players mount late;
+    // videos added after load still wait for the next render.
+    window.addEventListener('load', () => {
+      if (document.getElementById(CLASSIC_STYLE_ID)) markVideoStages();
+    }, { once: true });
   } else {
     removeStyle(CLASSIC_STYLE_ID);
     removeStyle(GUARD_STYLE_ID);
