@@ -512,6 +512,7 @@ body :is(a:link, a:link *):is(#nv-sheet, *) { color: ${c.link} !important; }
 body :is(a:visited, a:visited *):is(#nv-sheet, *) { color: ${c.visited} !important; }
 body :is(cite, q, blockquote):is(#nv-sheet, *) { color: ${c.cite} !important; }
 body :is(#nv-sheet, *)::placeholder { color: ${c.muted} !important; opacity: 1 !important; }
+/* input/button 的 color 当前与提升后的平铺同值（冗余无害）；将来分化时需同步 :is 提升 */
 body input, body textarea, body select {
   background-color: ${c.inputBg} !important;
   color: ${c.fg} !important;
