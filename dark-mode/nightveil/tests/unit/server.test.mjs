@@ -28,7 +28,7 @@ test('fixtures server serves index.html and 404s unknown paths', async () => {
     assert.ok(res, 'server never came up');
     assert.equal(res.status, 200);
     assert.match(res.headers.get('content-type'), /text\/html/);
-    assert.match(await res.text(), /Fixture stub/);
+    assert.match(await res.text(), /NightVeil fixtures/);
 
     const missing = await fetch(`http://localhost:${port}/nope.html`);
     assert.equal(missing.status, 404);

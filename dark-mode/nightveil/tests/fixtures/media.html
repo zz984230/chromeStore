@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>NightVeil media fixture</title>
+    <style>
+      body { font-family: sans-serif; background: #fff; color: #111; }
+      .player { width: 640px; margin: 16px; }
+      video { width: 640px; height: 360px; background: #000; display: block; }
+      .cover { display: inline-block; margin: 8px; }
+      .cover img { width: 240px; height: 135px; display: block; }
+      .stats { width: 240px; height: 28px; background-image: linear-gradient(to right, rgba(0,179,255,.9), rgba(255,45,85,.9)); }
+    </style>
+  </head>
+  <body>
+    <h1>Media fixture</h1>
+    <div class="player">
+      <video controls poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='360'%3E%3Crect width='640' height='360' fill='%23183b56'/%3E%3C/svg%3E"></video>
+      <p class="caption">Player wrapper layers must stay transparent in dark mode.</p>
+    </div>
+    <div class="cover">
+      <img alt="cover" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='135'%3E%3Crect width='240' height='135' fill='%234488cc'/%3E%3C/svg%3E">
+      <div class="stats">gradient strip must stay a gradient in dark mode</div>
+    </div>
+  </body>
+</html>
