@@ -29,6 +29,7 @@ body :is(#nv-sheet, *):not([data-nv-stage]):not([data-nv-stage] *) { background-
 body :is(#nv-sheet, *) {
   color: ${c.fg} !important;
   border-color: ${c.border} !important;
+  text-indent: 0 !important;
 }
 body :is(a:link, a:link *):is(#nv-sheet, *) { color: ${c.link} !important; }
 body :is(a:visited, a:visited *):is(#nv-sheet, *) { color: ${c.visited} !important; }

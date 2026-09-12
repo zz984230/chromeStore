@@ -440,7 +440,8 @@ test('overlay compilation embeds all 9 palette colors and core selectors', () =>
   assert.match(css, /background-image:\s*none\s*!important/);
   assert.match(css, /body \* {[^}]*background-color/s);
   assert.match(css, /body :is\(#nv-sheet, \*\):not\(\[data-nv-stage\]\):not\(\[data-nv-stage\] \*\) \{ background-image: none !important; \}/);
-  assert.ok(css.includes('body :is(#nv-sheet, *) {'), 'color lift selector missing');
+  assert.match(css, /body :is\(#nv-sheet, \*\) \{\n  color: /, 'color lift selector missing');
+  assert.match(css, /body :is\(#nv-sheet, \*\) \{[^}]*text-indent: 0 !important/s, 'text-indent recall missing');
   assert.ok(css.includes('body :is(cite, q, blockquote):is(#nv-sheet, *)'), 'cite specificity lift missing');
   assert.match(css, /body \[data-nv-stage\], body \[data-nv-stage\] \* \{ background-color: transparent !important; \}/);
 });
@@ -507,6 +508,7 @@ body :is(#nv-sheet, *):not([data-nv-stage]):not([data-nv-stage] *) { background-
 body :is(#nv-sheet, *) {
   color: ${c.fg} !important;
   border-color: ${c.border} !important;
+  text-indent: 0 !important;
 }
 body :is(a:link, a:link *):is(#nv-sheet, *) { color: ${c.link} !important; }
 body :is(a:visited, a:visited *):is(#nv-sheet, *) { color: ${c.visited} !important; }
