@@ -1,0 +1,34 @@
+// tests/unit/site-themes.test.mjs
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { SITE_THEMES, findSiteTheme, matchSiteTheme, compileSiteTheme } from '../../src/shared/siteThemes.js';
+
+test('ten site themes with unique ids, labels, and hosts', () => {
+  assert.equal(SITE_THEMES.length, 10);
+  assert.equal(new Set(SITE_THEMES.map((t) => t.id)).size, 10);
+  for (const t of SITE_THEMES) {
+    assert.ok(t.label, `${t.id} needs a label`);
+    assert.ok(t.hosts.length > 0, `${t.id} needs hosts`);
+  }
+});
+
+test('matchSiteTheme suffix-matches hosts; unknown and localhost stay null', () => {
+  assert.equal(matchSiteTheme('www.github.com').id, 'github');
+  assert.equal(matchSiteTheme('gist.github.com').id, 'github');
+  assert.equal(matchSiteTheme('WWW.Google.COM').id, 'google');
+  assert.equal(matchSiteTheme('x.com').id, 'twitter');
+  assert.equal(matchSiteTheme('notgithub.com'), null);
+  assert.equal(matchSiteTheme('localhost'), null);
+  assert.equal(matchSiteTheme(''), null);
+});
+
+test('compiled sheets carry the specificity prefix and !important bodies', () => {
+  for (const t of SITE_THEMES) {
+    const css = compileSiteTheme(t.id);
+    assert.ok(css.includes(`html[data-nv-site="${t.id}"] :is(#nv-sheet, *)`), `${t.id} prefix missing`);
+    assert.match(css, /!important/);
+    assert.ok(css.length > 100, `${t.id} sheet too small`);
+  }
+  assert.equal(findSiteTheme('nope'), undefined);
+  assert.equal(compileSiteTheme('nope'), undefined);
+});
