@@ -11,4 +11,8 @@ export const STRINGS = Object.freeze({
   optionsNote: 'Settings arrive in Milestone 1.',
   stateTitleDark: 'NightVeil — Dark',
   stateTitleLight: 'NightVeil — Light',
+  menuExcludeSite: 'Exclude this site from NightVeil',
+  menuIncludeSite: 'Include this site in NightVeil',
+  stateTitleSiteOn: 'NightVeil — Site included',
+  stateTitleSiteOff: 'NightVeil — Site not included',
 });
