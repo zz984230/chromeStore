@@ -87,6 +87,54 @@ function renderPlaceholders() {
   section('sec-schedule', STRINGS.sectionScheduleLabel, note(STRINGS.sectionScheduleNote));
 }
 
+// ---- Section II: options (behavior + exclusion rules) ----
+function renderBehavior() {
+  const box = el('fieldset', {}, el('legend', {}, STRINGS.behaviorLabel));
+  box.append(
+    el('label', {}, el('input', { type: 'radio', name: 'state', value: 'light', checked: current.state === 'light' }), ` ${STRINGS.stateLightLabel}`),
+    el('label', {}, el('input', { type: 'radio', name: 'state', value: 'dark', checked: current.state === 'dark' }), ` ${STRINGS.stateDarkLabel}`),
+    el('label', {}, el('input', { type: 'checkbox', 'data-key': 'inclusionMode', checked: current.inclusionMode }), ` ${STRINGS.inclusionModeLabel}`),
+    note(STRINGS.inclusionModeNote),
+    el('label', {}, el('input', { type: 'checkbox', 'data-key': 'perSiteToggle', checked: current.perSiteToggle }), ` ${STRINGS.perSiteToggleLabel}`),
+  );
+  box.addEventListener('change', (e) => {
+    if (e.target.name === 'state') save({ state: e.target.value });
+    else if (e.target.getAttribute('data-key')) save({ [e.target.getAttribute('data-key')]: e.target.checked });
+  });
+
+  const r = current.exclusionRules ?? {};
+  const rules = el('fieldset', {}, el('legend', {}, STRINGS.rulesLabel));
+  rules.append(
+    el('label', {}, el('input', { type: 'checkbox', 'data-rule': 'metaScheme', checked: r.metaScheme }), ` ${STRINGS.ruleMetaSchemeLabel}`),
+    el('label', {}, el('input', { type: 'checkbox', 'data-rule': 'darkBackground', checked: r.darkBackground }), ` ${STRINGS.ruleDarkBackgroundLabel}`),
+    el('label', {}, `${STRINGS.ruleBrightnessLabel} `, el('input', { type: 'number', min: '0', max: '255', 'data-rule': 'brightnessThreshold', value: r.brightnessThreshold ?? 50 })),
+    el('label', {}, `${STRINGS.ruleHtmlAttributesLabel} `, el('input', { type: 'text', size: '40', 'data-rule': 'htmlAttributes', value: r.htmlAttributes ?? '' })),
+    el('label', {}, `${STRINGS.ruleHtmlClassesLabel} `, el('input', { type: 'text', size: '40', 'data-rule': 'htmlClasses', value: r.htmlClasses ?? '' })),
+    el('label', {}, `${STRINGS.ruleCookiesLabel} `, el('input', { type: 'text', size: '40', 'data-rule': 'cookies', value: r.cookies ?? '' })),
+  );
+  rules.addEventListener('change', (e) => {
+    const key = e.target.getAttribute('data-rule');
+    if (!key) return;
+    const val = e.target.type === 'checkbox' ? e.target.checked
+      : e.target.type === 'number' ? Math.max(0, Math.min(255, Number(e.target.value) || 0))
+        : e.target.value;
+    save({ exclusionRules: { ...(current.exclusionRules ?? {}), [key]: val } });
+  });
+
+  section('sec-options', STRINGS.sectionOptionsLabel, box, rules);
+}
+
+// ---- Sections V / VI: hostname lists ----
+function renderListSection(id, summary, key, labelText) {
+  const ta = el('textarea', { 'data-list': key }, (current[key] ?? []).join('\n'));
+  const box = el('div', {}, el('p', { class: 'hint' }, labelText), ta, note(STRINGS.listEditHint));
+  ta.addEventListener('change', () => {
+    const list = ta.value.split('\n').map((s) => s.trim()).filter(Boolean);
+    save({ [key]: [...new Set(list)] });
+  });
+  section(id, summary, box);
+}
+
 // ---- Reset ----
 function wireReset() {
   const btn = $('#reset');
@@ -102,12 +150,28 @@ function syncFromSettings(s) {
   for (const i of document.querySelectorAll('#sec-themes input[data-site]')) {
     i.checked = !(s.disabledSiteThemes ?? []).includes(i.getAttribute('data-site'));
   }
+  const stateRadio = document.querySelector(`#sec-options input[name="state"][value="${s.state}"]`);
+  if (stateRadio) stateRadio.checked = true;
+  for (const i of document.querySelectorAll('#sec-options input[data-key]')) {
+    i.checked = !!s[i.getAttribute('data-key')];
+  }
+  const r = s.exclusionRules ?? {};
+  for (const i of document.querySelectorAll('#sec-options [data-rule]')) {
+    const key = i.getAttribute('data-rule');
+    if (i.type === 'checkbox') i.checked = !!r[key];
+    else if (document.activeElement !== i) i.value = r[key] ?? '';
+  }
+  for (const ta of document.querySelectorAll('textarea[data-list]')) {
+    if (document.activeElement !== ta) ta.value = (s[ta.getAttribute('data-list')] ?? []).join('\n');
+  }
 }
 
 function renderAll() {
   renderThemes();
+  renderBehavior();
+  renderListSection('sec-exclusion', STRINGS.sectionExclusionLabel, 'exclusionList', STRINGS.exclusionListLabel);
+  renderListSection('sec-inclusion', STRINGS.sectionInclusionLabel, 'inclusionList', STRINGS.inclusionListLabel);
   renderPlaceholders();
-  // Sections II / V / VI land in the next task.
 }
 
 function render() {
