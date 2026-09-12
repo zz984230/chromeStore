@@ -42,6 +42,8 @@ test('findPalette returns exact match, falls back to nv-simple', () => {
 });
 
 test('every overlay border is visible against its bg (luminance delta >= 14)', () => {
+  // 注：这是加权 RGB 和（百分比），不是 WCAG 伽马线性化的相对亮度——
+  // 本阈值只用于"边界可见性"设计约束，勿与 WCAG 对比度混用。
   const lum = (hex) => {
     const [r, g, b] = hex.replace('#', '').match(/../g).map((h) => parseInt(h, 16));
     return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
