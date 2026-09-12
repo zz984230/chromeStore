@@ -1,9 +1,13 @@
 // src/content/main.js
-// Content pipeline: read settings at document_start, inject/remove the
+// Content pipeline: read settings at document_start, gate on scope (global
+// state × site lists) and page exclusion rules, then inject/remove the
 // classic theme, apply a flash guard while active, and re-render on changes.
 import { STRINGS } from '../shared/strings.js';
 import { loadSettings, subscribeSettings } from '../shared/settings.js';
-import { compileThemeById } from '../shared/themes.js';
+import { compileThemeById, guardBackgroundFor } from '../shared/themes.js';
+import { findPalette } from '../shared/palettes.js';
+import { siteDarkActive } from '../shared/scope.js';
+import { evaluateRules, luminanceOf, metaSchemeIsDark } from '../shared/exclusionRules.js';
 
 const CLASSIC_STYLE_ID = 'nv-classic';
 const GUARD_STYLE_ID = 'nv-guard';
@@ -27,8 +31,9 @@ function removeStyle(id) {
 }
 
 let guardTimer = null;
-function armGuard() {
-  injectStyle(GUARD_STYLE_ID, 'html { background-color: #1e2229 !important; }');
+function armGuard(settings) {
+  const bg = guardBackgroundFor(findPalette(settings.themeId));
+  injectStyle(GUARD_STYLE_ID, `html { background-color: ${bg} !important; }`);
   if (guardTimer) clearTimeout(guardTimer);
   const dismiss = () => removeStyle(GUARD_STYLE_ID);
   if (document.readyState === 'complete') {
@@ -70,7 +75,7 @@ function markMediaStages() {
   }
 }
 
-// 全屏透明布局层（本例 B 站 palette 容器）被压平成不透明幕布盖整页——恢复其透明；z<1000 门限避免误伤弹窗遮罩（v1 启发，真例出现再细化——backlog）。
+// 全屏透明布局层被压平成不透明幕布盖整页——恢复其透明；z<1000 门限避免误伤弹窗遮罩。
 function markFullscreenOverlays() {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -81,12 +86,12 @@ function markFullscreenOverlays() {
     const r = el.getBoundingClientRect();
     if (r.width < vw * 0.9 || r.height < vh * 0.9) continue;
     const z = parseInt(cs.zIndex) || 0;
-    if (z >= 1000) continue; // 高 z 弹窗/遮罩不碰（原本多为不透明，恢复透明会破）
+    if (z >= 1000) continue;
     el.setAttribute(STAGE_ATTR, '');
   }
 }
 
-// 图截文字第二式——字号归零藏字召回；风险：依赖 fs:0 隐藏回退文字的真图标旁可能出现双渲染（backlog 已记）。
+// 图截文字第二式——字号归零藏字召回。
 function recallZeroSizeText() {
   for (const el of document.querySelectorAll('body *')) {
     if (el.children.length !== 0) continue;
@@ -94,7 +99,6 @@ function recallZeroSizeText() {
     if (!text) continue;
     const cs = getComputedStyle(el);
     if (cs.fontSize !== '0px') continue;
-    // 从最近非零字号祖先取回字号，兜底 12px
     let size = '12px';
     let a = el.parentElement;
     for (let i = 0; i < 6 && a; i++) {
@@ -106,29 +110,67 @@ function recallZeroSizeText() {
   }
 }
 
+// ---- page exclusion-rule probes (DOM side; matching logic lives in shared/) ----
+function collectRuleSignals(includeBg) {
+  const html = document.documentElement;
+  const metaSchemeDark = [...document.querySelectorAll('meta[name="color-scheme" i], meta[name="supported-color-schemes" i]')]
+    .some((m) => metaSchemeIsDark(m.getAttribute('content')));
+  const htmlAttrs = html ? [...html.attributes].map((a) => (a.value === '' ? a.name : `${a.name}=${a.value}`)) : [];
+  const htmlClasses = html ? [...html.classList] : [];
+  const cookieNames = document.cookie.split(';').map((s) => s.split('=')[0].trim()).filter(Boolean);
+  let bgLuminance = null;
+  if (includeBg) {
+    const el = document.body ?? document.documentElement;
+    if (el) bgLuminance = luminanceOf(getComputedStyle(el).backgroundColor);
+  }
+  return { metaSchemeDark, htmlAttrs, htmlClasses, cookieNames, bgLuminance };
+}
+
+function teardown() {
+  removeStyle(CLASSIC_STYLE_ID);
+  removeStyle(GUARD_STYLE_ID);
+  if (guardTimer) { clearTimeout(guardTimer); guardTimer = null; }
+  clearVideoStages();
+}
+
+function applyTheme(settings) {
+  armGuard(settings);
+  injectStyle(CLASSIC_STYLE_ID, compileThemeById(settings.themeId));
+  markMediaStages();
+  markFullscreenOverlays();
+  recallZeroSizeText();
+  // re-mark once the page finished loading — SPA players mount late.
+  window.addEventListener('load', () => {
+    if (document.getElementById(CLASSIC_STYLE_ID)) {
+      markMediaStages();
+      markFullscreenOverlays();
+      recallZeroSizeText();
+    }
+  }, { once: true });
+}
+
 function render(settings) {
-  const active = settings.state === 'dark';
-  if (active) {
-    armGuard();
-    injectStyle(CLASSIC_STYLE_ID, compileThemeById(settings.themeId));
-    markMediaStages();
-    markFullscreenOverlays();
-    recallZeroSizeText();
-    // re-mark once the page finished loading — SPA players mount late;
-    // videos added after load still wait for the next render.
-    window.addEventListener('load', () => {
-      if (document.getElementById(CLASSIC_STYLE_ID)) {
-        markMediaStages();
-        markFullscreenOverlays();
-        recallZeroSizeText();
-      }
-    }, { once: true });
-  } else {
+  const inScope = siteDarkActive(settings, location.hostname)
+    && !evaluateRules(settings.exclusionRules, collectRuleSignals(false));
+  if (!inScope) {
     // Light branch leaves prior dark-pass inline styles in place (harmless);
     // a light reload starts clean — acceptable v1.
-    removeStyle(CLASSIC_STYLE_ID);
-    removeStyle(GUARD_STYLE_ID);
-    clearVideoStages();
+    teardown();
+    return;
+  }
+  applyTheme(settings);
+  // Late re-check: body bg luminance needs the DOM; a dark-scheme meta may
+  // sit past the parsed head. Strip everything if the page opts out late.
+  const lateCheck = () => {
+    if (document.getElementById(CLASSIC_STYLE_ID)
+        && evaluateRules(settings.exclusionRules, collectRuleSignals(true))) {
+      teardown();
+    }
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', lateCheck, { once: true });
+  } else {
+    lateCheck();
   }
 }
 
