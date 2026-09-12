@@ -8,7 +8,7 @@
 import { normalizeHostname } from './scope.js';
 
 const sheet = (id, rules) => rules
-  .map(([sel, body]) => `html[data-nv-site="${id}"] :is(#nv-sheet, *)${sel} { ${body} }`)
+  .map(([sel, body]) => `${sel.split(',').map((s) => `html[data-nv-site="${id}"] :is(#nv-sheet, *)${s}`).join(', ')} { ${body} }`)
   .join('\n');
 
 export const SITE_THEMES = [
