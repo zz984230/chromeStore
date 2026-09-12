@@ -1,7 +1,7 @@
 // tests/unit/themes.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compileTheme, compileThemeById } from '../../src/shared/themes.js';
+import { compileTheme, compileThemeById, guardBackgroundFor } from '../../src/shared/themes.js';
 import { findPalette, PALETTES } from '../../src/shared/palettes.js';
 
 test('overlay compilation embeds all 9 palette colors and core selectors', () => {
@@ -42,4 +42,10 @@ test('every palette compiles to non-empty css; unknown family throws; id helper 
   }
   assert.throws(() => compileTheme({ id: 'x', family: 'nope' }), /unknown family/);
   assert.equal(compileThemeById('nv-midnight'), compileTheme(findPalette('nv-midnight')));
+});
+
+test('guardBackgroundFor uses palette bg for overlay and neutral dark for invert', () => {
+  assert.equal(guardBackgroundFor(findPalette('nv-midnight')), findPalette('nv-midnight').colors.bg);
+  assert.equal(guardBackgroundFor(findPalette('nv-simple')), '#1e2229');
+  assert.equal(guardBackgroundFor(findPalette('nv-inv-soft')), '#1e2229');
 });

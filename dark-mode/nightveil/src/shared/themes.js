@@ -66,3 +66,9 @@ img, video, canvas, iframe, embed, object, svg image {
 }
 `.trim();
 }
+
+// Flash-guard backdrop per family (D9): overlay themes guard with their own
+// bg; invert themes end up dark via filter, so keep a neutral dark guard.
+export function guardBackgroundFor(palette) {
+  return palette.family === 'invert' ? '#1e2229' : palette.colors.bg;
+}

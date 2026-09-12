@@ -28,7 +28,27 @@ test('loadSettings returns defaults for missing key and fills missing fields', a
   const mem = new MemoryStorage();
   assert.deepEqual(await loadSettings(mem), DEFAULT_SETTINGS);
   const partial = new MemoryStorage({ [STORAGE_KEY]: { themeId: 'nv-midnight' } });
-  assert.deepEqual(await loadSettings(partial), { state: 'light', themeId: 'nv-midnight' });
+  assert.deepEqual(await loadSettings(partial), { ...DEFAULT_SETTINGS, themeId: 'nv-midnight' });
+});
+
+test('legacy M1a settings object upgrades to full v2 defaults', async () => {
+  const mem = new MemoryStorage({ [STORAGE_KEY]: { state: 'dark', themeId: 'nv-coffee' } });
+  const s = await loadSettings(mem);
+  assert.equal(s.state, 'dark');
+  assert.equal(s.inclusionMode, false);
+  assert.deepEqual(s.exclusionList, []);
+  assert.equal(s.exclusionRules.metaScheme, true);
+});
+
+test('saveSettings serializes concurrent writers within a context', async () => {
+  const mem = new MemoryStorage();
+  await Promise.all([
+    saveSettings({ state: 'dark' }, mem),
+    saveSettings({ themeId: 'nv-owl' }, mem),
+  ]);
+  const s = await loadSettings(mem);
+  assert.equal(s.state, 'dark', 'first concurrent write was lost');
+  assert.equal(s.themeId, 'nv-owl');
 });
 
 test('saveSettings shallow-merges patch, persists, and returns merged settings', async () => {
