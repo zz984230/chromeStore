@@ -434,11 +434,15 @@ test('overlay compilation embeds all 9 palette colors and core selectors', () =>
     assert.ok(css.includes(value), `missing color ${value}`);
   }
   assert.match(css, /color-scheme:\s*dark/);
-  assert.match(css, /body a:link/);
-  assert.match(css, /body a:visited/);
+  assert.match(css, /body :is\(a:link, a:link \*\)/);
+  assert.match(css, /body :is\(a:visited, a:visited \*\)/);
   assert.match(css, /body input,\s*body textarea,\s*body select/);
   assert.match(css, /background-image:\s*none\s*!important/);
   assert.match(css, /body \* {[^}]*background-color/s);
+  assert.match(css, /body \*\:not\(\[data-nv-stage\]\)\:not\(\[data-nv-stage\] \*\) \{ background-image: none !important; \}/);
+  assert.ok(css.includes('body :is([class], [id], *) {'), 'color lift selector missing');
+  assert.ok(css.includes('body :is(cite, q, blockquote):is([class], [id], *)'), 'cite specificity lift missing');
+  assert.match(css, /body \[data-nv-stage\], body \[data-nv-stage\] \* \{ background-color: transparent !important; \}/);
 });
 
 test('invert compilation carries filter params and protection list', () => {
@@ -496,14 +500,17 @@ html, body {
   background-image: none !important;
 }
 body * {
-  color: ${c.fg} !important;
-  border-color: ${c.border} !important;
   background-color: ${c.bg} !important;
 }
-body ::placeholder { color: ${c.muted} !important; opacity: 1 !important; }
-body a:link, body a:link * { color: ${c.link} !important; }
-body a:visited, body a:visited * { color: ${c.visited} !important; }
-body cite, body q, body blockquote { color: ${c.cite} !important; }
+body *:not([data-nv-stage]):not([data-nv-stage] *) { background-image: none !important; }
+body :is([class], [id], *) {
+  color: ${c.fg} !important;
+  border-color: ${c.border} !important;
+}
+body :is(a:link, a:link *) { color: ${c.link} !important; }
+body :is(a:visited, a:visited *) { color: ${c.visited} !important; }
+body :is(cite, q, blockquote):is([class], [id], *) { color: ${c.cite} !important; }
+body :is([class], [id], *)::placeholder { color: ${c.muted} !important; opacity: 1 !important; }
 body input, body textarea, body select {
   background-color: ${c.inputBg} !important;
   color: ${c.fg} !important;

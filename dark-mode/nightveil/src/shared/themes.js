@@ -22,14 +22,17 @@ html, body {
   background-image: none !important;
 }
 body * {
-  color: ${c.fg} !important;
-  border-color: ${c.border} !important;
   background-color: ${c.bg} !important;
 }
-body ::placeholder { color: ${c.muted} !important; opacity: 1 !important; }
-body a:link, body a:link * { color: ${c.link} !important; }
-body a:visited, body a:visited * { color: ${c.visited} !important; }
-body cite, body q, body blockquote { color: ${c.cite} !important; }
+body *:not([data-nv-stage]):not([data-nv-stage] *) { background-image: none !important; }
+body :is([class], [id], *) {
+  color: ${c.fg} !important;
+  border-color: ${c.border} !important;
+}
+body :is(a:link, a:link *) { color: ${c.link} !important; }
+body :is(a:visited, a:visited *) { color: ${c.visited} !important; }
+body :is(cite, q, blockquote):is([class], [id], *) { color: ${c.cite} !important; }
+body :is([class], [id], *)::placeholder { color: ${c.muted} !important; opacity: 1 !important; }
 body input, body textarea, body select {
   background-color: ${c.inputBg} !important;
   color: ${c.fg} !important;
