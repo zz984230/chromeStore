@@ -840,29 +840,52 @@ function applyTheme(settings) {
   }, { once: true });
 }
 
+function whenDomReady(fn) {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+  else fn();
+}
+
+// Render counter: async callbacks (dom-ready, load) capture the generation
+// they were scheduled in and no-op when a newer render superseded them —
+// otherwise a stale callback could strip or apply against outdated settings.
+let renderGeneration = 0;
+
 function render(settings) {
-  const inScope = siteDarkActive(settings, location.hostname)
-    && !evaluateRules(settings.exclusionRules, collectRuleSignals(false));
-  if (!inScope) {
+  const gen = ++renderGeneration;
+  const rules = settings.exclusionRules ?? {};
+  if (!siteDarkActive(settings, location.hostname)
+      || evaluateRules(rules, collectRuleSignals(false))) {
     // Light branch leaves prior dark-pass inline styles in place (harmless);
     // a light reload starts clean — acceptable v1.
     teardown();
     return;
   }
+  if (rules.darkBackground) {
+    // The page's own bg luma must be measured on its native colors — the
+    // classic theme flattens body to our dark (self-trigger) and invert
+    // forces white (never-trigger). Hold the guard, decide at DOM ready:
+    // strip → measure → re-apply runs in one synchronous task, so there is
+    // no paint between teardown and the decision.
+    armGuard(settings);
+    whenDomReady(() => {
+      if (gen !== renderGeneration) return;
+      teardown();
+      if (evaluateRules(rules, collectRuleSignals(true))) return; // page opts out — stays off
+      applyTheme(settings);
+    });
+    return;
+  }
   applyTheme(settings);
-  // Late re-check: body bg luminance needs the DOM; a dark-scheme meta may
-  // sit past the parsed head. Strip everything if the page opts out late.
+  // Late re-check: a dark-scheme meta may sit past the parsed head. Strip if
+  // the page opts out late. (bg luma needs the delayed branch above.)
   const lateCheck = () => {
+    if (gen !== renderGeneration) return;
     if (document.getElementById(CLASSIC_STYLE_ID)
-        && evaluateRules(settings.exclusionRules, collectRuleSignals(true))) {
+        && evaluateRules(rules, collectRuleSignals(false))) {
       teardown();
     }
   };
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', lateCheck, { once: true });
-  } else {
-    lateCheck();
-  }
+  whenDomReady(lateCheck);
 }
 
 loadSettings().then(render);
