@@ -8,10 +8,13 @@ import { compileThemeById, guardBackgroundFor } from '../shared/themes.js';
 import { findPalette } from '../shared/palettes.js';
 import { siteDarkActive } from '../shared/scope.js';
 import { evaluateRules, luminanceOf, metaSchemeIsDark } from '../shared/exclusionRules.js';
+import { matchSiteTheme, compileSiteTheme } from '../shared/siteThemes.js';
 
 const CLASSIC_STYLE_ID = 'nv-classic';
 const GUARD_STYLE_ID = 'nv-guard';
 const GUARD_REMOVE_DELAY_MS = 200;
+const SITE_STYLE_ID = 'nv-site';
+const SITE_ATTR = 'data-nv-site';
 const STAGE_ATTR = 'data-nv-stage';
 
 console.log(STRINGS.contentActiveLog);
@@ -129,13 +132,20 @@ function collectRuleSignals(includeBg) {
 function teardown() {
   removeStyle(CLASSIC_STYLE_ID);
   removeStyle(GUARD_STYLE_ID);
+  removeStyle(SITE_STYLE_ID);
   if (guardTimer) { clearTimeout(guardTimer); guardTimer = null; }
+  document.documentElement?.removeAttribute(SITE_ATTR);
   clearVideoStages();
 }
 
 function applyTheme(settings) {
   armGuard(settings);
   injectStyle(CLASSIC_STYLE_ID, compileThemeById(settings.themeId));
+  const site = matchSiteTheme(location.hostname);
+  if (site && !(settings.disabledSiteThemes ?? []).includes(site.id)) {
+    document.documentElement.setAttribute(SITE_ATTR, site.id);
+    injectStyle(SITE_STYLE_ID, compileSiteTheme(site.id));
+  }
   markMediaStages();
   markFullscreenOverlays();
   recallZeroSizeText();
