@@ -1046,10 +1046,20 @@ test('matchSiteTheme suffix-matches hosts; unknown and localhost stay null', () 
   assert.equal(matchSiteTheme(''), null);
 });
 
-test('compiled sheets carry the specificity prefix and !important bodies', () => {
+test('compiled sheets boost every selector segment with the specificity prefix', () => {
   for (const t of SITE_THEMES) {
     const css = compileSiteTheme(t.id);
-    assert.ok(css.includes(`html[data-nv-site="${t.id}"] :is(#nv-sheet, *)`), `${t.id} prefix missing`);
+    for (const rule of css.split('\n')) {
+      const brace = rule.indexOf('{');
+      assert.ok(brace > 0, `${t.id} malformed rule: ${rule}`);
+      const selectorPart = rule.slice(0, brace);
+      for (const segment of selectorPart.split(',')) {
+        assert.ok(
+          segment.trim().startsWith(`html[data-nv-site="${t.id}"]`),
+          `${t.id} segment missing booster: ${segment}`,
+        );
+      }
+    }
     assert.match(css, /!important/);
     assert.ok(css.length > 100, `${t.id} sheet too small`);
   }
@@ -1076,7 +1086,7 @@ Expected: FAIL——`Cannot find module '../../src/shared/siteThemes.js'`
 import { normalizeHostname } from './scope.js';
 
 const sheet = (id, rules) => rules
-  .map(([sel, body]) => `html[data-nv-site="${id}"] :is(#nv-sheet, *)${sel} { ${body} }`)
+  .map(([sel, body]) => `${sel.split(',').map((s) => `html[data-nv-site="${id}"] :is(#nv-sheet, *)${s}`).join(', ')} { ${body} }`)
   .join('\n');
 
 export const SITE_THEMES = [
