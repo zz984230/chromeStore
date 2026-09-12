@@ -1271,6 +1271,9 @@ function applyTheme(settings) {
   if (site && !(settings.disabledSiteThemes ?? []).includes(site.id)) {
     document.documentElement.setAttribute(SITE_ATTR, site.id);
     injectStyle(SITE_STYLE_ID, compileSiteTheme(site.id));
+  } else {
+    removeStyle(SITE_STYLE_ID);
+    document.documentElement.removeAttribute(SITE_ATTR);
   }
   markMediaStages();
   // ...其余不变
