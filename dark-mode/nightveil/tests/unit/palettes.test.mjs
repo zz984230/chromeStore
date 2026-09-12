@@ -40,3 +40,15 @@ test('findPalette returns exact match, falls back to nv-simple', () => {
   assert.equal(findPalette('nv-midnight').id, 'nv-midnight');
   assert.equal(findPalette('nope').id, 'nv-simple');
 });
+
+test('every overlay border is visible against its bg (luminance delta >= 14)', () => {
+  const lum = (hex) => {
+    const [r, g, b] = hex.replace('#', '').match(/../g).map((h) => parseInt(h, 16));
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  };
+  for (const p of PALETTES) {
+    if (p.family !== 'overlay') continue;
+    const delta = Math.abs(lum(p.colors.border) - lum(p.colors.bg)) * 100;
+    assert.ok(delta >= 14, `${p.id} border-vs-bg luminance delta ${delta.toFixed(1)} < 14`);
+  }
+});
