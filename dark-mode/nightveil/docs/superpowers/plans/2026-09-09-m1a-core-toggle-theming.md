@@ -728,6 +728,22 @@ function markMediaStages() {
   }
 }
 
+// 全屏透明布局层（本例 B 站 palette 容器）被压平成不透明幕布盖整页——恢复其透明；z<1000 门限避免误伤弹窗遮罩（v1 启发，真例出现再细化——backlog）。
+function markFullscreenOverlays() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  for (const el of document.querySelectorAll('body *')) {
+    if (el.hasAttribute(STAGE_ATTR)) continue;
+    const cs = getComputedStyle(el);
+    if (cs.position !== 'fixed' && cs.position !== 'absolute') continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < vw * 0.9 || r.height < vh * 0.9) continue;
+    const z = parseInt(cs.zIndex) || 0;
+    if (z >= 1000) continue; // 高 z 弹窗/遮罩不碰（原本多为不透明，恢复透明会破）
+    el.setAttribute(STAGE_ATTR, '');
+  }
+}
+
 // 图截文字第二式——字号归零藏字召回；风险：依赖 fs:0 隐藏回退文字的真图标旁可能出现双渲染（backlog 已记）。
 function recallZeroSizeText() {
   for (const el of document.querySelectorAll('body *')) {
@@ -754,12 +770,14 @@ function render(settings) {
     armGuard();
     injectStyle(CLASSIC_STYLE_ID, compileThemeById(settings.themeId));
     markMediaStages();
+    markFullscreenOverlays();
     recallZeroSizeText();
     // re-mark once the page finished loading — SPA players mount late;
     // videos added after load still wait for the next render.
     window.addEventListener('load', () => {
       if (document.getElementById(CLASSIC_STYLE_ID)) {
         markMediaStages();
+        markFullscreenOverlays();
         recallZeroSizeText();
       }
     }, { once: true });
