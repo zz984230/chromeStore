@@ -24,16 +24,16 @@ html, body {
 body * {
   background-color: ${c.bg} !important;
 }
-body *:not([data-nv-stage]):not([data-nv-stage] *) { background-image: none !important; }
-/* :is([class], [id], *) 匹配所有元素——纯特异性提升器（0,1,1），不是内容过滤器，勿清理 */
-body :is([class], [id], *) {
+body :is(#nv-sheet, *):not([data-nv-stage]):not([data-nv-stage] *) { background-image: none !important; }
+/* :is(#nv-sheet, *) 匹配所有元素——纯特异性提升器（ID 级 (1,0,1)），不是内容过滤器，勿清理 */
+body :is(#nv-sheet, *) {
   color: ${c.fg} !important;
   border-color: ${c.border} !important;
 }
-body :is(a:link, a:link *) { color: ${c.link} !important; }
-body :is(a:visited, a:visited *) { color: ${c.visited} !important; }
-body :is(cite, q, blockquote):is([class], [id], *) { color: ${c.cite} !important; }
-body :is([class], [id], *)::placeholder { color: ${c.muted} !important; opacity: 1 !important; }
+body :is(a:link, a:link *):is(#nv-sheet, *) { color: ${c.link} !important; }
+body :is(a:visited, a:visited *):is(#nv-sheet, *) { color: ${c.visited} !important; }
+body :is(cite, q, blockquote):is(#nv-sheet, *) { color: ${c.cite} !important; }
+body :is(#nv-sheet, *)::placeholder { color: ${c.muted} !important; opacity: 1 !important; }
 /* input/button 的 color 当前与提升后的平铺同值（冗余无害）；将来分化时需同步 :is 提升 */
 body input, body textarea, body select {
   background-color: ${c.inputBg} !important;

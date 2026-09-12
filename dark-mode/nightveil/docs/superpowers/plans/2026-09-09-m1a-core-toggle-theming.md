@@ -434,14 +434,14 @@ test('overlay compilation embeds all 9 palette colors and core selectors', () =>
     assert.ok(css.includes(value), `missing color ${value}`);
   }
   assert.match(css, /color-scheme:\s*dark/);
-  assert.match(css, /body :is\(a:link, a:link \*\)/);
-  assert.match(css, /body :is\(a:visited, a:visited \*\)/);
+  assert.match(css, /body :is\(a:link, a:link \*\):is\(#nv-sheet, \*\)/);
+  assert.match(css, /body :is\(a:visited, a:visited \*\):is\(#nv-sheet, \*\)/);
   assert.match(css, /body input,\s*body textarea,\s*body select/);
   assert.match(css, /background-image:\s*none\s*!important/);
   assert.match(css, /body \* {[^}]*background-color/s);
-  assert.match(css, /body \*\:not\(\[data-nv-stage\]\)\:not\(\[data-nv-stage\] \*\) \{ background-image: none !important; \}/);
-  assert.ok(css.includes('body :is([class], [id], *) {'), 'color lift selector missing');
-  assert.ok(css.includes('body :is(cite, q, blockquote):is([class], [id], *)'), 'cite specificity lift missing');
+  assert.match(css, /body :is\(#nv-sheet, \*\):not\(\[data-nv-stage\]\):not\(\[data-nv-stage\] \*\) \{ background-image: none !important; \}/);
+  assert.ok(css.includes('body :is(#nv-sheet, *) {'), 'color lift selector missing');
+  assert.ok(css.includes('body :is(cite, q, blockquote):is(#nv-sheet, *)'), 'cite specificity lift missing');
   assert.match(css, /body \[data-nv-stage\], body \[data-nv-stage\] \* \{ background-color: transparent !important; \}/);
 });
 
@@ -502,15 +502,16 @@ html, body {
 body * {
   background-color: ${c.bg} !important;
 }
-body *:not([data-nv-stage]):not([data-nv-stage] *) { background-image: none !important; }
-body :is([class], [id], *) {
+body :is(#nv-sheet, *):not([data-nv-stage]):not([data-nv-stage] *) { background-image: none !important; }
+/* :is(#nv-sheet, *) 匹配所有元素——纯特异性提升器（ID 级 (1,0,1)），不是内容过滤器，勿清理 */
+body :is(#nv-sheet, *) {
   color: ${c.fg} !important;
   border-color: ${c.border} !important;
 }
-body :is(a:link, a:link *) { color: ${c.link} !important; }
-body :is(a:visited, a:visited *) { color: ${c.visited} !important; }
-body :is(cite, q, blockquote):is([class], [id], *) { color: ${c.cite} !important; }
-body :is([class], [id], *)::placeholder { color: ${c.muted} !important; opacity: 1 !important; }
+body :is(a:link, a:link *):is(#nv-sheet, *) { color: ${c.link} !important; }
+body :is(a:visited, a:visited *):is(#nv-sheet, *) { color: ${c.visited} !important; }
+body :is(cite, q, blockquote):is(#nv-sheet, *) { color: ${c.cite} !important; }
+body :is(#nv-sheet, *)::placeholder { color: ${c.muted} !important; opacity: 1 !important; }
 body input, body textarea, body select {
   background-color: ${c.inputBg} !important;
   color: ${c.fg} !important;
