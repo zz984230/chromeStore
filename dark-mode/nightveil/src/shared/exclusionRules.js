@@ -42,6 +42,6 @@ export function evaluateRules(rules, signals = {}) {
   if (cookies.length && (signals.cookieNames ?? []).some((c) => cookies.includes(c))) return true;
   if (r.darkBackground
       && signals.bgLuminance !== null && signals.bgLuminance !== undefined
-      && signals.bgLuminance <= (Number(r.brightnessThreshold) || 50)) return true;
+      && signals.bgLuminance <= (Number.isFinite(Number(r.brightnessThreshold)) ? Number(r.brightnessThreshold) : 50)) return true;
   return false;
 }

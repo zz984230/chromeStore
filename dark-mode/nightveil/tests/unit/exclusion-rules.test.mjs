@@ -47,3 +47,9 @@ test('evaluateRules: custom attribute and cookie lists replace defaults', () => 
   assert.equal(evaluateRules(r, { htmlAttrs: ['data-night'] }), true);
   assert.equal(evaluateRules(r, { htmlAttrs: ['data-theme=dark'] }), false);
 });
+
+test('evaluateRules: brightnessThreshold 0 is honored, not coerced to the default', () => {
+  const r = { ...DEFAULT_SETTINGS.exclusionRules, darkBackground: true, brightnessThreshold: 0 };
+  assert.equal(evaluateRules(r, { bgLuminance: 0 }), true, 'luma 0 must be excluded at threshold 0');
+  assert.equal(evaluateRules(r, { bgLuminance: 1 }), false);
+});
