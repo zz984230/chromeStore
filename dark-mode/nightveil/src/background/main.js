@@ -54,3 +54,15 @@ chrome.runtime.onStartup.addListener(() => {
   loadSettings().then(refreshToolbar);
 });
 subscribeSettings((s) => { refreshToolbar(s); refreshMenu(s); });
+
+// Cross-origin stylesheet proxy for the adaptive engine (M2a): content
+// scripts are page-CORS-bound; the SW holds host_permissions so it can read
+// any sheet the page could load (M2-BEHAVIOR §5).
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg?.type !== 'nv-engine-fetch-css' || !/^https?:/i.test(msg.href ?? '')) return false;
+  fetch(msg.href, { cache: 'default' })
+    .then((r) => r.text())
+    .then((content) => sendResponse({ ok: true, content }))
+    .catch(() => sendResponse({ ok: false }));
+  return true; // async sendResponse
+});
