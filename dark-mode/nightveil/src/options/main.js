@@ -11,7 +11,11 @@ import {
 } from '../shared/settings.js';
 import { PALETTES } from '../shared/palettes.js';
 import { SITE_THEMES } from '../shared/siteThemes.js';
-import { SEAT_THEME_ID, seatCheckboxState, ENGINE_GROUPS, ENGINE_SITE_POLICIES } from '../shared/optionsEngine.js';
+import {
+  SEAT_THEME_ID, seatCheckboxState, ENGINE_GROUPS, ENGINE_SITE_POLICIES,
+  ENGINE_CONTROLS, ENGINE_BEHAVIOR_HOST, assembleEnginePatch, controlValue,
+  tuningFallback, engineValueAt,
+} from '../shared/optionsEngine.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -87,8 +91,9 @@ function renderPlaceholders() {
   section('sec-schedule', STRINGS.sectionScheduleLabel, note(STRINGS.sectionScheduleNote));
 }
 
-// ---- Section IV: adaptive engine (skeleton — the 38 sub-option controls and
-// the variable editors plug into the group hosts in M2c tasks 5-6) ----
+// ---- Section IV: adaptive engine (the §8 sub-option controls render from
+// shared/optionsEngine.js ENGINE_CONTROLS; the variable editors + extraRules
+// textarea arrive with M2c task 6) ----
 function renderEngine() {
   // Seat master switch: checked ⟺ themeId === 'adaptive'. Unchecking hands
   // the seat to the first classic theme — some theme must stay selected
@@ -106,10 +111,57 @@ function renderEngine() {
   for (const g of ENGINE_GROUPS) {
     const host = el('div', { id: g.id }, el('p', { class: 'hint' }, g.label));
     if (g.id === 'eng-group-jkl') host.append(sitePolicyBox());
+    for (const c of ENGINE_CONTROLS.filter((k) => k.host === g.id)) host.append(engineControl(c));
     controls.append(host);
   }
+  controls.addEventListener('change', onEngineControlChange);
 
   section('sec-engine', STRINGS.sectionEngineLabel, seat, note(STRINGS.sectionEngineNote), controls);
+}
+
+// One §8 control row; values read from the last rendered settings snapshot.
+function engineControl(c) {
+  const value = engineValueAt(current.engine, c.path);
+  if (c.type === 'checkbox') {
+    return el('label', {}, el('input', { type: 'checkbox', id: c.id, checked: !!value }), ` ${c.label}`);
+  }
+  if (c.type === 'number') {
+    return el('label', {}, `${c.label} `, el('input', {
+      type: 'number', id: c.id, min: String(c.min), max: String(c.max), step: String(c.step ?? 1), value,
+    }));
+  }
+  if (c.type === 'radio') {
+    return el('label', {},
+      el('input', { type: 'radio', name: c.name, id: c.id, value: c.value, checked: value === c.value }),
+      ` ${c.label}`);
+  }
+  return el('label', {}, `${c.label} `, el('input', { type: 'text', id: c.id, size: '40', value: value ?? '' }));
+}
+
+// m.3 (page-load) needs PerformanceLongTaskTiming; without it the original
+// alerts and keeps m.2, saving nothing (M2-BEHAVIOR §0-④).
+function acceptTuning(chosen) {
+  const tuned = tuningFallback(typeof window.PerformanceLongTaskTiming !== 'undefined', chosen);
+  if (tuned === chosen) return true;
+  window.alert(STRINGS.engineTuningUnsupported);
+  const keep = document.querySelector('#eng-tuning-performance');
+  if (keep) keep.checked = true;
+  return false;
+}
+
+// Delegated autosave for every §8 control (group hosts + the II-area pair):
+// resolve by id, convert by type, write the whole engine group assembled from
+// the current snapshot — advanced synchronously so rapid edits compose
+// instead of clobbering each other before storage echoes back.
+function onEngineControlChange(e) {
+  const c = ENGINE_CONTROLS.find((k) => k.id === e.target.id);
+  if (!c) return false;
+  if (c.type === 'radio' && !acceptTuning(e.target.value)) return true;
+  const raw = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+  const next = assembleEnginePatch(current.engine, c.path, controlValue(c, raw));
+  current = { ...current, engine: next };
+  save({ engine: next });
+  return true;
 }
 
 // Site policy tri-state (respect / ignore / skip-compatible) → engine.siteThemePolicy.
@@ -134,7 +186,7 @@ function sitePolicyBox() {
 
 // ---- Section II: options (behavior + exclusion rules) ----
 function renderBehavior() {
-  const box = el('fieldset', {}, el('legend', {}, STRINGS.behaviorLabel));
+  const box = el('fieldset', { id: ENGINE_BEHAVIOR_HOST }, el('legend', {}, STRINGS.behaviorLabel));
   box.append(
     el('label', {}, el('input', { type: 'radio', name: 'state', value: 'light', checked: current.state === 'light' }), ` ${STRINGS.stateLightLabel}`),
     el('label', {}, el('input', { type: 'radio', name: 'state', value: 'dark', checked: current.state === 'dark' }), ` ${STRINGS.stateDarkLabel}`),
@@ -142,7 +194,15 @@ function renderBehavior() {
     note(STRINGS.inclusionModeNote),
     el('label', {}, el('input', { type: 'checkbox', 'data-key': 'perSiteToggle', checked: current.perSiteToggle }), ` ${STRINGS.perSiteToggleLabel}`),
   );
+  // II-area engine keys per §8: the recheck pair. They disable with the seat —
+  // no engine, no effect (sync re-derives this like the #eng-controls fieldset).
+  for (const c of ENGINE_CONTROLS.filter((k) => k.host === ENGINE_BEHAVIOR_HOST)) {
+    const row = engineControl(c);
+    row.querySelector('input').disabled = !seatCheckboxState(current.themeId);
+    box.append(row);
+  }
   box.addEventListener('change', (e) => {
+    if (onEngineControlChange(e)) return;
     if (e.target.name === 'state') save({ state: e.target.value });
     else if (e.target.getAttribute('data-key')) save({ [e.target.getAttribute('data-key')]: e.target.checked });
   });
@@ -202,6 +262,17 @@ function syncFromSettings(s) {
   if (controls) controls.disabled = !seatCheckboxState(s.themeId);
   for (const i of document.querySelectorAll('#sec-engine input[name="siteThemePolicy"]')) {
     i.checked = i.value === s.engine.siteThemePolicy;
+  }
+  // §8 controls re-derive from the merged engine group; the II-area pair also
+  // follows the seat (#eng-controls' fieldset disabled covers the rest).
+  for (const c of ENGINE_CONTROLS) {
+    const node = document.getElementById(c.id);
+    if (!node) continue;
+    if (c.host === ENGINE_BEHAVIOR_HOST) node.disabled = !seatCheckboxState(s.themeId);
+    const v = engineValueAt(s.engine, c.path);
+    if (node.type === 'checkbox') node.checked = !!v;
+    else if (node.type === 'radio') node.checked = node.value === v;
+    else if (document.activeElement !== node) node.value = v ?? '';
   }
   for (const i of document.querySelectorAll('#sec-themes input[data-site]')) {
     i.checked = !(s.disabledSiteThemes ?? []).includes(i.getAttribute('data-site'));
