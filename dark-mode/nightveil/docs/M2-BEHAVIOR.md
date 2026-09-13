@@ -16,7 +16,7 @@
 | ⑥ | Flash Guard | 引擎模式照常生效（guard 属性先挂）；移除时机三选一最早者：引擎写入首条规则后 delay 到期 / window load / 首个 longtask-self；重页面（元素数 ≥ 阈值 1000）跳过早移除等 load |
 | ⑦ | 特异性博弈 | 不改原规则，**复制进引擎自有样式表**：选择器前缀 `html[nv-active]`（:root/:host 有对应形式），逗号分组逐段处理；选项 c 开则统一 `!important`，否则保留原属性优先级 |
 | ⑧ | 内联 style | 选项 f 开才处理；给元素挂随机类，在引擎表写 `html[nv-active] .nv-inline-XXXX { … !important }`；仅 color / border-color / background / background-color / background-image 五类属性；内联自定义属性也进变量映射表 |
-| ⑨ | 颜色解析面 | `#RGB #RGBA #RRGGBB #RRGGBBAA`、`rgb()/rgba()/hsl()/hsla()`（逗号或空格分隔、数值或百分比）、148 个命名色。其余（oklch/lab/color()/color-mix 输入侧等）判 invalid → 走 a.6 回退色路径 |
+| ⑨ | 颜色解析面 | `#RGB #RGBA #RRGGBB #RRGGBBAA`、`rgb()/rgba()/hsl()/hsla()`（逗号或空格分隔、数值或百分比）、**146 个命名色**（原版清单本身缺 `cyan`/`magenta` 别名，以其为准；2026-09-13 建档期勘正）。其余（oklch/lab/color()/color-mix 输入侧等）判 invalid → 走 a.6 回退色路径 |
 | ⑩ | 性能旋钮 | 在 30+ 内：m.2/m.3 调优取向、m.1 PO 开关、i.2 持续处理、n 深层规则、II 区 recheck 延迟、VI 阈值。无毫秒预算类数值 |
 
 ## 1. 选择与优先级语义
