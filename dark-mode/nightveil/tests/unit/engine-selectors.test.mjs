@@ -48,3 +48,22 @@ test('child combinator segment always uses the space form', () => {
 test('function/attr commas are not split', () => {
   assert.equal(transformSelector(':is(a, b) .c', [], none), `${KEY} :is(a, b) .c`);
 });
+
+// Shadow context (§5): shadow trees have no html ancestor, so segments emit
+// bare — the host sheet's disabled flag is the on/off switch.
+test('bare mode: plain, universal and attr segments emit unprefixed', () => {
+  assert.equal(transformSelector('.btn', [], none, { bare: true }), '.btn');
+  assert.equal(transformSelector('*', [], none, { bare: true }), '*');
+  assert.equal(transformSelector('*.foo', [], none, { bare: true }), '*.foo');
+  assert.equal(transformSelector('.deep .inner .leaf', [], none, { bare: true }), '.deep .inner .leaf');
+  assert.equal(transformSelector('[data-x] .y', ['[data-x]'], solo, { bare: true }), '[data-x] .y');
+});
+
+test('bare mode: html/:root/:host still rewrite in place; pseudo-only still drops', () => {
+  assert.equal(transformSelector('html body', [], none, { bare: true }), `${KEY} body`);
+  assert.equal(transformSelector(':root', [], none, { bare: true }), ':root[data-nv-active]');
+  assert.equal(transformSelector(':host', [], none, { bare: true }), ':host([data-nv-active])');
+  assert.equal(transformSelector(':host(.x)', [], none, { bare: true }), ':host(.x[data-nv-active])');
+  assert.equal(transformSelector('::selection', [], none, { bare: true }), '');
+  assert.equal(transformSelector('.a, ::-webkit-scrollbar', [], none, { bare: true }), '.a');
+});

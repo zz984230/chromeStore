@@ -32,9 +32,14 @@ test('hook: idempotent double-injection guard', () => {
   assert.match(hook, /window\.__nvShadowHook\s*=\s*true\s*;/);
 });
 
-test('hook: whole body wrapped in try/catch — never breaks the page', () => {
-  assert.match(hook, /^\s*try\s*\{/m);
-  assert.match(hook, /catch\s*\(/);
+test('hook: IIFE body whose catches all swallow — never breaks the page', () => {
+  // Structural: the whole body lives in an IIFE wrapper, and every catch
+  // block swallows (no rethrow may ever reach the page's attachShadow).
+  assert.match(hook, /\(function\s*\(\s*\)\s*\{/);
+  assert.match(hook, /\}\)\(\)\s*;?\s*$/);
+  const catches = hook.match(/catch\s*\(\w*\)\s*\{[^}]*\}/g) ?? [];
+  assert.ok(catches.length >= 2, `expected guarded catch blocks, got ${catches.length}`);
+  for (const c of catches) assert.doesNotMatch(c, /\bthrow\b/);
 });
 
 test('hook: nv-shdw-<random> host key format', () => {

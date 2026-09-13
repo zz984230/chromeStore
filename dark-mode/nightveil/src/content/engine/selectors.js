@@ -24,7 +24,21 @@ export function htmlPropTokens(doc) {
   return tokens;
 }
 
-export function transformSelector(selectorText, htmlProps, countFn) {
+// html/:root/:host segments rewrite in place instead of gaining the prefix —
+// shared by both transformSelector modes (same precedence as before: html,
+// :root, :host).
+function rewriteInPlace(text) {
+  if (text.startsWith('html')) return text.replace('html', KEY);
+  if (text.startsWith(':root')) return text.replace(':root', ROOT_KEY);
+  if (text.startsWith(':host')) {
+    const simple = text.indexOf(')') === -1;
+    return simple ? text.replace(':host', ':host([data-nv-active])')
+      : text.replace(')', '[data-nv-active])');
+  }
+  return null;
+}
+
+export function transformSelector(selectorText, htmlProps, countFn, { bare = false } = {}) {
   const out = [];
   for (const raw of splitTopLevel(selectorText)) {
     const text = raw.trim();
@@ -32,16 +46,17 @@ export function transformSelector(selectorText, htmlProps, countFn) {
     const first = text.split(' ')[0];
 
     if (text.startsWith('::')) continue; // pseudo-only segment drops
+
+    const inPlace = rewriteInPlace(text);
+    if (inPlace !== null) { out.push(inPlace); continue; }
+
+    // Shadow context (§5): a shadow tree has no html ancestor, so the
+    // html[data-nv-active] prefix would never match — segments emit bare and
+    // the host sheet's disabled flag is the on/off switch.
+    if (bare) { out.push(text); continue; }
+
     if (text === '*') { out.push(`${KEY}, ${KEY} *`); continue; }
     if (text.startsWith('*')) { out.push(`${KEY} ${text}`); continue; }
-    if (text.startsWith('html')) { out.push(text.replace('html', KEY)); continue; }
-    if (text.startsWith(':root')) { out.push(text.replace(':root', ROOT_KEY)); continue; }
-    if (text.startsWith(':host')) {
-      const simple = text.indexOf(')') === -1;
-      out.push(simple ? text.replace(':host', ':host([data-nv-active])')
-        : text.replace(')', '[data-nv-active])'));
-      continue;
-    }
 
     const matchesHtml = htmlProps.includes(first);
     const noChildCombinator = text.indexOf('>') === -1;

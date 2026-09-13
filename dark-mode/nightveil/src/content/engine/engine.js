@@ -168,7 +168,10 @@ const safeCount = (token) => {
 };
 
 function emit(rule, propName, value) {
-  const selector = transformSelector(rule.selectorText, state.htmlProps, safeCount);
+  // Shadow sheets emit bare selectors: a shadow tree has no html ancestor, so
+  // the prefixed form would never match (sheet.disabled is the on/off switch).
+  const selector = transformSelector(rule.selectorText, state.htmlProps, safeCount,
+    { bare: state.shadowTarget !== null });
   if (!selector) return;
   const priority = state.engine.highPriority
     || rule.style.getPropertyPriority(propName) === 'important';
@@ -352,10 +355,9 @@ export function engineProcessSheetOf(node) {
 // nested shadows are covered — collecting hosts by shadowRoot presence. Each
 // host gets a marked key and a dedicated engine sheet adopted into its root;
 // the root's own sheets then rescan through the normal visitRule path with
-// state.shadowTarget set, so emitted rules land in the host's sheet (:host
-// segments rewrite via transformSelector's :host branch; other selectors fall
-// back to the html[data-nv-active] prefix, which only matches light-DOM
-// descendants — acceptable v1 simplification).
+// state.shadowTarget set, so emitted rules land in the host's sheet in bare
+// selector form (shadow trees have no html ancestor — sheet.disabled is the
+// on/off switch; :host/:root/html segments still rewrite in place).
 export function engineProcessShadowRoots() {
   if (state.engine === null) return;
   const own = new Set(shadowSheets.values()); // never rescan our engine sheets
@@ -691,9 +693,14 @@ export function deactivateEngine() {
     if (el.sheet) el.sheet.disabled = true;
   }
   // Shadow engine sheets sleep but stay adopted; the map is kept so
-  // re-activation revives them (cross-origin clone semantics).
-  for (const sheet of shadowSheets.values()) {
+  // re-activation revives them (cross-origin clone semantics). Bare rules
+  // carry no data-nv-active gate, so they must be cleared on teardown
+  // (mirroring the main sheet's mount-empty) and detached hosts pruned.
+  for (const [key, sheet] of shadowSheets) {
     sheet.disabled = true;
-    sheet.__nvHost?.removeAttribute(ACTIVE_ATTR);
+    const host = sheet.__nvHost;
+    host?.removeAttribute(ACTIVE_ATTR);
+    if (!host?.isConnected) { shadowSheets.delete(key); continue; }
+    try { while (sheet.cssRules.length) sheet.deleteRule(0); } catch { /* keep sleeping */ }
   }
 }
