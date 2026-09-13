@@ -914,12 +914,13 @@ test('absolutizeUrls rewrites relative urls against the sheet base, keeps data/a
   assert.ok(out.includes('url(https://e/f.png)'));
 });
 
-test('shouldFetch accepts http(s) css and non-font urls, rejects fonts and others', () => {
+test('shouldFetch accepts http(s) css and non-font urls, rejects non-css fonts and others', () => {
   assert.equal(shouldFetch('https://x.com/a.css'), true);
   assert.equal(shouldFetch('https://x.com/styles? v=2'), true); // http + not font
-  assert.equal(shouldFetch('https://x.com/font.css'), false);
+  // 原版字体过滤只作用于非 .css URL：.css 后缀短路通过（font.css 也会被代取）
+  assert.equal(shouldFetch('https://x.com/font.css'), true);
+  assert.equal(shouldFetch('https://x.com/assets/fonts/main.css'), true);
   assert.equal(shouldFetch('https://fonts.gstatic.com/s/font.woff2'), false);
-  assert.equal(shouldFetch('https://x.com/assets/fonts/main.css'), false);
   assert.equal(shouldFetch('about:blank'), false);
   assert.equal(shouldFetch('//x.com/a.css'), true); // protocol-relative resolves to http
 });

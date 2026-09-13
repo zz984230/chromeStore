@@ -12,7 +12,7 @@
 | ② | 30+ 子选项 | 共 **38 个存储键**（含 2 个纯数值、1 个文本、1 个变量组、1 个 extra rules 文本），逐项见 §8 映射表 |
 | ③ | 18 变量 | 9 色 + 9 文本，语义与默认值见 §9；注入目标 `:root, ::after, ::before, ::backdrop`；**用户可在选项页直接编辑** |
 | ④ | observer 模式 | 不是一个二选一开关，而是**多个正交观察项**：元素 MO 常开；style 属性 MO（f 开才挂）；class MO（i.1 开才挂）；PerformanceObserver（m.1 开才挂，m.3 依赖它）。m.2/m.3 是另一组 radio「调优取向」 |
-| ⑤ | 跨域样式表 | **不跳过**——同源直接 fetch（含 UTF-16 BOM 修正）；跨源发 href 给 SW 代取文本；字体 URL 跳过；HTML 响应丢弃；相对 url() 重写为绝对；克隆 `<style>` 作为原 `<link>` 子节点落回（跟随 media 属性与文档位置），原 link 不禁用 |
+| ⑤ | 跨域样式表 | **不跳过**——同源直接 fetch（含 UTF-16 BOM 修正）；跨源发 href 给 SW 代取文本；字体 URL 跳过（**仅非 .css URL**——`.css` 后缀短路通过，`font.css` 也会被代取，原版行为；2026-09-13 建档期勘正）；HTML 响应丢弃；相对 url() 重写为绝对；克隆 `<style>` 作为原 `<link>` 子节点落回（跟随 media 属性与文档位置），原 link 不禁用 |
 | ⑥ | Flash Guard | 引擎模式照常生效（guard 属性先挂）；移除时机三选一最早者：引擎写入首条规则后 delay 到期 / window load / 首个 longtask-self；重页面（元素数 ≥ 阈值 1000）跳过早移除等 load |
 | ⑦ | 特异性博弈 | 不改原规则，**复制进引擎自有样式表**：选择器前缀 `html[nv-active]`（:root/:host 有对应形式），逗号分组逐段处理；选项 c 开则统一 `!important`，否则保留原属性优先级 |
 | ⑧ | 内联 style | 选项 f 开才处理；给元素挂随机类，在引擎表写 `html[nv-active] .nv-inline-XXXX { … !important }`；仅 color / border-color / background / background-color / background-image 五类属性；内联自定义属性也进变量映射表 |
