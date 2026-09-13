@@ -40,9 +40,10 @@ export async function fetchRemoteCss(href, { fetchImpl = (...a) => fetch(...a), 
     try {
       const response = await fetchImpl(abs, { cache: 'default' });
       if (response?.ok) {
+        const cloned = response.clone();          // clone BEFORE consuming the body
         let content = await response.text();
         if (content.includes('\x00')) {
-          const buffer = await response.clone().arrayBuffer();
+          const buffer = await cloned.arrayBuffer();
           content = buffer ? new TextDecoder('utf-16').decode(buffer) : content;
         }
         if (content.includes('<!DOCTYPE html>')) return null;
