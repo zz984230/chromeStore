@@ -33,7 +33,7 @@ const sheet = (id, rules) => rules
 
 export const SITE_THEMES = [
   {
-    id: 'google', label: 'Google', hosts: ['google.com'],
+    id: 'google', label: 'Google', hosts: ['google.com'], compatible: true,
     css: sheet('google', [
       [' header', 'background-color: #202124 !important;'],
       [' footer', 'background-color: #171717 !important;'],

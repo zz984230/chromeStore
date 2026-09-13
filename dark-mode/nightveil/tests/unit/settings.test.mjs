@@ -71,3 +71,20 @@ test('subscribeSettings fires with new settings on our key only and can be cance
   assert.equal(seen.length, 1);
   assert.equal(seen[0].state, 'dark');
 });
+
+test('engine settings default and one-level deep merge for nested groups', async () => {
+  const mem = new MemoryStorage({ [STORAGE_KEY]: { engine: { highPriority: true } } });
+  const s = await loadSettings(mem);
+  assert.equal(s.themeId, 'adaptive', 'factory default theme is the engine seat');
+  assert.equal(s.engine.highPriority, true, 'stored override wins');
+  assert.equal(s.engine.siteThemePolicy, 'skip-compatible', 'missing fields backfill');
+  assert.equal(s.engine.luminanceRange.max, 75);
+  assert.deepEqual(s.engine.variables['--nv-surface'], '#292929');
+});
+
+test('legacy full-engine-absent settings upgrade keeps exclusionRules backfill', async () => {
+  const mem = new MemoryStorage({ [STORAGE_KEY]: { state: 'dark', themeId: 'nv-midnight' } });
+  const s = await loadSettings(mem);
+  assert.equal(s.engine.contextAware, true);
+  assert.equal(s.exclusionRules.metaScheme, true);
+});

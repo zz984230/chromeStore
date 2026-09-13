@@ -4,13 +4,15 @@
 // Writers (background toolbar/menu, options page) serialize through writeChain
 // per context; cross-context last-writer-wins remains possible (v1 accepted —
 // the two writers touch mostly disjoint fields, see M1b plan).
+import { engineDefaults } from '../content/engine/contract.js';
+
 const STORAGE_KEY_VALUE = 'nightveil.settings';
 
 export const STORAGE_KEY = STORAGE_KEY_VALUE;
 
 export const DEFAULT_SETTINGS = Object.freeze({
   state: 'light',          // 'light' | 'dark'
-  themeId: 'nv-simple',    // palettes.js id
+  themeId: 'adaptive',     // engine seat — factory default (M2-BEHAVIOR §11 拍板 1)
   inclusionMode: false,    // false = exclusion semantics; true = only listed sites
   perSiteToggle: false,    // inclusion mode + true → toolbar click edits inclusionList
   exclusionList: [],       // hostnames; an entry covers itself and its subdomains
@@ -24,6 +26,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
     htmlClasses: 'dark,darkmode',      // comma list matched against <html> classes
     cookies: '',                       // comma list of cookie names
   },
+  engine: engineDefaults(),
 });
 
 export function defaultStorage() {
@@ -32,8 +35,13 @@ export function defaultStorage() {
   return cs;
 }
 
+const NESTED_GROUPS = ['exclusionRules', 'engine'];
 function mergeWithDefaults(stored) {
-  return { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
+  const merged = { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
+  for (const group of NESTED_GROUPS) {
+    merged[group] = { ...DEFAULT_SETTINGS[group], ...(stored?.[group] ?? {}) };
+  }
+  return merged;
 }
 
 export async function loadSettings(storage = defaultStorage()) {

@@ -42,3 +42,9 @@ test('compiled sheets boost every selector segment with the specificity prefix',
   assert.equal(findSiteTheme('nope'), undefined);
   assert.equal(compileSiteTheme('nope'), undefined);
 });
+
+test('google is the compatible site theme that yields to the engine', () => {
+  const google = SITE_THEMES.find((t) => t.id === 'google');
+  assert.equal(google.compatible, true);
+  assert.equal(SITE_THEMES.filter((t) => t.compatible).length, 1);
+});
