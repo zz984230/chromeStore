@@ -301,6 +301,7 @@ export function deactivateEngine() {
   for (const id of [VARS_STYLE_ID, SHEET_STYLE_ID]) document.getElementById(id)?.remove();
   state.varsEl = null;
   state.sheetEl = null;
+  state.engine = null;
   state.writtenSelectors = new Set();
   state.varMap = {};
   state.htmlProps = [];
