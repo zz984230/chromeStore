@@ -107,7 +107,7 @@ function rewriteStyleRule(rule) {
     const value = rewriteColor(bgAll, { type: 'background', engine: e, varMap, selectorText: rule.selectorText });
     if (value !== bgAll || bgAll === 'transparent') {
       const nobc = rule.style.getPropertyValue('background-color') === '';
-      const key = nobc ? 'background' : (bgAll.indexOf('--gradient(') !== -1 ? 'background' : 'background-color');
+      const key = nobc ? 'background' : (bgAll.indexOf('-gradient(') !== -1 ? 'background' : 'background-color');
       emit(rule, key, value);
     }
   }
