@@ -445,8 +445,9 @@ test('invalid color with fallback enabled mixes fallback with transparency', () 
   assert.equal(out, 'color-mix(in srgb, var(--nv-surface) 90%, transparent)');
 });
 
-test('very light color (luminance above max) → fallback variable', () => {
-  const out = rewriteColor('#f4f6f8', { type: 'background', engine: D, varMap: {}, selectorText: '.card' });
+test('very light color (luminance above max, near-white degree past gate) → fallback variable', () => {
+  // #fefefe: l=0.996 → bp=100, outside near-white gate [5,95] → plain fallback
+  const out = rewriteColor('#fefefe', { type: 'background', engine: D, varMap: {}, selectorText: '.card' });
   assert.equal(out, 'var(--nv-surface)');
 });
 
@@ -457,10 +458,10 @@ test('mid-luminance color darkens 10% for background, lightens 10% for text', ()
   assert.notEqual(bg, fg, 'background darkens, text lightens — different outputs');
 });
 
-test('very light + bright → darken 50% instead of 10%', () => {
-  // #f5f5dc (beige): luminance ≈ 0.87 > 0.75 AND (s+l)/2 high → isbright
-  const out = rewriteColor('#f5f5dc', { type: 'background', engine: { ...D, luminanceRange: { min: 10, max: 30 } }, varMap: {}, selectorText: '.card' });
-  assert.match(out, /^#[0-9a-f]{8}$/);
+test('bright mid-luminance color darkens 50% instead of 10%', () => {
+  // #e0e0e0: luminance 0.745 ∈ (0.10, 0.75]; l 0.878 > 0.75 → isbright + darken → 50%
+  const out = rewriteColor('#e0e0e0', { type: 'background', engine: D, varMap: {}, selectorText: '.card' });
+  assert.equal(out, '#707070ff');
 });
 
 test('dark color below min luminance is preserved', () => {
@@ -474,9 +475,10 @@ test('pure black always preserved', () => {
 });
 
 test('near-white adjustment blends fallback with a computed darker hex', () => {
-  const out = rewriteColor('#fefefe', { type: 'background', engine: D, varMap: {}, selectorText: '.card' });
-  // luminance ≈ 0.996 > 0.75 → near-white branch before plain fallback
-  assert.match(out, /^color-mix\(in srgb, var\(--nv-surface\) \d+%, #[0-9a-f]{6} \d+%\)$/);
+  // #f4f6f8: l=0.9647 → bp=floor((0.2147/0.25)^1.1×105)=88 ∈ [5,95];
+  // darker = floor(10×0.88)=8 subtracted from #292929 → #212121
+  const out = rewriteColor('#f4f6f8', { type: 'background', engine: D, varMap: {}, selectorText: '.card' });
+  assert.equal(out, 'color-mix(in srgb, var(--nv-surface) 12%, #212121 88%)');
 });
 
 test('alpha preservation mixes fallback with transparent for translucent colors', () => {
@@ -645,24 +647,28 @@ export function rewriteColor(value, { type, engine, varMap = {}, selectorText = 
   const rootSpecial = selectorTargetsRoot(selectorText);
 
   if (lum > tMax || rootSpecial) {
-    if (engine.preserveAlpha && specs.a < 1) {
-      return `color-mix(in srgb, ${fallback}, transparent ${Math.floor((1 - specs.a) * 100)}%)`;
-    }
-    if (engine.nearWhiteAdjust.enabled) {
-      const strength = 105, exponent = 1.10;
-      let bp = Math.floor(Math.min(100, Math.pow(
-        Math.max(0, Math.min(1, (l - tMax) / (1 - tMax))), exponent) * strength));
-      if (isbright === false) bp = 0;
-      const nw = engine.nearWhiteAdjust;
-      if (bp >= nw.min && bp <= nw.max) {
-        const hex = engine.variables['--nv-surface'];
-        if (/^#[0-9a-f]{6}$/i.test(hex)) {
-          let dp = Math.floor(nw.percent * (bp / 100));
-          const dr = Math.max(0, parseInt(hex.slice(1, 3), 16) - dp);
-          const dg = Math.max(0, parseInt(hex.slice(3, 5), 16) - dp);
-          const db = Math.max(0, parseInt(hex.slice(5, 7), 16) - dp);
-          const darker = `#${dr.toString(16).padStart(2, '0')}${dg.toString(16).padStart(2, '0')}${db.toString(16).padStart(2, '0')}`;
-          return `color-mix(in srgb, ${fallback} ${100 - bp}%, ${darker} ${bp}%)`;
+    if (engine.preserveAlpha) {
+      if (specs.a < 1) {
+        return `color-mix(in srgb, ${fallback}, transparent ${Math.floor((1 - specs.a) * 100)}%)`;
+      }
+      // near-white blend is only reachable with alpha preservation on and a
+      // fully opaque color — nesting mirrors the original (M2-BEHAVIOR §3-5)
+      if (engine.nearWhiteAdjust.enabled) {
+        const strength = 105, exponent = 1.10;
+        let bp = Math.floor(Math.min(100, Math.pow(
+          Math.max(0, Math.min(1, (l - tMax) / (1 - tMax))), exponent) * strength));
+        if (isbright === false) bp = 0;
+        const nw = engine.nearWhiteAdjust;
+        if (bp >= nw.min && bp <= nw.max) {
+          const hex = engine.variables['--nv-surface'];
+          if (/^#[0-9a-f]{6}$/i.test(hex)) {
+            let dp = Math.floor(nw.percent * (bp / 100));
+            const dr = Math.max(0, parseInt(hex.slice(1, 3), 16) - dp);
+            const dg = Math.max(0, parseInt(hex.slice(3, 5), 16) - dp);
+            const db = Math.max(0, parseInt(hex.slice(5, 7), 16) - dp);
+            const darker = `#${dr.toString(16).padStart(2, '0')}${dg.toString(16).padStart(2, '0')}${db.toString(16).padStart(2, '0')}`;
+            return `color-mix(in srgb, ${fallback} ${100 - bp}%, ${darker} ${bp}%)`;
+          }
         }
       }
     }
