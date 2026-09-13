@@ -19,10 +19,28 @@ export function buildRuleText(selector, prop, value, { priority }) {
   return `${selector} { ${prop}: ${value}${priority ? ' !important' : ''} }`;
 }
 
+// §4 d.1/d.3: re-wrap a rewritten rule in the at-condition it was found under.
+// The at-rule keyword comes from the condition's owning rule (media/supports);
+// an empty condition wraps nothing — the rule text passes through unchanged.
+export function wrapConditional(atKeyword, conditionText, ruleText) {
+  const cond = (conditionText ?? '').trim();
+  if (!cond) return ruleText;
+  return `@${atKeyword} ${cond} { ${ruleText} }`;
+}
+
+// §4 d.2: @keyframes blocks copy wholesale into the engine sheet — the block
+// text is the original name plus the accumulated keyframe cssText.
+export function copyKeyframesBlock(keyframesRule) {
+  const parts = [];
+  for (const kf of keyframesRule.cssRules) parts.push(kf.cssText);
+  return `@keyframes ${keyframesRule.name} { ${parts.join(' ')} }`;
+}
+
 const state = {
   sheetEl: null,
   varsEl: null,
   writtenSelectors: new Set(), // selectors already present in the engine sheet
+  writtenKeyframes: new Set(), // @keyframes names already copied into the engine sheet
   engine: null,
   varMap: {},
   htmlProps: [], // htmlPropTokens snapshot, recomputed once per scan pass
@@ -133,24 +151,44 @@ export function newElementKey(node) {
 
 function prop(rule, name) { return rule.style.getPropertyValue(name) || rule.style[name] || ''; }
 
-function insertEngineRule(selector, prop, value, priority, target = state.sheetEl) {
-  const css = buildRuleText(selector, prop, value, { priority });
+// Priority decision shared by the sheet emit path and the keyframe-copy path.
+function rulePriority(rule, propName) {
+  return state.engine.highPriority || rule.style.getPropertyPriority(propName) === 'important';
+}
+
+// Conditioned rules (§4 d.1/d.3) dedup on selector + joined condition chain;
+// this map remembers each inserted group rule so a rescan updates it in place
+// instead of piling up duplicate @media blocks.
+const conditionedRules = new Map();
+
+function insertEngineRule(selector, prop, value, priority, target = state.sheetEl, conditions = []) {
+  const css = conditions.length
+    ? conditions.reduceRight((acc, c) => wrapConditional(c.at, c.text, acc),
+      buildRuleText(selector, prop, value, { priority }))
+    : buildRuleText(selector, prop, value, { priority });
+  const key = conditions.length
+    ? `${selector} | ${conditions.map((c) => `@${c.at} ${c.text}`).join(' && ')}`
+    : selector;
   const sheet = target?.sheet;
-  if (state.writtenSelectors.has(selector) && sheet) {
+  if (state.writtenSelectors.has(key) && sheet) {
     // same selector already rewritten → update in place when possible
     try {
-      for (let i = 0; i < sheet.cssRules.length; i++) {
-        if (sheet.cssRules[i].selectorText === selector) {
-          sheet.cssRules[i].style.setProperty(prop, value, priority ? 'important' : '');
-          return;
+      const scopes = conditions.length ? conditionedRules.get(key)?.cssRules : sheet.cssRules;
+      if (scopes) {
+        for (let i = 0; i < scopes.length; i++) {
+          if (scopes[i].selectorText === selector) {
+            scopes[i].style.setProperty(prop, value, priority ? 'important' : '');
+            return;
+          }
         }
       }
     } catch { /* fall through to insert */ }
   }
   try {
-    sheet.insertRule(css, 0);
+    const index = sheet.insertRule(css, 0);
+    if (conditions.length) conditionedRules.set(key, sheet.cssRules[index]);
   } catch { return; /* invalid selector — skip silently, matches original tolerance */ }
-  state.writtenSelectors.add(selector);
+  state.writtenSelectors.add(key);
   if (state.onFirstRule) {
     const cb = state.onFirstRule;
     state.onFirstRule = null;
@@ -167,18 +205,20 @@ const safeCount = (token) => {
   catch { return 1; }
 };
 
-function emit(rule, propName, value) {
+function emit(rule, propName, value, conditions = []) {
   // Shadow sheets emit bare selectors: a shadow tree has no html ancestor, so
   // the prefixed form would never match (sheet.disabled is the on/off switch).
   const selector = transformSelector(rule.selectorText, state.htmlProps, safeCount,
     { bare: state.shadowTarget !== null });
   if (!selector) return;
-  const priority = state.engine.highPriority
-    || rule.style.getPropertyPriority(propName) === 'important';
-  insertEngineRule(selector, propName, value, priority, state.shadowTarget ?? state.sheetEl);
+  insertEngineRule(selector, propName, value, rulePriority(rule, propName),
+    state.shadowTarget ?? state.sheetEl, conditions);
 }
 
-function rewriteStyleRule(rule) {
+// rewriteStyleRule is the per-property rewriting shared by sheet rules and
+// keyframe copies: emitFn defaults to the engine-sheet emit; the keyframes
+// branch overrides it to setProperty directly on the copied keyframe rules.
+function rewriteStyleRule(rule, conditions = [], emitFn = emit) {
   const e = state.engine;
   const varMap = state.varMap;
   if (e.mapCssVariables) collectCustomProps(rule);
@@ -186,15 +226,15 @@ function rewriteStyleRule(rule) {
   if (e.darken.text) {
     const v = prop(rule, 'color');
     if (v && v !== 'var(--nv-text)' && isProcessableColor(v, 'text', e)) {
-      if (v.trim() === 'transparent') emit(rule, 'font-size', '0');       // §10 quirk
-      else emit(rule, 'color', rewriteColor(v, { type: 'text', engine: e, varMap, selectorText: rule.selectorText }));
+      if (v.trim() === 'transparent') emitFn(rule, 'font-size', '0', conditions);       // §10 quirk
+      else emitFn(rule, 'color', rewriteColor(v, { type: 'text', engine: e, varMap, selectorText: rule.selectorText }), conditions);
     }
   }
   if (e.darken.svgFill || e.darken.svgStroke) {
     for (const [name, on] of [['fill', e.darken.svgFill], ['stroke', e.darken.svgStroke]]) {
       const v = prop(rule, name);
       if (on && v && v !== 'var(--nv-ink)' && isProcessableColor(v, 'svg', e)) {
-        emit(rule, name, rewriteColor(v, { type: 'svg', engine: e, varMap, selectorText: rule.selectorText }));
+        emitFn(rule, name, rewriteColor(v, { type: 'svg', engine: e, varMap, selectorText: rule.selectorText }), conditions);
       }
     }
   }
@@ -202,7 +242,7 @@ function rewriteStyleRule(rule) {
     for (const [name, on, varName] of [['box-shadow', e.darken.boxShadow, '--nv-shadow-box'], ['text-shadow', e.darken.textShadow, '--nv-shadow-text']]) {
       const v = prop(rule, name);
       if (on && v && v !== 'none' && !v.includes('transparent') && v !== `var(${varName})`) {
-        emit(rule, name, `var(${varName})`);
+        emitFn(rule, name, `var(${varName})`, conditions);
       }
     }
   }
@@ -214,8 +254,8 @@ function rewriteStyleRule(rule) {
       if (!color || color === 'var(--nv-edge)') continue;
       if (e.borderNeedsWidth && !width) continue;
       if (!isProcessableColor(color, 'border', e)) continue;
-      emit(rule, side === '' ? 'border-color' : `border${side}-color`,
-        rewriteColor(color, { type: 'border', engine: e, varMap, selectorText: rule.selectorText }));
+      emitFn(rule, side === '' ? 'border-color' : `border${side}-color`,
+        rewriteColor(color, { type: 'border', engine: e, varMap, selectorText: rule.selectorText }), conditions);
     }
   }
   // background-color / background shorthand / background-image
@@ -223,8 +263,8 @@ function rewriteStyleRule(rule) {
   if (e.darken.background && bgColor && isProcessableColor(bgColor, 'background', e)) {
     const value = rewriteColor(bgColor, { type: 'background', engine: e, varMap, selectorText: rule.selectorText });
     if (value !== bgColor || bgColor === 'transparent') {
-      emit(rule, 'background-color', value);
-      if (e.backgroundBlend) emit(rule, 'background-blend-mode', 'var(--nv-blend)');
+      emitFn(rule, 'background-color', value, conditions);
+      if (e.backgroundBlend) emitFn(rule, 'background-blend-mode', 'var(--nv-blend)', conditions);
     }
   }
   const bgAll = prop(rule, 'background');
@@ -233,21 +273,21 @@ function rewriteStyleRule(rule) {
     if (value !== bgAll || bgAll === 'transparent') {
       const nobc = rule.style.getPropertyValue('background-color') === '';
       const key = nobc ? 'background' : (bgAll.indexOf('-gradient(') !== -1 ? 'background' : 'background-color');
-      emit(rule, key, value);
+      emitFn(rule, key, value, conditions);
     }
   }
   const bgImage = prop(rule, 'background-image');
   if (e.darkenBackgroundImages && bgImage && bgImage !== 'none') {
     if (bgImage.indexOf('url(') !== -1 && !/-\d+x|\d+x[-_]/.test(bgImage)) {
-      emit(rule, 'background-image', `linear-gradient(var(--nv-image-veil), var(--nv-image-veil)), ${bgImage}`);
+      emitFn(rule, 'background-image', `linear-gradient(var(--nv-image-veil), var(--nv-image-veil)), ${bgImage}`, conditions);
       if (e.preserveBackgroundProps) {
         const repeat = prop(rule, 'background-repeat');
         const position = prop(rule, 'background-position');
-        if (repeat && !(e.ignoreInitialProps && repeat === 'initial')) emit(rule, 'background-repeat', repeat);
-        if (position && !(e.ignoreInitialProps && position === 'initial')) emit(rule, 'background-position', position);
+        if (repeat && !(e.ignoreInitialProps && repeat === 'initial')) emitFn(rule, 'background-repeat', repeat, conditions);
+        if (position && !(e.ignoreInitialProps && position === 'initial')) emitFn(rule, 'background-position', position, conditions);
       }
     } else if (bgImage.indexOf('-gradient(') !== -1 && e.removeGradients) {
-      emit(rule, 'background-image', 'none');
+      emitFn(rule, 'background-image', 'none', conditions);
     }
   }
 }
@@ -262,22 +302,51 @@ function collectCustomProps(rule) {
   }
 }
 
-function visitRule(rule) {
+// §4 d.2: copy the keyframes block into the engine sheet once per name, then
+// rewrite the COPY's keyframe rules in place — property sets land directly on
+// the copied rules (setProperty), never on the engine-sheet selector path.
+function rewriteKeyframes(rule) {
+  if (state.writtenKeyframes.has(rule.name)) return;
+  const target = state.shadowTarget ?? state.sheetEl;
+  const sheet = target?.sheet;
+  if (!sheet) return;
+  let index;
+  try { index = sheet.insertRule(copyKeyframesBlock(rule), 0); } catch { return; }
+  state.writtenKeyframes.add(rule.name);
+  const copy = sheet.cssRules[index];
+  if (!copy?.cssRules) return;
+  for (const kf of copy.cssRules) {
+    if (!kf.style) continue;
+    rewriteStyleRule(kf, [], (r, propName, value) => {
+      r.style.setProperty(propName, value, rulePriority(r, propName) ? 'important' : '');
+    });
+  }
+}
+
+function visitRule(rule, conditions = []) {
   const e = state.engine;
   if (rule.href) { requestSheetFetch(rule.href, rule.parentStyleSheet?.ownerNode); return; }
-  if (rule.style) { rewriteStyleRule(rule); return; }
+  if (rule.style) { rewriteStyleRule(rule, conditions); return; }
   const type = rule.constructor.name;
   const isMedia = type === 'CSSMediaRule', isSupports = type === 'CSSSupportsRule', isKeyframes = type === 'CSSKeyframesRule';
   if (isMedia && !e.processMediaQueries) return;
   if (isSupports && !e.processSupports) return;
   if (isKeyframes && !e.processKeyframes) return;
-  const deeper = isMedia || isSupports || isKeyframes ? false : e.deepRules;
+  if (isKeyframes) { rewriteKeyframes(rule); return; }
+  // §4: the condition chain accumulates outer-first down the parent chain
+  // (嵌套 @media 内 @supports → 双层包裹)
+  let childConditions = conditions;
+  if (isMedia || isSupports) {
+    const text = (rule.conditionText ?? '').trim();
+    if (text) childConditions = [...conditions, { at: isMedia ? 'media' : 'supports', text }];
+  }
+  const deeper = isMedia || isSupports ? false : e.deepRules;
   if (!rule.cssRules) return;
   for (const child of rule.cssRules) {
-    if (child.style) rewriteStyleRule(child);
+    if (child.style) rewriteStyleRule(child, childConditions);
     else if (deeper || ((child.constructor.name === 'CSSMediaRule' && e.processMediaQueries)
       || (child.constructor.name === 'CSSSupportsRule' && e.processSupports)
-      || (child.constructor.name === 'CSSKeyframesRule' && e.processKeyframes))) visitRule(child);
+      || (child.constructor.name === 'CSSKeyframesRule' && e.processKeyframes))) visitRule(child, childConditions);
   }
 }
 
@@ -436,6 +505,8 @@ export function activateEngine(settings, { onFirstRule } = {}) {
   resetObserversAndDrains(); // idempotent: a prior activation may still be wound up
   state.engine = engine;
   state.writtenSelectors = new Set();
+  state.writtenKeyframes = new Set();
+  conditionedRules.clear();
   state.onFirstRule = onFirstRule ?? null;
   document.documentElement.setAttribute(ACTIVE_ATTR, '');
 
@@ -698,6 +769,8 @@ export function deactivateEngine() {
   state.sheetEl = null;
   state.engine = null;
   state.writtenSelectors = new Set();
+  state.writtenKeyframes = new Set();
+  conditionedRules.clear();
   state.varMap = {};
   state.htmlProps = [];
   state.onFirstRule = null;
