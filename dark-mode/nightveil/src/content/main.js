@@ -166,8 +166,20 @@ function applyEngine(settings, site, siteUsable) {
     return;
   }
   deactivateEngine();
+  // site theme composes on the fixed base overlay (original dark.css parity)
+  injectStyle(CLASSIC_STYLE_ID, compileThemeById('nv-simple'));
   document.documentElement.setAttribute(SITE_ATTR, site.id);
   injectStyle(SITE_STYLE_ID, compileSiteTheme(site.id));
+  markMediaStages();
+  markFullscreenOverlays();
+  recallZeroSizeText();
+  window.addEventListener('load', () => {
+    if (document.getElementById(CLASSIC_STYLE_ID)) {
+      markMediaStages();
+      markFullscreenOverlays();
+      recallZeroSizeText();
+    }
+  }, { once: true });
 }
 
 function applyClassic(settings, site, siteUsable) {
