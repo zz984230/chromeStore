@@ -11,6 +11,7 @@ import {
 } from '../shared/settings.js';
 import { PALETTES } from '../shared/palettes.js';
 import { SITE_THEMES } from '../shared/siteThemes.js';
+import { SEAT_THEME_ID, seatCheckboxState, ENGINE_GROUPS, ENGINE_SITE_POLICIES } from '../shared/optionsEngine.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -80,11 +81,55 @@ function renderThemes() {
   section('sec-themes', STRINGS.sectionThemesLabel, classic, sites);
 }
 
-// ---- Placeholder sections (III / IV / VII) ----
+// ---- Placeholder sections (III / VII) ----
 function renderPlaceholders() {
   section('sec-usercss', STRINGS.sectionUserCssLabel, note(STRINGS.sectionUserCssNote));
-  section('sec-engine', STRINGS.sectionEngineLabel, note(STRINGS.sectionEngineNote));
   section('sec-schedule', STRINGS.sectionScheduleLabel, note(STRINGS.sectionScheduleNote));
+}
+
+// ---- Section IV: adaptive engine (skeleton — the 38 sub-option controls and
+// the variable editors plug into the group hosts in M2c tasks 5-6) ----
+function renderEngine() {
+  // Seat master switch: checked ⟺ themeId === 'adaptive'. Unchecking hands
+  // the seat to the first classic theme — some theme must stay selected
+  // (original dark_41 semantics; picking a section-I radio does the same).
+  const seat = el('label', {},
+    el('input', { type: 'checkbox', id: 'eng-seat', checked: seatCheckboxState(current.themeId) }),
+    ` ${STRINGS.engineSeatLabel}`);
+  seat.addEventListener('change', (e) => {
+    save({ themeId: e.target.checked ? SEAT_THEME_ID : PALETTES[0].id });
+  });
+
+  // fieldset disabled natively disables every control that lands inside —
+  // same mechanism the page already trusts for grouped controls.
+  const controls = el('fieldset', { id: 'eng-controls', disabled: !seatCheckboxState(current.themeId) });
+  for (const g of ENGINE_GROUPS) {
+    const host = el('div', { id: g.id }, el('p', { class: 'hint' }, g.label));
+    if (g.id === 'eng-group-jkl') host.append(sitePolicyBox());
+    controls.append(host);
+  }
+
+  section('sec-engine', STRINGS.sectionEngineLabel, seat, note(STRINGS.sectionEngineNote), controls);
+}
+
+// Site policy tri-state (respect / ignore / skip-compatible) → engine.siteThemePolicy.
+function sitePolicyBox() {
+  const box = el('div', {});
+  for (const p of ENGINE_SITE_POLICIES) {
+    box.append(el('label', {},
+      el('input', {
+        type: 'radio', name: 'siteThemePolicy', id: p.id, value: p.value,
+        checked: current.engine.siteThemePolicy === p.value,
+      }),
+      ` ${p.label}`));
+  }
+  box.append(note(STRINGS.enginePolicyNote));
+  box.addEventListener('change', (e) => {
+    if (e.target.name === 'siteThemePolicy') {
+      save({ engine: { ...current.engine, siteThemePolicy: e.target.value } });
+    }
+  });
+  return box;
 }
 
 // ---- Section II: options (behavior + exclusion rules) ----
@@ -145,8 +190,19 @@ function wireReset() {
 // ---- storage-driven sync (external changes while the page stays open) ----
 function syncFromSettings(s) {
   current = s;
-  const radio = document.querySelector(`#sec-themes input[name="themeId"][value="${s.themeId}"]`);
-  if (radio) radio.checked = true;
+  // The seat checkbox and the palette radios share the themeId namespace, so
+  // every radio is re-derived from settings: a stale check clears when the
+  // other side takes the seat (no radio has value 'adaptive').
+  for (const i of document.querySelectorAll('#sec-themes input[name="themeId"]')) {
+    i.checked = i.value === s.themeId;
+  }
+  const seat = document.querySelector('#eng-seat');
+  if (seat) seat.checked = seatCheckboxState(s.themeId);
+  const controls = document.querySelector('#eng-controls');
+  if (controls) controls.disabled = !seatCheckboxState(s.themeId);
+  for (const i of document.querySelectorAll('#sec-engine input[name="siteThemePolicy"]')) {
+    i.checked = i.value === s.engine.siteThemePolicy;
+  }
   for (const i of document.querySelectorAll('#sec-themes input[data-site]')) {
     i.checked = !(s.disabledSiteThemes ?? []).includes(i.getAttribute('data-site'));
   }
@@ -171,6 +227,7 @@ function renderAll() {
   renderBehavior();
   renderListSection('sec-exclusion', STRINGS.sectionExclusionLabel, 'exclusionList', STRINGS.exclusionListLabel);
   renderListSection('sec-inclusion', STRINGS.sectionInclusionLabel, 'inclusionList', STRINGS.inclusionListLabel);
+  renderEngine();
   renderPlaceholders();
 }
 
