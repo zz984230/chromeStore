@@ -18,7 +18,7 @@ test('parses rgb/rgba comma and space separated, hsl/hsla with percents', () => 
   assert.equal(h.a, 0.25); assert.equal(h.r, 255);
 });
 
-test('parses the 148 named colors; unknown and modern syntax return null', () => {
+test('parses the 146 named colors; unknown and modern syntax return null', () => {
   assert.equal(NAMED_COLORS.rebeccapurple, '#663399');
   assert.deepEqual(parseColor('cornflowerblue'), { r: 0x64, g: 0x95, b: 0xed, a: 1 });
   assert.equal(parseColor('oklch(0.5 0.1 20)'), null);
