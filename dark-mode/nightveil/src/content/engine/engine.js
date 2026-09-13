@@ -198,7 +198,7 @@ function collectRootVarMap() {
     if (!map) return;
     for (const [name, value] of map) {
       if (name.startsWith('--') && !name.startsWith('--nv-')) {
-        state.varMap[`var(${name})`] = (value?.[0]?.[0] ?? '').trim();
+        state.varMap[`var(${name})`] = value.toString().trim();
       }
     }
   } catch { /* non-Chromium or detached — rule-level map still works */ }
