@@ -9,7 +9,7 @@ import { findPalette } from '../shared/palettes.js';
 import { siteDarkActive } from '../shared/scope.js';
 import { evaluateRules, luminanceOf, metaSchemeIsDark } from '../shared/exclusionRules.js';
 import { matchSiteTheme, compileSiteTheme } from '../shared/siteThemes.js';
-import { activateEngine, deactivateEngine, ACTIVE_ATTR } from './engine/engine.js';
+import { activateEngine, deactivateEngine, VARS_STYLE_ID } from './engine/engine.js';
 import { ENGINE_VARIABLES } from '../shared/engineTheme.js';
 
 const CLASSIC_STYLE_ID = 'nv-classic';
@@ -234,7 +234,7 @@ function render(settings) {
   // the page opts out late. (bg luma needs the delayed branch above.)
   const lateCheck = () => {
     if (gen !== renderGeneration) return;
-    if (document.getElementById(CLASSIC_STYLE_ID)
+    if ((document.getElementById(CLASSIC_STYLE_ID) || document.getElementById(VARS_STYLE_ID))
         && evaluateRules(rules, collectRuleSignals(false))) {
       teardown();
     }
