@@ -24,7 +24,7 @@ export const SITE_THEMES = [
   {
     id: 'github', label: 'GitHub', hosts: ['github.com'],
     css: sheet('github', [
-      [' .AppHeader, .Header', 'background-color: #010409 !important; border-color: #30363d !important;'],
+      [' .AppHeader, .Header, header', 'background-color: #010409 !important; border-color: #30363d !important;'],
       [' .Box, .timeline-comment', 'background-color: #0d1117 !important; border-color: #30363d !important;'],
       [' .btn', 'background-color: #212830 !important; border-color: #3d444d !important;'],
       [' table td, table th', 'border-color: #21262d !important;'],
