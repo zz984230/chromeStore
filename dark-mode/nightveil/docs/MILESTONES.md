@@ -2,16 +2,16 @@
 
 > 状态图例：⬜ 未开始 ｜ 🟨 进行中 ｜ ✅ 已验收（/tabbit 逐条通过）｜ ⏸ 暂停
 > 变更纪律：任务只能从上级拆出或追加于「追加记录」节；验收标准变更需同步更新自主迭代.md 的里程碑条目。
-> 总览最新更新：2026-09-12
+> 总览最新更新：2026-09-13
 
 ## 总览
 
 | 里程碑 | 范围 | 状态 | 验收轮次 |
 |---|---|---|---|
 | M0 | 文档与项目骨架（本表、ADR、协议、目录、构建链） | ✅ | /tabbit 1 轮通过（含 1 次人工加载扩展） |
-| M1 | 骨架 + 经典主题 + 生效边界（伞行，见 M1a/M1b） | 🟨 | M1a ✅ / M1b 未开始 |
+| M1 | 骨架 + 经典主题 + 生效边界（伞行，见 M1a/M1b） | ✅ | M1a ✅ / M1b ✅（2026-09-13，含四页冒烟回归） |
 | M1a | 核心切换与主题引擎 | ✅ | /tabbit 1 轮 + 验收迭代 1 次；终审 With fixes 当日闭环；**+ 9 波实战加固（2026-09-11/12，B 站/新浪灰度）** |
-| M1b | 生效边界与选项页 | ⬜ | — |
+| M1b | 生效边界与选项页 | ✅ | /tabbit 分段验收（fixtures/选项页真机/真实站点/四页冒烟）+ 终审 |
 | M2 | 自适应引擎（Adaptive Engine） | ⬜ | — |
 | M3 | 完整选项（色温/防白闪/定时/用户样式） | ⬜ | — |
 | M3+ | Backlog 消化（站点补齐、差评修复、增强） | ⬜ | — |
@@ -33,17 +33,17 @@
 
 **功能**（标注 🅰 = M1a 已验收交付；🅱 = M1b 范围）
 - [x] 🅰 工具栏点击全局切换 Light/Dark；图标 + 标题随状态更新（含 onStartup 重启同步；"全 tab 同步"的逐 tab 域名区分部分依赖 M1b Inclusion Mode）
-- [ ] 🅱 右键菜单：按状态显示 Exclude / Include（行为忠实原版；"Exclude from Color Temperature" 入口属 M3 色温功能，M1 不做）
+- [x] 🅱 右键菜单：按状态显示 Exclude / Include（行为忠实原版；"Exclude from Color Temperature" 入口属 M3 色温功能，M1 不做）
 - [x] 🅰 参数化调色板引擎：Overlay 基础样式 + Invert 基础样式（ADR-0002）
-- [ ] 40 个 Classic Theme（26 Overlay + 14 Invert）——🅰 引擎与 40 主题编译已验收（单测全覆盖）；🅱 选项页单选 UI 待做，主题当前固定为默认 Evening
-- [ ] 🅱 10 个 Site Theme（google、github、wikipedia、stackoverflow、reddit、amazon、facebook、instagram、twitter、bing），默认全开
-- [ ] 🅱 Exclusion List（域名）+ Exclusion Rules（属性/类名/cookie 检测；meta color-scheme；暗背景亮度阈值）
-- [ ] 🅱 Inclusion Mode + Per-site Toggle
-- [ ] 🅱 options.html 七分区框架（I 主题 / II 选项 / III 用户样式占位 / IV 引擎占位 / V 排除 / VI 包含 / VII 定时占位）+ 自动保存 + Reset
+- [x] 40 个 Classic Theme（26 Overlay + 14 Invert）——引擎与编译 M1a 已验收；M1b 交付选项页单选 UI + 实时换主题
+- [x] 🅱 10 个 Site Theme（google、github、wikipedia、stackoverflow、reddit、amazon、facebook、instagram、twitter、bing），默认全开
+- [x] 🅱 Exclusion List（域名）+ Exclusion Rules（属性/类名/cookie 检测；meta color-scheme；暗背景亮度阈值）
+- [x] 🅱 Inclusion Mode + Per-site Toggle
+- [x] 🅱 options.html 七分区框架（I 主题 / II 选项 / III 用户样式占位 / IV 引擎占位 / V 排除 / VI 包含 / VII 定时占位）+ 自动保存 + Reset
 - [x] 🅰 防白闪基础版（Flash Guard：默认简单暗样式 + 200ms 延迟）
-- [ ] 验收 fixture 页 6 张 + localhost 托管——🅰 plain 已交付；🅱 补 media / frames / vars / native-dark / heavy 五张
+- [x] 验收 fixture 页 6 张 + localhost 托管——plain + media / frames / vars / native-dark / heavy
 - [x] 🅰 文案单源断言测试（manifest + options.html 双锁定，`fa0174e` 加宽至 options.html）
-- [ ] 🅱 fixtures 服务路径遍历回归断言（如 `/..%2fpackage.json` → 403）钉进测试（2026-09-09 终审遗留）
+- [x] 🅱 fixtures 服务路径遍历回归断言（如 `/..%2fpackage.json` → 403）钉进测试（2026-09-09 终审遗留）
 
 **验收**：自主迭代.md 通用条目 1~4 + 里程碑条目 5~8；收尾真实站点抽查（github.com、wikipedia.org、stackoverflow.com 各截图对比）
 
@@ -93,3 +93,5 @@
 - 2026-09-09：M0 全分支终审通过（Ready to merge: Yes，0 Critical / 1 Important / 5 Minor；Important 与代码类 Minor 已当日修复）。M1 规划需注意两条：①"文案只能来自 strings.js"约束的范围要澄清——manifest/options.html 等静态文件无法 import JS 模块，建议把约束限定为"src/ 运行时文案"，并在 M1 加一条 `manifest.name === STRINGS.extensionName` 之类的单源断言测试；②fixture 套件扩到 6 页时补一行路径遍历回归断言（如 `/..%2fpackage.json` → 403），把安全守卫钉进测试。
 - 2026-09-10：M1a 终审通过（With fixes，两条 Important 当日修复：description 文案抄袭重写、onStartup 图标同步）。M1b 计划需注意：①invert 家族目前零运行时验证，M1b 基线须加一条 invert 主题的 tabbit 断言；②验收清单加"浏览器重启后图标仍同步"步骤（扩展重载≠浏览器重启）；③guard 颜色硬编码为 nv-simple bg，主题可切换后需按当前 palette 取值；④M1b 引入第二写者（options 页）后，falsy-newValue 丢弃与读-改-写竞态两条台账注记需重新评估。
 - 2026-09-11/12：用户真实灰度触发 9 波缺陷修复（B 站小窗/数据条/首页全黑、边框消失、新浪文字发虚/消失/图截文字），全部根因定位→修复→审查→用户验证闭环，详见 M1a 节"实战加固"表。附带流程教训两条入台账：①验证必须含视觉确认（计算样式会漏 text-indent/伪元素）；②复现前必须从 src 重新生成编译产物（过期 CSS 导致两轮无效复现）。M1b 计划吸收：验收清单加入"新浪行情页+B 站首页/空间列表/播放页"四页冒烟（本轮灰度覆盖过的页面转为回归基线）。
+
+**M1b（2026-09-12/13 完成子阶段）**：生效边界与选项页全部交付。12 任务子代理流水线（实现+双审+5 个修复波，计划级缺陷 4 个：阈值 0 折半、darkBackground 自测注入色、逗号分组选择器逃逸特异性提升器、站点层禁用残留；皆已修复并回写计划）。验收证据（/tabbit 分段 + 用户配合）：①fixtures 六页——plain/media/frames（含嵌套帧与 about:blank）/vars/heavy 着色正确，native-dark 被规则跳过（零注入、原生暗色保留），Light 拆除干净；②主题——Midnight 实时切换+持久化，**Invert Balanced 运行时断言**（html filter `invert(1) hue-rotate(180deg) brightness(1.05) contrast(1.05)`，M1a 遗留闭环）；③边界——Exclusion/Inclusion/右键 Include（幂等）/per-site 工具栏（全局状态不误切）/Reset 全链路；④**浏览器重启图标同步**（M1a 遗留闭环）；⑤真实站点——github（header 选择器当场调优 `ee08440`，复验 `rgb(1,4,9)`）、wikipedia、stackoverflow（顶栏 `#2d2d2d` 精修层生效）；⑥四页冒烟——B 站首页（89 舞台标记，无全黑）/空间列表（切换重渲染后 0→123 标记、渐变恢复；SPA 晚挂载为 BACKLOG 已知局限，非回归）/播放页（播放器标记+控制栏可见）/新浪行情（红绿语义保留、整页可读）。测试 16→36；选项页 http 挂载预览态（D8）由控制器直接断言通过。
