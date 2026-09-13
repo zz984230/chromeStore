@@ -402,8 +402,38 @@ export function scheduleShadowScan() {
   state.sched.schedule('shadow', engineProcessShadowRoots);
 }
 
+// Shared unwinding for teardown AND re-activation (idempotent activation):
+// disconnect every observer handle (optional chaining makes repeat calls and
+// null handles safe), drop the scheduler, and drain the pending/processed
+// bookkeeping. The §6 recheck re-render lands engine→engine WITHOUT an
+// interleaved deactivate — mountStyle wipes the engine sheet, so without this
+// reset the surviving inlineProcessed would skip every inline rescan (inline
+// rules vanish) and observers whose flags turned off would stay connected.
+// Never touches shadowSheets (revive semantics) or fetched (fetch dedupe).
+function resetObserversAndDrains() {
+  state.elementMO?.disconnect();
+  state.elementMO = null;
+  state.styleMO?.disconnect();
+  state.styleMO = null;
+  state.classMO?.disconnect();
+  state.classMO = null;
+  state.poShort?.disconnect();
+  state.poShort = null;
+  state.poLong?.disconnect();
+  state.poLong = null;
+  state.sched?.cancelAll();
+  state.sched = null;
+  pendingSheets.clear();
+  pendingInline.clear();
+  seenNodeKeys.clear();
+  // nv-inline-* classes stay on their nodes — inert without the engine sheet
+  // (M1 light-branch precedent); only the processed-props bookkeeping resets.
+  inlineProcessed.clear();
+}
+
 export function activateEngine(settings, { onFirstRule } = {}) {
   const engine = settings.engine;
+  resetObserversAndDrains(); // idempotent: a prior activation may still be wound up
   state.engine = engine;
   state.writtenSelectors = new Set();
   state.onFirstRule = onFirstRule ?? null;
@@ -661,24 +691,7 @@ function mountStyle(id, css) {
 }
 
 export function deactivateEngine() {
-  state.elementMO?.disconnect();
-  state.elementMO = null;
-  state.styleMO?.disconnect();
-  state.styleMO = null;
-  state.classMO?.disconnect();
-  state.classMO = null;
-  state.poShort?.disconnect();
-  state.poShort = null;
-  state.poLong?.disconnect();
-  state.poLong = null;
-  state.sched?.cancelAll();
-  state.sched = null;
-  pendingSheets.clear();
-  pendingInline.clear();
-  seenNodeKeys.clear();
-  // nv-inline-* classes stay on their nodes — inert without the engine sheet
-  // (M1 light-branch precedent); only the processed-props bookkeeping resets.
-  inlineProcessed.clear();
+  resetObserversAndDrains();
   document.documentElement?.removeAttribute(ACTIVE_ATTR);
   for (const id of [VARS_STYLE_ID, SHEET_STYLE_ID]) document.getElementById(id)?.remove();
   state.varsEl = null;
