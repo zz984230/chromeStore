@@ -25,8 +25,9 @@ test('INLINE_PROPS is exactly the §0-⑧ five properties', () => {
 test('randInlineClass: nv-inline-<digits> format, near-unique over 1000 draws', () => {
   const draws = Array.from({ length: 1000 }, () => randInlineClass());
   for (const c of draws) assert.match(c, /^nv-inline-\d+$/);
-  // 1e7 draw space → ~50 expected collisions in 1000 draws; exact uniqueness
-  // would flake ~5% of runs, so pin a statistical lower bound instead.
+  // 1e7 draw space → ~0.05 expected colliding pairs in 1000 draws, i.e. ~5%
+  // of runs would see one collision; an exact-uniqueness assertion would
+  // flake, so pin a statistical lower bound instead.
   assert.ok(new Set(draws).size >= 900, `expected mostly-unique draws, got ${new Set(draws).size}`);
 });
 

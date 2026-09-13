@@ -388,8 +388,10 @@ const INLINE_TARGET_VAR = { text: 'var(--nv-text)', border: 'var(--nv-edge)', ba
 
 // Value-level branch of one inline declaration — mirrors the rewriteStyleRule
 // branches scoped to the five inline props; returns the emitted value or null
-// when the declaration must not produce a rule.
-function rewriteInlineProp(key, value, engine, varMap, style) {
+// when the declaration must not produce a rule. selectorText is the node's
+// plain tag name so rewriteColor sees html/body inline styles as root targets
+// (rootSpecial fallback), same as the sheet path does for html/body rules.
+function rewriteInlineProp(key, value, engine, varMap, style, selectorText) {
   if (key === 'background-image') {
     if (!engine.darkenBackgroundImages || value === 'none') return null;
     if (value.indexOf('url(') !== -1 && !/-\d+x|\d+x[-_]/.test(value)) {
@@ -408,7 +410,7 @@ function rewriteInlineProp(key, value, engine, varMap, style) {
   if (value === INLINE_TARGET_VAR[type]) return null;
   if (engine.borderNeedsWidth && type === 'border' && !style.getPropertyValue('border-width')) return null;
   if (!isProcessableColor(value, type, engine)) return null;
-  const next = rewriteColor(value, { type, engine, varMap });
+  const next = rewriteColor(value, { type, engine, varMap, selectorText });
   return next === value ? null : next; // preserveDarkColors etc. → no-op rule skipped
 }
 
@@ -426,6 +428,7 @@ export function rewriteInlineNode(node, engine, varMap, insertFn) {
   if (!style) return;
   const cls = inlineClassFor(node);
   const selector = `html[${ACTIVE_ATTR}] .${cls}`;
+  const rootSelector = node.localName || ''; // rewriteColor root-target signal (html/body)
   const seen = inlineProcessed.get(cls) ?? new Set();
   inlineProcessed.set(cls, seen);
   for (let i = 0; i < style.length; i++) {
@@ -439,7 +442,7 @@ export function rewriteInlineNode(node, engine, varMap, insertFn) {
       if (!key.startsWith('--nv-')) varMap[`var(${key})`] = value;
       continue;
     }
-    const out = rewriteInlineProp(key, value, engine, varMap, style);
+    const out = rewriteInlineProp(key, value, engine, varMap, style, rootSelector);
     if (out === null) continue;
     seen.add(key);
     insertFn(selector, inlineEmitKey(key, value, style), out);
