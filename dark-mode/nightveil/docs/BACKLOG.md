@@ -58,6 +58,11 @@
 - [ ] 命名债：clearVideoStages 实际清理全部媒体舞台标记，下次触碰时改名 clearMediaStages
 - [ ] 舞台子树内的图截文字双重渲染角落情况：舞台豁免使 sprite 背景幸存，而 text-indent 召回让真实文字也显示（2026-09-12 wave-7 审查发现；真例出现时给召回规则加舞台排除或拆分规则）
 
+## 已知局限（Adaptive Engine 颜色改写，2026-09-13 M2 设计确立）
+
+- [ ] 现代 CSS 颜色语法（oklch() / lab() / color-mix() 等）不改写，检测到即跳过所在规则——与原版 tinycolor 时代能力面对等（M2 grilling D4 决策）；复刻期后作为独立迭代补齐
+- [ ] `document.adoptedStyleSheets`（构造式样式表）两种变更追踪模式都追不到（不触发 DOM mutation、不产生 resource entry）——原版同样追不到，能力面对等（M2 grilling D5 决策）
+
 ## 未来增强（可选）
 
 - [ ] 图标小尺寸优化：16/32px 下月牙偏"厚实"、辨识度一般，可为小尺寸用加粗几何变体（M0 视觉抽查结论 2026-09-09）。已知成因：边缘像素未做颜色混合——`aMoon > 0` 即取纯月牙色而 alpha 取 `max(aPlate, aMoon)`，1/16 月牙覆盖的边缘像素渲染为纯月牙色而非混合色（T2 审查 Minor #1）

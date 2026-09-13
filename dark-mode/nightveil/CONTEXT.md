@@ -44,6 +44,10 @@ _Avoid_: custom dark
 运行在页面内、遍历页面样式表并实时改写颜色的动态引擎。对应原版的 "Native Dark"。
 _Avoid_: native dark, live engine
 
+**变更追踪（Change Tracking）**:
+页面出现新样式后，在约定时限内完成改写的机制。有两种用户可选策略：MutationObserver（盯 DOM 变更，精确而耗 CPU）与 PerformanceObserver（盯样式表资源加载，便宜但覆盖窄）。
+_Avoid_: watch mode, observer（单指实现而非用户可选概念）
+
 ### 生效边界
 
 **Exclusion List（排除列表）**:
