@@ -44,15 +44,23 @@ function removeStyle(id) {
 }
 
 let guardTimer = null;
+// Guard dismissal machinery, shared by armGuard's load-bound path and the
+// engine's first-rule hook (§2-4): clear any pending dismissal, then (re)arm
+// the one module timer that removes the guard style. Removal is idempotent,
+// so a double dismissal (first rule + load timer) is harmless.
+function dismissGuardSoon() {
+  if (guardTimer) clearTimeout(guardTimer);
+  guardTimer = setTimeout(() => removeStyle(GUARD_STYLE_ID), GUARD_REMOVE_DELAY_MS);
+}
+
 function armGuard(settings, bgOverride) {
   const bg = bgOverride ?? guardBackgroundFor(findPalette(settings.themeId));
   injectStyle(GUARD_STYLE_ID, `html { background-color: ${bg} !important; }`);
   if (guardTimer) clearTimeout(guardTimer);
-  const dismiss = () => removeStyle(GUARD_STYLE_ID);
   if (document.readyState === 'complete') {
-    guardTimer = setTimeout(dismiss, GUARD_REMOVE_DELAY_MS);
+    dismissGuardSoon();
   } else {
-    window.addEventListener('load', () => { guardTimer = setTimeout(dismiss, GUARD_REMOVE_DELAY_MS); }, { once: true });
+    window.addEventListener('load', dismissGuardSoon, { once: true });
   }
 }
 
@@ -170,7 +178,11 @@ function applyEngine(settings, site, siteUsable) {
   if (engineOwnsSite(settings.engine.siteThemePolicy, siteUsable ? site : null)) {
     removeStyle(SITE_STYLE_ID);
     document.documentElement.removeAttribute(SITE_ATTR);
-    activateEngine(settings);
+    // §2-4: a light page renders its first engine rule almost immediately —
+    // dismiss the guard on that rule instead of waiting for load+200ms.
+    // Heavy pages keep the load-bound path (their first paint lags load).
+    const lightPage = document.querySelectorAll('*').length < 1000;
+    activateEngine(settings, lightPage ? { onFirstRule: dismissGuardSoon } : undefined);
     return;
   }
   deactivateEngine();
