@@ -30,6 +30,11 @@ const state = {
   elementMO: null, // always-on documentElement childList/subtree observer
 };
 
+// Nodes awaiting the coalesced 'node' flush: the scheduler keeps only the
+// latest closure per key, so a batch of link/style insertions accumulates here
+// and the single flushed fn processes every node in the batch.
+const pendingSheets = new Set();
+
 // Debounce scheduler: same-key schedules coalesce (only the latest fn runs),
 // different keys run independently. Timer impls are injectable for tests.
 export function createScheduler(setTimeoutImpl = setTimeout, clearTimeoutImpl = clearTimeout) {
@@ -325,7 +330,12 @@ function handleAddedElement(node) {
   const engine = state.engine;
   const name = node.localName;
   if (name === 'link' || name === 'style') {
-    state.sched.schedule('node', () => engineProcessSheetOf(node));
+    pendingSheets.add(node);
+    state.sched.schedule('node', () => {
+      const nodes = [...pendingSheets];
+      pendingSheets.clear();
+      for (const n of nodes) engineProcessSheetOf(n);
+    });
     if (engine.tuning === 'performance') state.sched.schedule('ctx', engineRefreshContext);
   } else if (name === 'iframe' || name === 'script') {
     if (engine.tuning === 'performance') state.sched.schedule('rescan', engineRescanAll);
@@ -349,6 +359,7 @@ export function deactivateEngine() {
   state.elementMO = null;
   state.sched?.cancelAll();
   state.sched = null;
+  pendingSheets.clear();
   document.documentElement?.removeAttribute(ACTIVE_ATTR);
   for (const id of [VARS_STYLE_ID, SHEET_STYLE_ID]) document.getElementById(id)?.remove();
   state.varsEl = null;
