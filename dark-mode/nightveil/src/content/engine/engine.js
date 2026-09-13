@@ -156,6 +156,19 @@ function rulePriority(rule, propName) {
   return state.engine.highPriority || rule.style.getPropertyPriority(propName) === 'important';
 }
 
+// Dedup scope per insert target: the main engine sheet is 'main'; every other
+// target (a host's adopted shadow sheet) gets a stable per-object token, so
+// shadow-vs-shadow and shadow-vs-light rules sharing a selector keep
+// independent dedup entries instead of stealing each other's updates.
+const targetTokens = new WeakMap();
+let targetTokenSeq = 0;
+const targetKey = (target) => {
+  if (target === state.sheetEl) return 'main';
+  let token = targetTokens.get(target);
+  if (token === undefined) targetTokens.set(target, (token = `shadow:${++targetTokenSeq}`));
+  return token;
+};
+
 // Conditioned rules (§4 d.1/d.3) dedup on selector + joined condition chain;
 // this map remembers each inserted group rule so a rescan updates it in place
 // instead of piling up duplicate @media blocks.
@@ -166,10 +179,12 @@ function insertEngineRule(selector, prop, value, priority, target = state.sheetE
     ? conditions.reduceRight((acc, c) => wrapConditional(c.at, c.text, acc),
       buildRuleText(selector, prop, value, { priority }))
     : buildRuleText(selector, prop, value, { priority });
-  const key = conditions.length
+  const key = `${targetKey(target)}|${conditions.length
     ? `${selector} | ${conditions.map((c) => `@${c.at} ${c.text}`).join(' && ')}`
-    : selector;
-  const sheet = target?.sheet;
+    : selector}`;
+  // Constructed CSSStyleSheets (shadow targets) carry insertRule/cssRules
+  // themselves — they have no owner element, hence no .sheet attribute.
+  const sheet = target?.sheet ?? target;
   if (state.writtenSelectors.has(key) && sheet) {
     // same selector already rewritten → update in place when possible
     try {
@@ -306,13 +321,14 @@ function collectCustomProps(rule) {
 // rewrite the COPY's keyframe rules in place — property sets land directly on
 // the copied rules (setProperty), never on the engine-sheet selector path.
 function rewriteKeyframes(rule) {
-  if (state.writtenKeyframes.has(rule.name)) return;
   const target = state.shadowTarget ?? state.sheetEl;
-  const sheet = target?.sheet;
+  const sheet = target?.sheet ?? target; // constructed shadow sheets insert directly
   if (!sheet) return;
+  const kfKey = `${targetKey(target)}|${rule.name}`;
+  if (state.writtenKeyframes.has(kfKey)) return;
   let index;
   try { index = sheet.insertRule(copyKeyframesBlock(rule), 0); } catch { return; }
-  state.writtenKeyframes.add(rule.name);
+  state.writtenKeyframes.add(kfKey);
   const copy = sheet.cssRules[index];
   if (!copy?.cssRules) return;
   for (const kf of copy.cssRules) {
