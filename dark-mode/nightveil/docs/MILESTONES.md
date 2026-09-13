@@ -106,3 +106,4 @@
 
 - 2026-09-13：M2 grilling（/grill-with-docs）敲定设计基线：①任务 0 行为清单建档先行——通读原版源码提炼纯行为、用户审定后关门（ADR-0003 附录）；②引擎架构——isolated content script 运行 + 跨域样式表 background SW 代取 + 自写最小颜色库 + 桶分类 var() 间接层（ADR-0004）；③拆 M2a/M2b/M2c 三段；④媒体舞台标记不并入变更追踪；⑤现代颜色语法与 adoptedStyleSheets 局限入 BACKLOG；⑥真实站点抽查定新浪财经/知乎/MDN（无站点主题覆盖，测引擎裸能力）；⑦动态断言用 ≤1s 轮询、性能数值记录不硬断。
 - 2026-09-13：任务 0 建档完成（docs/M2-BEHAVIOR.md，待用户审定关门）。十项确认全部落定，其中两项推翻 grilling 工作假设：①引擎是主题第 41 席而非正交模式（dark_41 单选，出厂默认即引擎——默认值是否跟随待拍板）；②站点主题非「照常叠加」而是 j/k/l 三态策略（默认仅忽略兼容款：google/support/accounts/myaccount/duckduckgo 让位引擎）。另勘正 BACKLOG：shadow root 内样式表原版可处理（选项 g 含主世界 attachShadow hook），文档级 adoptedStyleSheets 仍追不到。
+- 2026-09-13：**M2a 终审闭环**（fable 全分支审查，17→23 提交）。判定 With fixes → 修复波 5 提交（safeCount 防 invalid selector 崩扫、根 varMap 全值读取、站点回退补 nv-simple 基础层组合、HTML 嗅探大小写不敏感 + 死变量清理、测试名 146）→ 复审 **Ready to merge: Yes**。缓期项：@media/@supports 条件包裹 + engine 子组两级合并 → M2c 前置门（上方 M2c 条目）；引擎性能类 Minor（null-sheet 窗口、emit 逐属性 token 重算、克隆过期）→ M2b observer 工作一并处理。
