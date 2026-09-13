@@ -9,6 +9,8 @@ import { findPalette } from '../shared/palettes.js';
 import { siteDarkActive } from '../shared/scope.js';
 import { evaluateRules, luminanceOf, metaSchemeIsDark } from '../shared/exclusionRules.js';
 import { matchSiteTheme, compileSiteTheme } from '../shared/siteThemes.js';
+import { activateEngine, deactivateEngine, ACTIVE_ATTR } from './engine/engine.js';
+import { ENGINE_VARIABLES } from '../shared/engineTheme.js';
 
 const CLASSIC_STYLE_ID = 'nv-classic';
 const GUARD_STYLE_ID = 'nv-guard';
@@ -34,8 +36,8 @@ function removeStyle(id) {
 }
 
 let guardTimer = null;
-function armGuard(settings) {
-  const bg = guardBackgroundFor(findPalette(settings.themeId));
+function armGuard(settings, bgOverride) {
+  const bg = bgOverride ?? guardBackgroundFor(findPalette(settings.themeId));
   injectStyle(GUARD_STYLE_ID, `html { background-color: ${bg} !important; }`);
   if (guardTimer) clearTimeout(guardTimer);
   const dismiss = () => removeStyle(GUARD_STYLE_ID);
@@ -133,16 +135,46 @@ function teardown() {
   removeStyle(CLASSIC_STYLE_ID);
   removeStyle(GUARD_STYLE_ID);
   removeStyle(SITE_STYLE_ID);
+  deactivateEngine();
   if (guardTimer) { clearTimeout(guardTimer); guardTimer = null; }
   document.documentElement?.removeAttribute(SITE_ATTR);
   clearVideoStages();
 }
 
 function applyTheme(settings) {
+  const site = matchSiteTheme(location.hostname);
+  const siteUsable = site && !(settings.disabledSiteThemes ?? []).includes(site.id);
+  if (settings.themeId === 'adaptive') { applyEngine(settings, site, siteUsable); return; }
+  applyClassic(settings, site, siteUsable);
+}
+
+function engineOwnsSite(policy, site) {
+  // M2-BEHAVIOR §1: respect → site theme wins; ignore → engine always;
+  // skip-compatible → engine only on compatible-marked sites.
+  if (!site) return true;
+  if (policy === 'ignore') return true;
+  if (policy === 'respect') return false;
+  return Boolean(site.compatible);
+}
+
+function applyEngine(settings, site, siteUsable) {
+  armGuard(settings, ENGINE_VARIABLES['--nv-surface']);   // guard with the engine surface color
+  if (engineOwnsSite(settings.engine.siteThemePolicy, siteUsable ? site : null)) {
+    removeStyle(SITE_STYLE_ID);
+    document.documentElement.removeAttribute(SITE_ATTR);
+    activateEngine(settings);
+    return;
+  }
+  deactivateEngine();
+  document.documentElement.setAttribute(SITE_ATTR, site.id);
+  injectStyle(SITE_STYLE_ID, compileSiteTheme(site.id));
+}
+
+function applyClassic(settings, site, siteUsable) {
+  deactivateEngine();
   armGuard(settings);
   injectStyle(CLASSIC_STYLE_ID, compileThemeById(settings.themeId));
-  const site = matchSiteTheme(location.hostname);
-  if (site && !(settings.disabledSiteThemes ?? []).includes(site.id)) {
+  if (siteUsable) {
     document.documentElement.setAttribute(SITE_ATTR, site.id);
     injectStyle(SITE_STYLE_ID, compileSiteTheme(site.id));
   } else {
