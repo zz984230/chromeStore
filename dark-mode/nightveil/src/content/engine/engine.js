@@ -13,6 +13,7 @@ export const SHEET_STYLE_ID = 'nv-engine-sheet';
 export const ACTIVE_ATTR = 'data-nv-active';
 export const SHADOW_HOST_ATTR = 'data-nv-shadowhost';
 const CLONED_ATTR = 'data-nv-cloned';
+const CLONE_HREF_ATTR = 'data-nv-href';
 const MANAGED_STYLE_IDS = new Set([VARS_STYLE_ID, SHEET_STYLE_ID, 'nv-classic', 'nv-guard', 'nv-site']);
 
 export function buildRuleText(selector, prop, value, { priority }) {
@@ -366,14 +367,42 @@ function visitRule(rule, conditions = []) {
   }
 }
 
+// Clone lookup by fetch href: a clone remembers the href its CSS was fetched
+// for (set at creation below), so a clone that survived a teardown cycle can
+// be found and reused. Returns the matching clone element or null — the
+// truthy result doubles as the "already cloned" predicate and the scan target
+// for requestSheetFetch. Loops over the sweep rather than taking the first
+// match because clones for different hrefs coexist and document order is not
+// href order.
+export function hasCloneFor(href, root) {
+  for (const el of root.querySelectorAll(`style[${CLONED_ATTR}][${CLONE_HREF_ATTR}]`)) {
+    if (el.getAttribute(CLONE_HREF_ATTR) === href) return el;
+  }
+  return null;
+}
+
 const fetched = new Set();
 async function requestSheetFetch(href, ownerNode) {
+  const clone = hasCloneFor(href, document);
+  if (clone) {
+    // Clone from an earlier fetch is still in the document: revive it
+    // (mirroring activation's clone revival) and scan it directly — no
+    // re-fetch, which would duplicate the clone now that deactivateEngine
+    // clears `fetched`.
+    clone.removeAttribute('disabled');
+    if (clone.sheet) {
+      clone.sheet.disabled = false;
+      scanSheet(clone.sheet);
+    }
+    return;
+  }
   if (fetched.has(href)) return;
   fetched.add(href);
   const content = await fetchRemoteCss(href);
   if (!content) return;
   const style = document.createElement('style');
   style.setAttribute(CLONED_ATTR, '');
+  style.setAttribute(CLONE_HREF_ATTR, href);
   const abs = absolutizeUrls(content, href);
   style.textContent = abs;
   (ownerNode ?? document.head).appendChild(style);
@@ -790,6 +819,11 @@ export function deactivateEngine() {
   state.varMap = {};
   state.htmlProps = [];
   state.onFirstRule = null;
+  // Stale hrefs must not outlive teardown: a link the page removed and
+  // re-added with the same href never re-fetched (its clone died with it).
+  // Clearing is safe because requestSheetFetch reuses surviving clones via
+  // hasCloneFor — kept links skip the fetch instead (no duplicate clones).
+  fetched.clear();
   for (const el of document.querySelectorAll(`[${CLONED_ATTR}]`)) {
     el.setAttribute('disabled', '');
     if (el.sheet) el.sheet.disabled = true;
