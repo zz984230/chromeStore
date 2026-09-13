@@ -18,6 +18,14 @@ test('same-key schedules coalesce into one run; different keys run separately', 
   assert.deepEqual(runs, ['a2', 'b'], 'same key: only the latest payload runs');
 });
 
+test('schedule forwards the delay argument to setTimeoutImpl', () => {
+  const delays = [];
+  const setTimeoutStub = (fn, delay) => { delays.push(delay); return 1; };
+  const s = createScheduler(setTimeoutStub, () => {});
+  s.schedule('po-long', () => {}, 300);
+  assert.deepEqual(delays, [300], 'explicit delay reaches the timer impl');
+});
+
 test('cancel stops a pending run; cancelAll clears everything', () => {
   const runs = [];
   const timers = new Map();

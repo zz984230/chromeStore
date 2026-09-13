@@ -30,6 +30,8 @@ const state = {
   elementMO: null, // always-on documentElement childList/subtree observer
   styleMO: null, // style-attribute observer, only while processInlineStyles is on
   classMO: null, // class-attribute observer, only while watchClassChanges is on
+  poShort: null, // paint/layout-shift observer, only while tuning is page-load
+  poLong: null, // longtask observer, only when the entry type is supported
 };
 
 // Inline style rewrite bookkeeping (§0-⑧). inlineClassCache remembers which
@@ -358,6 +360,7 @@ export function activateEngine(settings, { onFirstRule } = {}) {
   if (observers.elementMO) attachElementObserver();
   if (observers.styleMO) attachStyleObserver();
   if (observers.classMO) attachClassObserver();
+  if (observers.poShort) attachPerformanceObservers();
 }
 
 // Always-on element observer: any added element node routes to its trigger
@@ -532,6 +535,36 @@ function attachClassObserver() {
     { subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true });
 }
 
+// PerformanceObserver wiring (m.1 + m.3), assembled only for the page-load
+// tuning (decideObservers poShort/poLong). Older targets may throw on unknown
+// entryTypes — each construction is guarded and a failure silently skips that
+// observer, matching the engine's silent-tolerance pattern.
+function attachPerformanceObservers() {
+  state.poShort?.disconnect();
+  state.poLong?.disconnect();
+  try {
+    state.poShort = new PerformanceObserver(() => {
+      if (!state.engine) return; // delivered after teardown
+      state.sched.schedule('po-short', () => {
+        engineRefreshContext();
+        engineRescanAll();
+      });
+    });
+    state.poShort.observe({ entryTypes: ['paint', 'layout-shift'] });
+  } catch { state.poShort = null; }
+  try {
+    if (window.PerformanceLongTaskTiming === undefined) return;
+    state.poLong = new PerformanceObserver(() => {
+      if (!state.engine) return;
+      // hidden-tab longtasks only: repaint after the fact is wasted work
+      if (document.visibilityState === 'hidden') {
+        state.sched.schedule('po-long', engineRescanAll, 300);
+      }
+    });
+    state.poLong.observe({ entryTypes: ['longtask'] });
+  } catch { state.poLong = null; }
+}
+
 function mountStyle(id, css) {
   let el = document.getElementById(id);
   if (!el) {
@@ -550,6 +583,10 @@ export function deactivateEngine() {
   state.styleMO = null;
   state.classMO?.disconnect();
   state.classMO = null;
+  state.poShort?.disconnect();
+  state.poShort = null;
+  state.poLong?.disconnect();
+  state.poLong = null;
   state.sched?.cancelAll();
   state.sched = null;
   pendingSheets.clear();
