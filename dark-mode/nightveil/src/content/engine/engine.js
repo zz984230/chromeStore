@@ -45,8 +45,17 @@ function insertEngineRule(selector, prop, value, priority) {
   } catch { /* invalid selector — skip silently, matches original tolerance */ }
 }
 
+// A quote-bearing html attribute value can yield an invalid selector token,
+// and querySelectorAll would throw — aborting the whole scan mid-sheet. Treat
+// a throwing token as a nonzero count so it resolves to the plain
+// space-prefixed forms, never the html-chaining branch.
+const safeCount = (token) => {
+  try { return document.querySelectorAll(token).length; }
+  catch { return 1; }
+};
+
 function emit(rule, propName, value) {
-  const selector = transformSelector(rule.selectorText, htmlPropTokens(document), (t) => document.querySelectorAll(t).length);
+  const selector = transformSelector(rule.selectorText, htmlPropTokens(document), safeCount);
   if (!selector) return;
   const priority = state.engine.highPriority
     || rule.style.getPropertyPriority(propName) === 'important';
