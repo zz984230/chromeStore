@@ -7,8 +7,28 @@
 // are v1 drafts — tuned during the acceptance round.
 import { normalizeHostname } from './scope.js';
 
+// Split a selector on top-level commas only — `:is(#nv-sheet, *)` and
+// attribute selectors contain commas that are not selector separators.
+export function splitTopLevel(selector) {
+  const out = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of selector) {
+    if (ch === '(' || ch === '[') depth += 1;
+    if (ch === ')' || ch === ']') depth -= 1;
+    if (ch === ',' && depth === 0) {
+      out.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) out.push(current);
+  return out;
+}
+
 const sheet = (id, rules) => rules
-  .map(([sel, body]) => `${sel.split(',').map((s) => `html[data-nv-site="${id}"] :is(#nv-sheet, *)${s}`).join(', ')} { ${body} }`)
+  .map(([sel, body]) => `${splitTopLevel(sel).map((s) => `html[data-nv-site="${id}"] :is(#nv-sheet, *)${s}`).join(', ')} { ${body} }`)
   .join('\n');
 
 export const SITE_THEMES = [

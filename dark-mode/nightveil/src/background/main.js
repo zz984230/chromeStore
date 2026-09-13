@@ -49,7 +49,7 @@ chrome.action.onClicked.addListener(async (tab) => {
   }
 });
 
-loadSettings().then(refreshToolbar);
+loadSettings().then((s) => { refreshToolbar(s); refreshMenu(s); });
 chrome.runtime.onStartup.addListener(() => {
   loadSettings().then(refreshToolbar);
 });

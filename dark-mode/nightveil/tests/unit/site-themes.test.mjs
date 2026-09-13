@@ -1,7 +1,7 @@
 // tests/unit/site-themes.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SITE_THEMES, findSiteTheme, matchSiteTheme, compileSiteTheme } from '../../src/shared/siteThemes.js';
+import { SITE_THEMES, findSiteTheme, matchSiteTheme, compileSiteTheme, splitTopLevel } from '../../src/shared/siteThemes.js';
 
 test('ten site themes with unique ids, labels, and hosts', () => {
   assert.equal(SITE_THEMES.length, 10);
@@ -21,26 +21,6 @@ test('matchSiteTheme suffix-matches hosts; unknown and localhost stay null', () 
   assert.equal(matchSiteTheme('localhost'), null);
   assert.equal(matchSiteTheme(''), null);
 });
-
-// Split on top-level commas only — the booster's `:is(#nv-sheet, *)` and
-// attribute selectors contain commas that are not selector separators.
-const splitTopLevel = (selector) => {
-  const out = [];
-  let depth = 0;
-  let current = '';
-  for (const ch of selector) {
-    if (ch === '(' || ch === '[') depth += 1;
-    if (ch === ')' || ch === ']') depth -= 1;
-    if (ch === ',' && depth === 0) {
-      out.push(current);
-      current = '';
-    } else {
-      current += ch;
-    }
-  }
-  if (current.trim()) out.push(current);
-  return out;
-};
 
 test('compiled sheets boost every selector segment with the specificity prefix', () => {
   for (const t of SITE_THEMES) {
