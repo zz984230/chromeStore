@@ -545,10 +545,7 @@ function attachPerformanceObservers() {
   try {
     state.poShort = new PerformanceObserver(() => {
       if (!state.engine) return; // delivered after teardown
-      state.sched.schedule('po-short', () => {
-        engineRefreshContext();
-        engineRescanAll();
-      });
+      state.sched.schedule('po-short', engineRescanAll); // refreshes context first
     });
     state.poShort.observe({ entryTypes: ['paint', 'layout-shift'] });
   } catch { state.poShort = null; }
