@@ -11,6 +11,7 @@ import { fetchRemoteCss, absolutizeUrls } from './fetchCss.js';
 export const VARS_STYLE_ID = 'nv-engine-vars';
 export const SHEET_STYLE_ID = 'nv-engine-sheet';
 export const ACTIVE_ATTR = 'data-nv-active';
+export const SHADOW_HOST_ATTR = 'data-nv-shadowhost';
 const CLONED_ATTR = 'data-nv-cloned';
 const MANAGED_STYLE_IDS = new Set([VARS_STYLE_ID, SHEET_STYLE_ID, 'nv-classic', 'nv-guard', 'nv-site']);
 
@@ -32,7 +33,14 @@ const state = {
   classMO: null, // class-attribute observer, only while watchClassChanges is on
   poShort: null, // paint/layout-shift observer, only while tuning is page-load
   poLong: null, // longtask observer, only when the entry type is supported
+  shadowTarget: null, // while set, emit routes rules into a host's shadow engine sheet
 };
+
+// Shadow DOM penetration (§5): host-key string (the data-nv-shadowhost value)
+// → the engine sheet adopted into that host's shadow root. The map is kept
+// across deactivation — re-activation revives the sheets (disabled = false),
+// mirroring the cross-origin clone semantics.
+const shadowSheets = new Map();
 
 // Inline style rewrite bookkeeping (§0-⑧). inlineClassCache remembers which
 // nv-inline-* class a node carries so a later pass reuses it instead of
@@ -95,6 +103,7 @@ export function decideObservers(engine) {
     poShort: po,
     poLong: po,
     continueWatch: engine.watchNewElements === true,
+    shadow: engine.processShadowStyles === true,
   };
 }
 
@@ -124,21 +133,22 @@ export function newElementKey(node) {
 
 function prop(rule, name) { return rule.style.getPropertyValue(name) || rule.style[name] || ''; }
 
-function insertEngineRule(selector, prop, value, priority) {
+function insertEngineRule(selector, prop, value, priority, target = state.sheetEl) {
   const css = buildRuleText(selector, prop, value, { priority });
-  if (state.writtenSelectors.has(selector) && state.sheetEl?.sheet) {
+  const sheet = target?.sheet;
+  if (state.writtenSelectors.has(selector) && sheet) {
     // same selector already rewritten → update in place when possible
     try {
-      for (let i = 0; i < state.sheetEl.sheet.cssRules.length; i++) {
-        if (state.sheetEl.sheet.cssRules[i].selectorText === selector) {
-          state.sheetEl.sheet.cssRules[i].style.setProperty(prop, value, priority ? 'important' : '');
+      for (let i = 0; i < sheet.cssRules.length; i++) {
+        if (sheet.cssRules[i].selectorText === selector) {
+          sheet.cssRules[i].style.setProperty(prop, value, priority ? 'important' : '');
           return;
         }
       }
     } catch { /* fall through to insert */ }
   }
   try {
-    state.sheetEl.sheet.insertRule(css, 0);
+    sheet.insertRule(css, 0);
   } catch { return; /* invalid selector — skip silently, matches original tolerance */ }
   state.writtenSelectors.add(selector);
   if (state.onFirstRule) {
@@ -162,7 +172,7 @@ function emit(rule, propName, value) {
   if (!selector) return;
   const priority = state.engine.highPriority
     || rule.style.getPropertyPriority(propName) === 'important';
-  insertEngineRule(selector, propName, value, priority);
+  insertEngineRule(selector, propName, value, priority, state.shadowTarget ?? state.sheetEl);
 }
 
 function rewriteStyleRule(rule) {
@@ -336,6 +346,60 @@ export function engineProcessSheetOf(node) {
   if (node.href) requestSheetFetch(node.href, node);
 }
 
+// ---- shadow DOM penetration (g, §5) ----
+
+// Walk the document — and every open shadow root reached along the way, so
+// nested shadows are covered — collecting hosts by shadowRoot presence. Each
+// host gets a marked key and a dedicated engine sheet adopted into its root;
+// the root's own sheets then rescan through the normal visitRule path with
+// state.shadowTarget set, so emitted rules land in the host's sheet (:host
+// segments rewrite via transformSelector's :host branch; other selectors fall
+// back to the html[data-nv-active] prefix, which only matches light-DOM
+// descendants — acceptable v1 simplification).
+export function engineProcessShadowRoots() {
+  if (state.engine === null) return;
+  const own = new Set(shadowSheets.values()); // never rescan our engine sheets
+  const visited = new Set();
+  const walk = (root) => {
+    for (const el of root.querySelectorAll('*')) {
+      const sr = el.shadowRoot; // open roots only — the hook forces open mode
+      if (!sr || visited.has(sr)) continue;
+      visited.add(sr);
+      if (!el.hasAttribute(SHADOW_HOST_ATTR)) {
+        el.setAttribute(SHADOW_HOST_ATTR, `nv-shdw-${Math.floor(Math.random() * 1e7)}`);
+      }
+      const key = el.getAttribute(SHADOW_HOST_ATTR);
+      let sheet = shadowSheets.get(key);
+      if (!sheet) {
+        sheet = new CSSStyleSheet();
+        sheet.__nvHost = el; // back-reference for the activate/deactivate loops
+        shadowSheets.set(key, sheet);
+        own.add(sheet);
+        try { sr.adoptedStyleSheets = [...sr.adoptedStyleSheets, sheet]; } catch { continue; }
+      }
+      for (const src of [...sr.styleSheets, ...sr.adoptedStyleSheets]) {
+        if (own.has(src)) continue;
+        let rules;
+        try { rules = src.cssRules; } catch { continue; }
+        if (!rules) continue;
+        state.shadowTarget = sheet;
+        try {
+          for (const rule of rules) visitRule(rule);
+        } finally { state.shadowTarget = null; } // never leak into light-DOM emits
+      }
+      walk(sr);
+    }
+  };
+  walk(document);
+}
+
+// Hook notification entry: the main-world script postMessage'd a first host
+// marking. Coalesced under the scheduler's 'shadow' key.
+export function scheduleShadowScan() {
+  if (state.engine === null || !state.sched) return;
+  state.sched.schedule('shadow', engineProcessShadowRoots);
+}
+
 export function activateEngine(settings, { onFirstRule } = {}) {
   const engine = settings.engine;
   state.engine = engine;
@@ -361,6 +425,27 @@ export function activateEngine(settings, { onFirstRule } = {}) {
   if (observers.styleMO) attachStyleObserver();
   if (observers.classMO) attachClassObserver();
   if (observers.poShort) attachPerformanceObservers();
+  if (observers.shadow) {
+    injectShadowHook();
+    engineProcessShadowRoots(); // after the initial scan
+    // revive sheets from a previous activation cycle (clone semantics)
+    for (const sheet of shadowSheets.values()) {
+      sheet.disabled = false;
+      sheet.__nvHost?.setAttribute(ACTIVE_ATTR, '');
+    }
+  }
+}
+
+// Main-world hook injection (§5): a static web_accessible script, appended
+// once per document and left there (idempotent — the hook self-guards). It
+// marks future shadow hosts and forces open mode so the engine can reach the
+// roots; new hosts report back via the 'nv-shadow-attach' postMessage.
+function injectShadowHook() {
+  if (document.querySelector('script[data-nv-hook]')) return;
+  const script = document.createElement('script');
+  script.setAttribute('data-nv-hook', '');
+  script.src = chrome.runtime.getURL('nv-shadow-hook.js');
+  document.documentElement.appendChild(script);
 }
 
 // Always-on element observer: any added element node routes to its trigger
@@ -604,5 +689,11 @@ export function deactivateEngine() {
   for (const el of document.querySelectorAll(`[${CLONED_ATTR}]`)) {
     el.setAttribute('disabled', '');
     if (el.sheet) el.sheet.disabled = true;
+  }
+  // Shadow engine sheets sleep but stay adopted; the map is kept so
+  // re-activation revives them (cross-origin clone semantics).
+  for (const sheet of shadowSheets.values()) {
+    sheet.disabled = true;
+    sheet.__nvHost?.removeAttribute(ACTIVE_ATTR);
   }
 }

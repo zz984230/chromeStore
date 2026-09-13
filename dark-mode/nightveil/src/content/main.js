@@ -9,7 +9,7 @@ import { findPalette } from '../shared/palettes.js';
 import { siteDarkActive } from '../shared/scope.js';
 import { evaluateRules, luminanceOf, metaSchemeIsDark } from '../shared/exclusionRules.js';
 import { matchSiteTheme, compileSiteTheme } from '../shared/siteThemes.js';
-import { activateEngine, deactivateEngine, VARS_STYLE_ID } from './engine/engine.js';
+import { activateEngine, deactivateEngine, scheduleShadowScan, VARS_STYLE_ID } from './engine/engine.js';
 import { ENGINE_VARIABLES } from '../shared/engineTheme.js';
 
 const CLASSIC_STYLE_ID = 'nv-classic';
@@ -20,6 +20,14 @@ const SITE_ATTR = 'data-nv-site';
 const STAGE_ATTR = 'data-nv-stage';
 
 console.log(STRINGS.contentActiveLog);
+
+// Shadow host hook notification (§5): the main-world script postMessage's on
+// a host's first marking; route it into the engine scheduler's coalescing
+// 'shadow' key (no-op unless the adaptive engine is active).
+window.addEventListener('message', (e) => {
+  if (e.source !== window) return;
+  if (e.data?.from === 'nv-shadow-attach') scheduleShadowScan();
+});
 
 function injectStyle(id, css) {
   let el = document.getElementById(id);

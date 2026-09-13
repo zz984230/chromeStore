@@ -36,5 +36,8 @@
       "all_frames": true,
       "match_about_blank": true
     }
+  ],
+  "web_accessible_resources": [
+    { "resources": ["nv-shadow-hook.js"], "matches": ["<all_urls>"] }
   ]
 }
