@@ -18,31 +18,67 @@ export function buildRuleText(selector, prop, value, { priority }) {
   return `${selector} { ${prop}: ${value}${priority ? ' !important' : ''} }`;
 }
 
-const state = { sheetEl: null, varsEl: null, rulesIndex: new Map(), engine: null, varMap: {} };
+const state = {
+  sheetEl: null,
+  varsEl: null,
+  writtenSelectors: new Set(), // selectors already present in the engine sheet
+  engine: null,
+  varMap: {},
+  htmlProps: [], // htmlPropTokens snapshot, recomputed once per scan pass
+  onFirstRule: null, // first-rule hook of the current activation, nulled once fired
+};
+
+// Debounce scheduler: same-key schedules coalesce (only the latest fn runs),
+// different keys run independently. Timer impls are injectable for tests.
+export function createScheduler(setTimeoutImpl = setTimeout, clearTimeoutImpl = clearTimeout) {
+  const pending = new Map();
+  return {
+    schedule(key, fn, delay = 0) {
+      const prev = pending.get(key);
+      if (prev !== undefined) clearTimeoutImpl(prev);
+      const id = setTimeoutImpl(() => {
+        pending.delete(key);
+        fn();
+      }, delay);
+      pending.set(key, id);
+    },
+    cancel(key) {
+      const id = pending.get(key);
+      if (id === undefined) return;
+      clearTimeoutImpl(id);
+      pending.delete(key);
+    },
+    cancelAll() {
+      for (const id of pending.values()) clearTimeoutImpl(id);
+      pending.clear();
+    },
+  };
+}
 
 function prop(rule, name) { return rule.style.getPropertyValue(name) || rule.style[name] || ''; }
 
 function insertEngineRule(selector, prop, value, priority) {
   const css = buildRuleText(selector, prop, value, { priority });
-  const key = `${selector}∣${prop}`;
-  const existing = state.rulesIndex.get(selector);
-  if (existing !== undefined && state.sheetEl?.sheet) {
+  if (state.writtenSelectors.has(selector) && state.sheetEl?.sheet) {
     // same selector already rewritten → update in place when possible
     try {
       for (let i = 0; i < state.sheetEl.sheet.cssRules.length; i++) {
         if (state.sheetEl.sheet.cssRules[i].selectorText === selector) {
           state.sheetEl.sheet.cssRules[i].style.setProperty(prop, value, priority ? 'important' : '');
-          state.rulesIndex.set(key, i);
           return;
         }
       }
     } catch { /* fall through to insert */ }
   }
   try {
-    const index = state.sheetEl.sheet.insertRule(css, 0);
-    state.rulesIndex.set(selector, index);
-    state.rulesIndex.set(key, index);
-  } catch { /* invalid selector — skip silently, matches original tolerance */ }
+    state.sheetEl.sheet.insertRule(css, 0);
+  } catch { return; /* invalid selector — skip silently, matches original tolerance */ }
+  state.writtenSelectors.add(selector);
+  if (state.onFirstRule) {
+    const cb = state.onFirstRule;
+    state.onFirstRule = null;
+    cb();
+  }
 }
 
 // A quote-bearing html attribute value can yield an invalid selector token,
@@ -55,7 +91,7 @@ const safeCount = (token) => {
 };
 
 function emit(rule, propName, value) {
-  const selector = transformSelector(rule.selectorText, htmlPropTokens(document), safeCount);
+  const selector = transformSelector(rule.selectorText, state.htmlProps, safeCount);
   if (!selector) return;
   const priority = state.engine.highPriority
     || rule.style.getPropertyPriority(propName) === 'important';
@@ -146,7 +182,7 @@ function collectCustomProps(rule) {
   }
 }
 
-function visitRule(rule, depth) {
+function visitRule(rule) {
   const e = state.engine;
   if (rule.href) { requestSheetFetch(rule.href, rule.parentStyleSheet?.ownerNode); return; }
   if (rule.style) { rewriteStyleRule(rule); return; }
@@ -161,7 +197,7 @@ function visitRule(rule, depth) {
     if (child.style) rewriteStyleRule(child);
     else if (deeper || ((child.constructor.name === 'CSSMediaRule' && e.processMediaQueries)
       || (child.constructor.name === 'CSSSupportsRule' && e.processSupports)
-      || (child.constructor.name === 'CSSKeyframesRule' && e.processKeyframes))) visitRule(child, depth + 1);
+      || (child.constructor.name === 'CSSKeyframesRule' && e.processKeyframes))) visitRule(child);
   }
 }
 
@@ -181,6 +217,7 @@ async function requestSheetFetch(href, ownerNode) {
 }
 
 function scanSheet(sheet) {
+  if (!state.engine) return; // async callbacks (fetched-sheet rAF) may fire after deactivation
   const owner = sheet.ownerNode;
   if (owner && MANAGED_STYLE_IDS.has(owner.id)) return;
   let rules;
@@ -189,7 +226,7 @@ function scanSheet(sheet) {
     return;
   }
   if (!rules) return;
-  for (const rule of rules) visitRule(rule, 0);
+  for (const rule of rules) visitRule(rule);
 }
 
 function collectRootVarMap() {
@@ -204,11 +241,33 @@ function collectRootVarMap() {
   } catch { /* non-Chromium or detached — rule-level map still works */ }
 }
 
-export function activateEngine(settings) {
+// Rebuild the per-pass context snapshot: fresh varMap and one htmlPropTokens
+// computation for the whole scan pass (emit reads the snapshot).
+export function engineRefreshContext() {
+  state.varMap = {};
+  collectRootVarMap();
+  state.htmlProps = htmlPropTokens(document);
+}
+
+// Full reentrant scan: refresh context, then rescan every reachable sheet.
+export function engineRescanAll() {
+  engineRefreshContext();
+  for (const sheet of document.styleSheets) scanSheet(sheet);
+}
+
+// Incremental entry point for a newly added link/style node, including the
+// cross-origin fetch path when the node has no readable sheet yet.
+export function engineProcessSheetOf(node) {
+  if (!node) return;
+  if (node.sheet) { scanSheet(node.sheet); return; }
+  if (node.href) requestSheetFetch(node.href, node);
+}
+
+export function activateEngine(settings, { onFirstRule } = {}) {
   const engine = settings.engine;
   state.engine = engine;
-  state.rulesIndex = new Map();
-  state.varMap = {};
+  state.writtenSelectors = new Set();
+  state.onFirstRule = onFirstRule ?? null;
   document.documentElement.setAttribute(ACTIVE_ATTR, '');
 
   // re-enable clones from a previous activation cycle (original "process"
@@ -223,8 +282,7 @@ export function activateEngine(settings) {
   state.varsEl = mountStyle(VARS_STYLE_ID, `${vars}\n${extra}`);
   state.sheetEl = mountStyle(SHEET_STYLE_ID, '');
 
-  collectRootVarMap();
-  for (const sheet of document.styleSheets) scanSheet(sheet);
+  engineRescanAll();
 }
 
 function mountStyle(id, css) {
@@ -243,7 +301,10 @@ export function deactivateEngine() {
   for (const id of [VARS_STYLE_ID, SHEET_STYLE_ID]) document.getElementById(id)?.remove();
   state.varsEl = null;
   state.sheetEl = null;
-  state.rulesIndex = new Map();
+  state.writtenSelectors = new Set();
+  state.varMap = {};
+  state.htmlProps = [];
+  state.onFirstRule = null;
   for (const el of document.querySelectorAll(`[${CLONED_ATTR}]`)) {
     el.setAttribute('disabled', '');
     if (el.sheet) el.sheet.disabled = true;
