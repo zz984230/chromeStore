@@ -26,6 +26,8 @@ const state = {
   varMap: {},
   htmlProps: [], // htmlPropTokens snapshot, recomputed once per scan pass
   onFirstRule: null, // first-rule hook of the current activation, nulled once fired
+  sched: null, // per-activation debounce scheduler (coalesces observer triggers)
+  elementMO: null, // always-on documentElement childList/subtree observer
 };
 
 // Debounce scheduler: same-key schedules coalesce (only the latest fn runs),
@@ -52,6 +54,21 @@ export function createScheduler(setTimeoutImpl = setTimeout, clearTimeoutImpl = 
       for (const id of pending.values()) clearTimeoutImpl(id);
       pending.clear();
     },
+  };
+}
+
+// Pure derivation of which observers/triggers an active engine needs.
+// elementMO is always on while active; runtime capability checks (e.g.
+// PerformanceLongTaskTiming for poLong) happen at assembly, not here.
+export function decideObservers(engine) {
+  const po = engine.performanceObserver === true && engine.tuning === 'page-load';
+  return {
+    elementMO: true,
+    styleMO: engine.processInlineStyles === true,
+    classMO: engine.watchClassChanges === true,
+    poShort: po,
+    poLong: po,
+    continueWatch: engine.watchNewElements === true,
   };
 }
 
@@ -283,6 +300,37 @@ export function activateEngine(settings, { onFirstRule } = {}) {
   state.sheetEl = mountStyle(SHEET_STYLE_ID, '');
 
   engineRescanAll();
+  if (decideObservers(engine).elementMO) attachElementObserver();
+}
+
+// Always-on element observer: any added element node routes to its trigger
+// through the scheduler's coalescing keys.
+function attachElementObserver() {
+  state.elementMO?.disconnect(); // idempotent re-activation guard
+  state.sched?.cancelAll();
+  state.sched = createScheduler();
+  state.elementMO = new MutationObserver((records) => {
+    if (!state.engine) return; // microtask delivered after teardown
+    for (const m of records) {
+      for (const node of m.addedNodes) {
+        if (node.nodeType !== 1) continue; // element nodes only
+        handleAddedElement(node);
+      }
+    }
+  });
+  state.elementMO.observe(document.documentElement, { childList: true, subtree: true });
+}
+
+function handleAddedElement(node) {
+  const engine = state.engine;
+  const name = node.localName;
+  if (name === 'link' || name === 'style') {
+    state.sched.schedule('node', () => engineProcessSheetOf(node));
+    if (engine.tuning === 'performance') state.sched.schedule('ctx', engineRefreshContext);
+  } else if (name === 'iframe' || name === 'script') {
+    if (engine.tuning === 'performance') state.sched.schedule('rescan', engineRescanAll);
+  }
+  // other tags: no trigger yet (class/style-attr watching lands in M2b Task 4/5)
 }
 
 function mountStyle(id, css) {
@@ -297,6 +345,10 @@ function mountStyle(id, css) {
 }
 
 export function deactivateEngine() {
+  state.elementMO?.disconnect();
+  state.elementMO = null;
+  state.sched?.cancelAll();
+  state.sched = null;
   document.documentElement?.removeAttribute(ACTIVE_ATTR);
   for (const id of [VARS_STYLE_ID, SHEET_STYLE_ID]) document.getElementById(id)?.remove();
   state.varsEl = null;
