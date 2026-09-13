@@ -28,7 +28,20 @@ const state = {
   onFirstRule: null, // first-rule hook of the current activation, nulled once fired
   sched: null, // per-activation debounce scheduler (coalesces observer triggers)
   elementMO: null, // always-on documentElement childList/subtree observer
+  styleMO: null, // style-attribute observer, only while processInlineStyles is on
 };
+
+// Inline style rewrite bookkeeping (§0-⑧). inlineClassCache remembers which
+// nv-inline-* class a node carries so a later pass reuses it instead of
+// piling on classes; it survives deactivation (nodes keep their class).
+// inlineProcessed maps class → props already emitted for it, so rescans
+// (rescanAll, style-MO) don't duplicate rules; it resets on deactivate.
+const inlineClassCache = new WeakMap();
+const inlineProcessed = new Map();
+const pendingInline = new Set(); // style-changed nodes awaiting the 'inline' flush
+// Inline rules are always important (§0-⑧): the rewrite core emits
+// (selector, prop, value) and this wrapper pins the priority.
+const insertInlineRule = (selector, prop, value) => insertEngineRule(selector, prop, value, true);
 
 // Nodes awaiting the coalesced 'node' flush: the scheduler keeps only the
 // latest closure per key, so a batch of link/style insertions accumulates here
@@ -271,10 +284,16 @@ export function engineRefreshContext() {
   state.htmlProps = htmlPropTokens(document);
 }
 
-// Full reentrant scan: refresh context, then rescan every reachable sheet.
+// Full reentrant scan: refresh context, then rescan every reachable sheet —
+// plus, while processInlineStyles (f) is on, every [style] element.
 export function engineRescanAll() {
   engineRefreshContext();
   for (const sheet of document.styleSheets) scanSheet(sheet);
+  if (state.engine?.processInlineStyles === true) {
+    for (const el of document.querySelectorAll('[style]')) {
+      rewriteInlineNode(el, state.engine, state.varMap, insertInlineRule);
+    }
+  }
 }
 
 // Incremental entry point for a newly added link/style node, including the
@@ -305,7 +324,9 @@ export function activateEngine(settings, { onFirstRule } = {}) {
   state.sheetEl = mountStyle(SHEET_STYLE_ID, '');
 
   engineRescanAll();
-  if (decideObservers(engine).elementMO) attachElementObserver();
+  const observers = decideObservers(engine);
+  if (observers.elementMO) attachElementObserver();
+  if (observers.styleMO) attachStyleObserver();
 }
 
 // Always-on element observer: any added element node routes to its trigger
@@ -340,7 +361,114 @@ function handleAddedElement(node) {
   } else if (name === 'iframe' || name === 'script') {
     if (engine.tuning === 'performance') state.sched.schedule('rescan', engineRescanAll);
   }
-  // other tags: no trigger yet (class/style-attr watching lands in M2b Task 4/5)
+  // other tags: no trigger yet (class watching + i.2 continuous processing land in M2b Task 4)
+}
+
+// ---- inline styles (f, §0-⑧): five props, random class, always important ----
+
+export const INLINE_PROPS = ['color', 'border-color', 'background', 'background-color', 'background-image'];
+
+export function randInlineClass() {
+  return 'nv-inline-' + Math.floor(Math.random() * 1e7);
+}
+
+// Existing nv-inline-* class of the node when we can confirm it still applies,
+// else generate one and add it (idempotent — never two classes per node).
+export function inlineClassFor(node) {
+  const known = inlineClassCache.get(node);
+  if (known && node.classList?.contains(known)) return known;
+  const cls = randInlineClass();
+  node.classList?.add?.(cls);
+  inlineClassCache.set(node, cls);
+  return cls;
+}
+
+const INLINE_TYPE = { color: 'text', 'border-color': 'border', background: 'background', 'background-color': 'background' };
+const INLINE_TARGET_VAR = { text: 'var(--nv-text)', border: 'var(--nv-edge)', background: 'var(--nv-surface)' };
+
+// Value-level branch of one inline declaration — mirrors the rewriteStyleRule
+// branches scoped to the five inline props; returns the emitted value or null
+// when the declaration must not produce a rule.
+function rewriteInlineProp(key, value, engine, varMap, style) {
+  if (key === 'background-image') {
+    if (!engine.darkenBackgroundImages || value === 'none') return null;
+    if (value.indexOf('url(') !== -1 && !/-\d+x|\d+x[-_]/.test(value)) {
+      return `linear-gradient(var(--nv-image-veil), var(--nv-image-veil)), ${value}`;
+    }
+    if (value.indexOf('-gradient(') !== -1 && engine.removeGradients) return 'none';
+    return null;
+  }
+  const type = INLINE_TYPE[key];
+  if (!type) return null;
+  const on = type === 'text' ? engine.darken.text : type === 'border' ? engine.darken.border : engine.darken.background;
+  if (!on) return null;
+  // transparent text feeds the font-size quirk on the sheet path, which is not
+  // one of the five inline props — nothing safe to emit here
+  if (type === 'text' && value === 'transparent') return null;
+  if (value === INLINE_TARGET_VAR[type]) return null;
+  if (engine.borderNeedsWidth && type === 'border' && !style.getPropertyValue('border-width')) return null;
+  if (!isProcessableColor(value, type, engine)) return null;
+  const next = rewriteColor(value, { type, engine, varMap });
+  return next === value ? null : next; // preserveDarkColors etc. → no-op rule skipped
+}
+
+// A color-only background shorthand narrows to background-color when the node
+// also declares background-color separately, so the shorthand's other layers
+// survive — same emit-key choice as the sheet path.
+function inlineEmitKey(key, value, style) {
+  if (key !== 'background') return key;
+  if (value.indexOf('-gradient(') !== -1 || style.getPropertyValue('background-color') === '') return 'background';
+  return 'background-color';
+}
+
+export function rewriteInlineNode(node, engine, varMap, insertFn) {
+  const style = node.style;
+  if (!style) return;
+  const cls = inlineClassFor(node);
+  const selector = `html[${ACTIVE_ATTR}] .${cls}`;
+  const seen = inlineProcessed.get(cls) ?? new Set();
+  inlineProcessed.set(cls, seen);
+  for (let i = 0; i < style.length; i++) {
+    const key = style[i];
+    if (typeof key !== 'string' || seen.has(key)) continue;
+    const value = (style.getPropertyValue(key) || '').trim();
+    if (!value) continue;
+    if (key.startsWith('--')) {
+      // custom props are varMap inputs, not rules — re-collected on every pass
+      // because engineRefreshContext resets the map between scan passes
+      if (!key.startsWith('--nv-')) varMap[`var(${key})`] = value;
+      continue;
+    }
+    const out = rewriteInlineProp(key, value, engine, varMap, style);
+    if (out === null) continue;
+    seen.add(key);
+    insertFn(selector, inlineEmitKey(key, value, style), out);
+  }
+}
+
+// style-attribute observer (f): a changed style value carrying a color-ish
+// token reschedules the node's inline rewrite under the coalescing 'inline'
+// key; the pending set drains the whole batch (same-key coalescing keeps only
+// the latest closure, so nodes must not ride inside the closure — c40d345).
+function attachStyleObserver() {
+  state.styleMO?.disconnect();
+  state.styleMO = new MutationObserver((records) => {
+    if (!state.engine) return; // microtask delivered after teardown
+    for (const m of records) {
+      const val = m.target.getAttribute?.('style') ?? '';
+      if (!val.includes('--') && !val.includes('color:') && !val.includes('background')) continue;
+      pendingInline.add(m.target);
+      state.sched.schedule('inline', () => {
+        const nodes = [...pendingInline];
+        pendingInline.clear();
+        for (const n of nodes) {
+          if (!state.engine) return;
+          rewriteInlineNode(n, state.engine, state.varMap, insertInlineRule);
+        }
+      });
+    }
+  });
+  state.styleMO.observe(document.documentElement, { attributeFilter: ['style'], subtree: true });
 }
 
 function mountStyle(id, css) {
@@ -357,9 +485,15 @@ function mountStyle(id, css) {
 export function deactivateEngine() {
   state.elementMO?.disconnect();
   state.elementMO = null;
+  state.styleMO?.disconnect();
+  state.styleMO = null;
   state.sched?.cancelAll();
   state.sched = null;
   pendingSheets.clear();
+  pendingInline.clear();
+  // nv-inline-* classes stay on their nodes — inert without the engine sheet
+  // (M1 light-branch precedent); only the processed-props bookkeeping resets.
+  inlineProcessed.clear();
   document.documentElement?.removeAttribute(ACTIVE_ATTR);
   for (const id of [VARS_STYLE_ID, SHEET_STYLE_ID]) document.getElementById(id)?.remove();
   state.varsEl = null;
