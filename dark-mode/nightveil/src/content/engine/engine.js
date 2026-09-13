@@ -195,6 +195,13 @@ export function activateEngine(settings) {
   state.varMap = {};
   document.documentElement.setAttribute(ACTIVE_ATTR, '');
 
+  // re-enable clones from a previous activation cycle (original "process"
+  // branch behavior) — they are re-scanned via the document.styleSheets loop
+  for (const el of document.querySelectorAll(`[${CLONED_ATTR}]`)) {
+    el.removeAttribute('disabled');
+    if (el.sheet) el.sheet.disabled = false;
+  }
+
   const vars = engineVarsCss({ ...ENGINE_VARIABLES, ...(engine.variables ?? {}) });
   const extra = engine.extraRules ?? EXTRA_RULES_DEFAULT;
   state.varsEl = mountStyle(VARS_STYLE_ID, `${vars}\n${extra}`);
@@ -221,5 +228,8 @@ export function deactivateEngine() {
   state.varsEl = null;
   state.sheetEl = null;
   state.rulesIndex = new Map();
-  for (const el of document.querySelectorAll(`[${CLONED_ATTR}]`)) el.setAttribute('disabled', '');
+  for (const el of document.querySelectorAll(`[${CLONED_ATTR}]`)) {
+    el.setAttribute('disabled', '');
+    if (el.sheet) el.sheet.disabled = true;
+  }
 }
