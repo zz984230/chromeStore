@@ -17,7 +17,6 @@ export function shouldFetch(href) {
   let abs = href;
   if (href.startsWith('//')) abs = `https:${href}`;
   if (!/^https?:/i.test(abs)) return false;
-  const relative = abs.replace(/^.*:\/\//i, '');
   const notFont = !/font\.|font-|\/font/i.test(abs) && !/fonts\.|fonts-|\/fonts/i.test(abs);
   return abs.endsWith('.css') || notFont;
 }
@@ -46,12 +45,12 @@ export async function fetchRemoteCss(href, { fetchImpl = (...a) => fetch(...a), 
           const buffer = await cloned.arrayBuffer();
           content = buffer ? new TextDecoder('utf-16').decode(buffer) : content;
         }
-        if (content.includes('<!DOCTYPE html>')) return null;
+        if (/<html/i.test(content.slice(0, 512))) return null;
         return content;
       }
     } catch { /* fall through to background proxy */ }
   }
   const viaBg = await sendToBackground(abs);
-  if (viaBg?.ok && viaBg.content && !viaBg.content.includes('<!DOCTYPE html>')) return viaBg.content;
+  if (viaBg?.ok && viaBg.content && !/<html/i.test(viaBg.content.slice(0, 512))) return viaBg.content;
   return null;
 }
