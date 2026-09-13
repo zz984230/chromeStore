@@ -29,6 +29,7 @@ const state = {
   sched: null, // per-activation debounce scheduler (coalesces observer triggers)
   elementMO: null, // always-on documentElement childList/subtree observer
   styleMO: null, // style-attribute observer, only while processInlineStyles is on
+  classMO: null, // class-attribute observer, only while watchClassChanges is on
 };
 
 // Inline style rewrite bookkeeping (§0-⑧). inlineClassCache remembers which
@@ -47,6 +48,11 @@ const insertInlineRule = (selector, prop, value) => insertEngineRule(selector, p
 // latest closure per key, so a batch of link/style insertions accumulates here
 // and the single flushed fn processes every node in the batch.
 const pendingSheets = new Set();
+
+// i.2 continuous processing: id/class keys of post-load elements already
+// routed to a 'new-el' rescan, so the same element never retriggers one.
+// Resets with the activation that populated it.
+const seenNodeKeys = new Set();
 
 // Debounce scheduler: same-key schedules coalesce (only the latest fn runs),
 // different keys run independently. Timer impls are injectable for tests.
@@ -88,6 +94,30 @@ export function decideObservers(engine) {
     poLong: po,
     continueWatch: engine.watchNewElements === true,
   };
+}
+
+// Class-MO self-feedback filter (i.1): our own writes only ever add or remove
+// nv-* tokens (nv-inline-* random classes, clone marking), so a mutation whose
+// non-nv token set is unchanged is ours — false keeps 'class-rescan' quiet.
+// An unreadable old/new value cannot prove the change was ours → true.
+export function isForeignClassMutation(oldValue, newValue) {
+  const foreign = (v) => new Set(
+    (v ?? '').split(/\s+/).filter((t) => t && !t.startsWith('nv-')));
+  const before = foreign(oldValue);
+  const after = foreign(newValue);
+  if (before.size !== after.size) return true;
+  for (const t of before) if (!after.has(t)) return true;
+  return false;
+}
+
+// i.2 dedup key: the id when present, else the full className string when it
+// carries at least one non-nv- token; null when the element gives nothing
+// watchable (also covers SVG, whose className is not a string).
+export function newElementKey(node) {
+  const id = node.id ?? '';
+  if (id) return id;
+  const cls = typeof node.className === 'string' ? node.className : '';
+  return cls.split(/\s+/).some((t) => t && !t.startsWith('nv-')) ? cls : null;
 }
 
 function prop(rule, name) { return rule.style.getPropertyValue(name) || rule.style[name] || ''; }
@@ -327,6 +357,7 @@ export function activateEngine(settings, { onFirstRule } = {}) {
   const observers = decideObservers(engine);
   if (observers.elementMO) attachElementObserver();
   if (observers.styleMO) attachStyleObserver();
+  if (observers.classMO) attachClassObserver();
 }
 
 // Always-on element observer: any added element node routes to its trigger
@@ -360,8 +391,15 @@ function handleAddedElement(node) {
     if (engine.tuning === 'performance') state.sched.schedule('ctx', engineRefreshContext);
   } else if (name === 'iframe' || name === 'script') {
     if (engine.tuning === 'performance') state.sched.schedule('rescan', engineRescanAll);
+  } else if (decideObservers(engine).continueWatch && document.readyState === 'complete') {
+    // i.2 continuous processing: post-load elements carrying a watchable
+    // id/class trigger one rescan per key (deduped via seenNodeKeys).
+    const key = newElementKey(node);
+    if (key && !seenNodeKeys.has(key)) {
+      seenNodeKeys.add(key);
+      state.sched.schedule('new-el', engineRescanAll);
+    }
   }
-  // other tags: no trigger yet (class watching + i.2 continuous processing land in M2b Task 4)
 }
 
 // ---- inline styles (f, §0-⑧): five props, random class, always important ----
@@ -474,6 +512,26 @@ function attachStyleObserver() {
   state.styleMO.observe(document.documentElement, { attributeFilter: ['style'], subtree: true });
 }
 
+// class watcher (i.1, watchClassChanges): any foreign class change anywhere in
+// the document reschedules a full rescan; nv-only deltas are our own writes
+// and are swallowed by the self-feedback filter.
+function attachClassObserver() {
+  state.classMO?.disconnect();
+  state.classMO = new MutationObserver((records) => {
+    if (!state.engine) return; // microtask delivered after teardown
+    for (const m of records) {
+      const now = m.target.getAttribute?.('class') ?? null;
+      if (isForeignClassMutation(m.oldValue, now)) {
+        state.sched.schedule('class-rescan', engineRescanAll);
+        return; // coalesced — one foreign delta per batch is enough
+      }
+    }
+  });
+  // attributeOldValue feeds isForeignClassMutation's old/new comparison
+  state.classMO.observe(document.documentElement,
+    { subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true });
+}
+
 function mountStyle(id, css) {
   let el = document.getElementById(id);
   if (!el) {
@@ -490,10 +548,13 @@ export function deactivateEngine() {
   state.elementMO = null;
   state.styleMO?.disconnect();
   state.styleMO = null;
+  state.classMO?.disconnect();
+  state.classMO = null;
   state.sched?.cancelAll();
   state.sched = null;
   pendingSheets.clear();
   pendingInline.clear();
+  seenNodeKeys.clear();
   // nv-inline-* classes stay on their nodes — inert without the engine sheet
   // (M1 light-branch precedent); only the processed-props bookkeeping resets.
   inlineProcessed.clear();
