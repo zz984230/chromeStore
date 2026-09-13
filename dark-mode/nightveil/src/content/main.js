@@ -215,8 +215,11 @@ function whenDomReady(fn) {
 // they were scheduled in and no-op when a newer render superseded them —
 // otherwise a stale callback could strip or apply against outdated settings.
 let renderGeneration = 0;
+// Most recent render input, kept for the post-load recheck re-render (§6).
+let lastSettings = null;
 
 function render(settings) {
+  lastSettings = settings;
   const gen = ++renderGeneration;
   const rules = settings.exclusionRules ?? {};
   if (!siteDarkActive(settings, location.hostname)
@@ -252,6 +255,18 @@ function render(settings) {
     }
   };
   whenDomReady(lateCheck);
+  // Post-load recheck (§6): once the page finished loading, re-render once so
+  // the exclusion evaluation runs again — late dark-scheme metas and dark
+  // backgrounds get a chance to tear the effect down. Generation guard drops
+  // callbacks superseded by a newer render.
+  if (settings.themeId === 'adaptive' && settings.engine.recheck
+      && document.readyState !== 'complete') {
+    window.addEventListener('load', () => {
+      if (gen !== renderGeneration) return;
+      setTimeout(() => { if (gen === renderGeneration) render(lastSettings); },
+        Number(settings.engine.recheckDelay) || 0);
+    }, { once: true });
+  }
 }
 
 loadSettings().then(render);
