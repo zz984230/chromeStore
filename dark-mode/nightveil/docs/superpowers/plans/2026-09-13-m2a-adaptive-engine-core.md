@@ -781,7 +781,7 @@ test('html/:root/:host segments rewrite in place', () => {
 
 test('html-matching attribute token chains without space when it targets html itself', () => {
   // [data-theme] matches html (count 0) → chained selector, no space
-  assert.equal(transformSelector('[data-theme="dark"] .x', ['[data-theme]', '[data-theme="dark"'], solo),
+  assert.equal(transformSelector('[data-theme="dark"] .x', ['[data-theme]', '[data-theme="dark"]'], solo),
     `${KEY}[data-theme="dark"] .x`);
 });
 
