@@ -12,6 +12,7 @@ export const VARS_STYLE_ID = 'nv-engine-vars';
 export const SHEET_STYLE_ID = 'nv-engine-sheet';
 export const ACTIVE_ATTR = 'data-nv-active';
 const CLONED_ATTR = 'data-nv-cloned';
+const MANAGED_STYLE_IDS = new Set([VARS_STYLE_ID, SHEET_STYLE_ID, 'nv-classic', 'nv-guard', 'nv-site']);
 
 export function buildRuleText(selector, prop, value, { priority }) {
   return `${selector} { ${prop}: ${value}${priority ? ' !important' : ''} }`;
@@ -102,9 +103,13 @@ function rewriteStyleRule(rule) {
     }
   }
   const bgAll = prop(rule, 'background');
-  if (e.darken.background && bgAll && isProcessableColor(bgAll, 'background', e) && bgAll.indexOf('-gradient(') !== -1) {
+  if (e.darken.background && bgAll && isProcessableColor(bgAll, 'background', e)) {
     const value = rewriteColor(bgAll, { type: 'background', engine: e, varMap, selectorText: rule.selectorText });
-    emit(rule, 'background', value);
+    if (value !== bgAll || bgAll === 'transparent') {
+      const nobc = rule.style.getPropertyValue('background-color') === '';
+      const key = nobc ? 'background' : (bgAll.indexOf('--gradient(') !== -1 ? 'background' : 'background-color');
+      emit(rule, key, value);
+    }
   }
   const bgImage = prop(rule, 'background-image');
   if (e.darkenBackgroundImages && bgImage && bgImage !== 'none') {
@@ -167,6 +172,8 @@ async function requestSheetFetch(href, ownerNode) {
 }
 
 function scanSheet(sheet) {
+  const owner = sheet.ownerNode;
+  if (owner && MANAGED_STYLE_IDS.has(owner.id)) return;
   let rules;
   try { rules = sheet.cssRules; } catch { // cross-origin without fetch path — skip
     if (sheet.href) requestSheetFetch(sheet.href, sheet.ownerNode);
