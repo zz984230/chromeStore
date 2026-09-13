@@ -82,6 +82,28 @@ test('engine settings default and one-level deep merge for nested groups', async
   assert.deepEqual(s.engine.variables['--nv-surface'], '#292929');
 });
 
+test('engine known subgroups two-level merge: partial stored variables backfills the rest', async () => {
+  const mem = new MemoryStorage({ [STORAGE_KEY]: { engine: { variables: { '--nv-surface': '#101010' } } } });
+  const s = await loadSettings(mem);
+  assert.equal(s.engine.variables['--nv-surface'], '#101010', 'stored override wins');
+  assert.equal(s.engine.variables['--nv-text'], '#dcdcdc', 'other variable defaults backfill');
+  assert.equal(Object.keys(s.engine.variables).length, 18, 'full variable set intact');
+});
+
+test('engine known subgroups two-level merge: partial stored darken backfills siblings', async () => {
+  const mem = new MemoryStorage({ [STORAGE_KEY]: { engine: { darken: { text: false } } } });
+  const s = await loadSettings(mem);
+  assert.equal(s.engine.darken.text, false, 'stored override wins');
+  assert.equal(s.engine.darken.border, true, 'missing darken fields backfill');
+});
+
+test('exclusionRules stays one-level merge: unknown subgroup keys pass through untouched', async () => {
+  const mem = new MemoryStorage({ [STORAGE_KEY]: { exclusionRules: { htmlClasses: 'x' } } });
+  const s = await loadSettings(mem);
+  assert.equal(s.exclusionRules.htmlClasses, 'x', 'stored override wins');
+  assert.equal(s.exclusionRules.htmlAttributes, 'data-theme=dark', 'sibling default preserved');
+});
+
 test('legacy full-engine-absent settings upgrade keeps exclusionRules backfill', async () => {
   const mem = new MemoryStorage({ [STORAGE_KEY]: { state: 'dark', themeId: 'nv-midnight' } });
   const s = await loadSettings(mem);

@@ -36,10 +36,19 @@ export function defaultStorage() {
 }
 
 const NESTED_GROUPS = ['exclusionRules', 'engine'];
+// Engine sub-groups the M2c options UI writes partially: stored subgroup
+// objects deep-merge over defaults (second level) so sibling fields backfill.
+// exclusionRules stays one-level by design.
+const NESTED_SUBGROUPS = {
+  engine: ['darken', 'fallback', 'alphaRange', 'luminanceRange', 'nearWhiteAdjust', 'contextAwareTargets', 'variables'],
+};
 function mergeWithDefaults(stored) {
   const merged = { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
   for (const group of NESTED_GROUPS) {
     merged[group] = { ...DEFAULT_SETTINGS[group], ...(stored?.[group] ?? {}) };
+    for (const sub of NESTED_SUBGROUPS[group] ?? []) {
+      merged[group][sub] = { ...DEFAULT_SETTINGS[group][sub], ...(stored?.[group]?.[sub] ?? {}) };
+    }
   }
   return merged;
 }
