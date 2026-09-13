@@ -61,7 +61,7 @@
 ## 已知局限（Adaptive Engine 颜色改写，2026-09-13 M2 设计确立）
 
 - [ ] 现代 CSS 颜色语法（oklch() / lab() / color-mix() 等）不改写，检测到即跳过所在规则——与原版 tinycolor 时代能力面对等（M2 grilling D4 决策）；复刻期后作为独立迭代补齐
-- [ ] `document.adoptedStyleSheets`（构造式样式表）两种变更追踪模式都追不到（不触发 DOM mutation、不产生 resource entry）——原版同样追不到，能力面对等（M2 grilling D5 决策）
+- [ ] `document.adoptedStyleSheets`（文档级构造式样式表）追不到——不触发 DOM mutation、不产生 resource entry；shadow root 内的样式表（含其 adoptedStyleSheets）原版经选项 g 可处理（任务 0 勘正 2026-09-13），文档级仍无解，能力面对等
 
 ## 未来增强（可选）
 

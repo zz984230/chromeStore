@@ -41,8 +41,8 @@ _Avoid_: custom theme（易与用户自写样式混淆）
 _Avoid_: custom dark
 
 **Adaptive Engine（自适应引擎）**:
-运行在页面内、遍历页面样式表并实时改写颜色的动态引擎。对应原版的 "Native Dark"。
-_Avoid_: native dark, live engine
+运行在页面内、遍历页面样式表并实时改写颜色的动态引擎。对应原版的 "Native Dark"。以主题席位身份参与单选（与 Classic Theme、User CSS 同机制），不是独立的着色模式开关。
+_Avoid_: native dark, live engine, coloring mode
 
 **变更追踪（Change Tracking）**:
 页面出现新样式后，在约定时限内完成改写的机制。有两种用户可选策略：MutationObserver（盯 DOM 变更，精确而耗 CPU）与 PerformanceObserver（盯样式表资源加载，便宜但覆盖窄）。

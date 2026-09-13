@@ -67,8 +67,8 @@
 > 2026-09-13 grilling 敲定：拆 M2a/M2b/M2c 三段交付；任务 0 行为清单建档先行，建档审定前不写实现代码；关键架构决策见 ADR-0004。
 
 **功能**（按段拆分，原六项功能全部保留、归入各段）
-- [ ] 任务 0（M2a 内先行）：行为清单建档——允许通读原版源码提炼**纯行为描述**，产出行为清单 + 原选项↔新选项映射表，经用户审定后「关门」（程序见 ADR-0003 附录）。确认清单见下节。
-- [ ] M2a：样式表遍历 + 颜色改写核心（桶分类 + `var(--nv-*)` 间接层，ADR-0004）；自写最小颜色数学库（现代语法跳过，见 BACKLOG）；18 个 `--nv-*` 变量与原版 `--native-dark-*` 1:1；跨域样式表 background SW 代取；模式切换接入（settings 加 `coloringMode` 字段，Classic/Adaptive 正交，Site Theme 照常叠加）
+- [x] 任务 0（M2a 内先行）：行为清单建档——**2026-09-13 完成并经用户审定关门**，交付物 docs/M2-BEHAVIOR.md（38 子选项映射表 + 18 变量表 + 颜色契约 + 全部边缘行为）；三项拍板：默认主题切 `adaptive`、命名表认可、BACKLOG 勘正确认。
+- [ ] M2a：样式表遍历 + 颜色改写核心（引擎自有样式表复制改写 + `var(--nv-*)` 回退值混合，ADR-0004 + M2-BEHAVIOR §3/§4）；自写最小颜色数学库（现代语法跳过，见 BACKLOG）；18 个 `--nv-*` 变量与原版 `--native-dark-*` 1:1（映射表 M2-BEHAVIOR §9）；跨域样式表 background SW 代取（原版同款行为，任务 0 确认）；**主题席位接入**——`themeId: 'adaptive'` 作为第 41 席参与单选（任务 0 推翻 D2 正交假设），站点主题交互按 `engine.siteThemePolicy` 三态（默认 skip-compatible，M2-BEHAVIOR §1）；**默认主题切 `adaptive`**（拍板 1，M1 基线测试前提同步调整）
 - [ ] M2b：MutationObserver / PerformanceObserver 两种变更追踪模式 + 重扫调度（语义分工见 ADR-0004；媒体舞台标记**不**并入）
 - [ ] M2c：30+ 子选项逐项 1:1 对等 + 映射表交付（ADR-0003）；options.html 第 IV 分区完整实现（30+ 子选项 UI）
 
@@ -103,3 +103,4 @@
 **M1b（2026-09-12/13 完成子阶段）**：生效边界与选项页全部交付。12 任务子代理流水线（实现+双审+5 个修复波，计划级缺陷 4 个：阈值 0 折半、darkBackground 自测注入色、逗号分组选择器逃逸特异性提升器、站点层禁用残留；皆已修复并回写计划）。验收证据（/tabbit 分段 + 用户配合）：①fixtures 六页——plain/media/frames（含嵌套帧与 about:blank）/vars/heavy 着色正确，native-dark 被规则跳过（零注入、原生暗色保留），Light 拆除干净；②主题——Midnight 实时切换+持久化，**Invert Balanced 运行时断言**（html filter `invert(1) hue-rotate(180deg) brightness(1.05) contrast(1.05)`，M1a 遗留闭环）；③边界——Exclusion/Inclusion/右键 Include（幂等）/per-site 工具栏（全局状态不误切）/Reset 全链路；④**浏览器重启图标同步**（M1a 遗留闭环）；⑤真实站点——github（header 选择器当场调优 `ee08440`，复验 `rgb(1,4,9)`）、wikipedia、stackoverflow（顶栏 `#2d2d2d` 精修层生效）；⑥四页冒烟——B 站首页（89 舞台标记，无全黑）/空间列表（切换重渲染后 0→123 标记、渐变恢复；SPA 晚挂载为 BACKLOG 已知局限，非回归）/播放页（播放器标记+控制栏可见）/新浪行情（红绿语义保留、整页可读）。测试 16→36；选项页 http 挂载预览态（D8）由控制器直接断言通过。
 
 - 2026-09-13：M2 grilling（/grill-with-docs）敲定设计基线：①任务 0 行为清单建档先行——通读原版源码提炼纯行为、用户审定后关门（ADR-0003 附录）；②引擎架构——isolated content script 运行 + 跨域样式表 background SW 代取 + 自写最小颜色库 + 桶分类 var() 间接层（ADR-0004）；③拆 M2a/M2b/M2c 三段；④媒体舞台标记不并入变更追踪；⑤现代颜色语法与 adoptedStyleSheets 局限入 BACKLOG；⑥真实站点抽查定新浪财经/知乎/MDN（无站点主题覆盖，测引擎裸能力）；⑦动态断言用 ≤1s 轮询、性能数值记录不硬断。
+- 2026-09-13：任务 0 建档完成（docs/M2-BEHAVIOR.md，待用户审定关门）。十项确认全部落定，其中两项推翻 grilling 工作假设：①引擎是主题第 41 席而非正交模式（dark_41 单选，出厂默认即引擎——默认值是否跟随待拍板）；②站点主题非「照常叠加」而是 j/k/l 三态策略（默认仅忽略兼容款：google/support/accounts/myaccount/duckduckgo 让位引擎）。另勘正 BACKLOG：shadow root 内样式表原版可处理（选项 g 含主世界 attachShadow hook），文档级 adoptedStyleSheets 仍追不到。
