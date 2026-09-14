@@ -217,10 +217,13 @@ test('controlValue converts raw input values per control type', () => {
   assert.equal(controlValue(pct, '150'), 100, 'clamped to max');
   assert.equal(controlValue(pct, '-5'), 0, 'clamped to min');
   assert.equal(controlValue(pct, 'abc'), 0, 'NaN counts as 0');
+  assert.equal(controlValue(pct, ''), null, 'a cleared field is null, never a silent 0');
+  assert.equal(controlValue(pct, '   '), null, 'whitespace-only counts as cleared');
   assert.equal(controlValue({ type: 'number', min: 0, max: 10000, step: 10 }, '5000'), 5000);
   assert.equal(controlValue({ type: 'checkbox' }, true), true);
   assert.equal(controlValue({ type: 'checkbox' }, false), false);
   assert.equal(controlValue({ type: 'text' }, 'hsla(0,0%,0%,.85)'), 'hsla(0,0%,0%,.85)');
+  assert.equal(controlValue({ type: 'text' }, ''), '', 'cleared text still saves an empty string');
   assert.equal(controlValue({ type: 'radio' }, 'page-load'), 'page-load');
 });
 
@@ -246,7 +249,9 @@ test('options main.js renders §8 controls from the shared table', () => {
 test('options main.js autosaves each control as a whole-engine patch', () => {
   assert.ok(/ENGINE_CONTROLS\.find\(\(k\) => k\.id === e\.target\.id\)/.test(mainSrc),
     'delegation resolves the changed control by id');
-  assert.ok(/assembleEnginePatch\(current\.engine, c\.path, controlValue\(c, raw\)\)/.test(mainSrc));
+  assert.ok(/assembleEnginePatch\(current\.engine, c\.path, value\)/.test(mainSrc));
+  assert.ok(/if \(value === null\) return true;/.test(mainSrc),
+    'a cleared number field skips the autosave — storage is untouched, never handed a silent 0');
   assert.ok(/current = \{ \.\.\.current, engine: next \}/.test(mainSrc),
     'the snapshot advances synchronously so rapid edits compose instead of clobbering');
   assert.ok(/btn\.addEventListener\('click', \(\) => save\(\{ \.\.\.DEFAULT_SETTINGS \}\)\)/.test(mainSrc),

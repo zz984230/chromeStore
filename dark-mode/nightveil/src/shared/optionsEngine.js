@@ -177,10 +177,13 @@ export function assembleEnginePatch(engine, path, value) {
 }
 
 // Raw input value → stored value, by control type: numbers coerce with
-// Number() and clamp to the §8 range; checkboxes are booleans; text and radio
-// values pass through as strings.
+// Number() and clamp to the §8 range, except a cleared (empty/whitespace)
+// field, which yields null so the autosave path can skip instead of silently
+// storing 0; checkboxes are booleans; text and radio values pass through as
+// strings.
 export function controlValue(control, rawValue) {
   if (control.type === 'number') {
+    if (typeof rawValue === 'string' && rawValue.trim() === '') return null;
     const n = Number(rawValue);
     return Math.min(control.max, Math.max(control.min, Number.isFinite(n) ? n : 0));
   }

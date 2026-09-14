@@ -195,7 +195,9 @@ function onEngineControlChange(e) {
   if (!c) return false;
   if (c.type === 'radio' && !acceptTuning(e.target.value)) return true;
   const raw = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-  const next = assembleEnginePatch(current.engine, c.path, controlValue(c, raw));
+  const value = controlValue(c, raw);
+  if (value === null) return true; // cleared number field — storage waits for a real value
+  const next = assembleEnginePatch(current.engine, c.path, value);
   current = { ...current, engine: next };
   save({ engine: next });
   return true;
