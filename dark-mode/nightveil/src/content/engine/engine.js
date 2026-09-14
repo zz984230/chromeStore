@@ -175,6 +175,24 @@ const targetKey = (target) => {
 // instead of piling up duplicate @media blocks.
 const conditionedRules = new Map();
 
+// Depth-first written-rule lookup for the conditioned update-in-place path:
+// the map stores the OUTERMOST wrapper, and the style rule can sit below
+// further grouping levels — under @media > @supports the next scope is a
+// CSSSupportsRule with no selectorText, so a one-level scan misses the rule
+// and every rescan inserts another wrapped copy (unbounded growth). Walk INTO
+// grouping rules (cssRules without selectorText) and return the innermost rule
+// whose selectorText matches; undefined when truly absent.
+export function findConditionedRule(scopes, selector) {
+  for (const rule of scopes ?? []) {
+    if (rule.selectorText === selector) return rule;
+    if (!rule.selectorText && rule.cssRules) {
+      const hit = findConditionedRule(rule.cssRules, selector);
+      if (hit) return hit;
+    }
+  }
+  return undefined;
+}
+
 function insertEngineRule(selector, prop, value, priority, target = state.sheetEl, conditions = []) {
   const css = conditions.length
     ? conditions.reduceRight((acc, c) => wrapConditional(c.at, c.text, acc),
@@ -189,11 +207,20 @@ function insertEngineRule(selector, prop, value, priority, target = state.sheetE
   if (state.writtenSelectors.has(key) && sheet) {
     // same selector already rewritten → update in place when possible
     try {
-      const scopes = conditions.length ? conditionedRules.get(key)?.cssRules : sheet.cssRules;
-      if (scopes) {
-        for (let i = 0; i < scopes.length; i++) {
-          if (scopes[i].selectorText === selector) {
-            scopes[i].style.setProperty(prop, value, priority ? 'important' : '');
+      if (conditions.length) {
+        // the map holds the outermost wrapper — descend any nested grouping
+        // levels (findConditionedRule) to reach the inner style rule
+        const existing = findConditionedRule(conditionedRules.get(key)?.cssRules, selector);
+        if (existing) {
+          existing.style.setProperty(prop, value, priority ? 'important' : '');
+          return;
+        }
+      } else {
+        // plain writes stay top-level only: a wrapper's inner rule belongs to
+        // a different dedup key and must not absorb this update
+        for (const rule of sheet.cssRules) {
+          if (rule.selectorText === selector) {
+            rule.style.setProperty(prop, value, priority ? 'important' : '');
             return;
           }
         }
