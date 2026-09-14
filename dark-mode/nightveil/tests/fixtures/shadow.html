@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>NightVeil shadow fixture</title>
+    <style>
+      body { font-family: sans-serif; background: #fff; color: #222; }
+      .host { margin: 8px; border: 1px solid #ddd; }
+    </style>
+  </head>
+  <body>
+    <h1>Shadow DOM fixture</h1>
+    <p>Both hosts attach a <code>closed</code> shadow root inline — NightVeil must force it open and theme it.</p>
+    <div id="host-one" class="host"></div>
+    <div id="host-two" class="host"></div>
+    <script>
+      (function () {
+        function mount(host, extraInnerRule) {
+          var root = host.attachShadow({ mode: 'closed' });
+          var style = document.createElement('style');
+          style.textContent =
+            ':host { background: #ffffff; padding: 12px; }' +
+            '.inner { color: #0000dd; font-weight: bold;' + extraInnerRule + ' }';
+          var inner = document.createElement('div');
+          inner.className = 'inner';
+          inner.textContent = 'Shadow content inside ' + host.id;
+          root.appendChild(style);
+          root.appendChild(inner);
+        }
+        mount(document.getElementById('host-one'), '');
+        mount(document.getElementById('host-two'), ' background: #f4f6f8;');
+      })();
+    </script>
+  </body>
+</html>
