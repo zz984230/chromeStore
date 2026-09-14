@@ -2,10 +2,12 @@
 
 验收标准见 `自主迭代.md`；命名体系见 `CONTEXT.md`。参考插件（`fjhefbhpidlapjcngiojjoclnfldehno/`，已 gitignore）仅作行为规格来源，代码层面全面差异化。每个里程碑收尾时执行 /tabbit 验证循环，并对照验收标准勾账。
 
-## M1 工程骨架
+## M1 工程骨架 ✅（2026-09-15 关闭）
 - 范围：npm 工程（esbuild）、零依赖图标生成器、manifest、background/content/popup 三入口空壳
 - 验收映射：#1（无报错加载）、#7 前半（service worker 启动无报错）
-- 计划：[2026-09-14-m1-scaffold.md](superpowers/plans/2026-09-14-m1-scaffold.md)
+- 计划：[2026-09-14-m1-scaffold.md](superpowers/plans/2026-09-14-m1-scaffold.md)（3/3 任务完成，终审 Ready: Yes）
+- 证据：chrome://extensions 卡片干净 + popup 渲染 0.1.0（用户确认）；保密观测试页主帧注入 debug 日志 + 0 页面异常（tabbit 自动采集）；npm test 2/2。终审 5 条 Minor 全部并入 M2 首批（次箭头断言、--accent/.hint 改名、console.info、版本号去硬编码、popup ?. 防护）
+- 遗留记录：tabbit 拦 chrome://，扩展加载/卡片/popup 需人工确认（协议注记）；AliPlayer `<video>` 在主文档、无 iframe（M2 发现机制主战场）；M2 起验收证据沉淀到 docs/verification/
 
 ## M2 核心调档链路
 - 范围：`paceMath`（档位数值）/ 设置存储（单键对象）/ 视频发现（MutationObserver + 兜底扫描）/ 逐视频接线（守速 + 熔断 + 换源重套）/ 浮标 / 后台命令中枢（Alt+`/`./`0` 三预置快捷键 + popup 消息）/ popup 调档 UI（滑块 + 预设档位）
