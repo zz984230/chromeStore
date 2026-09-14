@@ -6,7 +6,7 @@ import { STRINGS } from '../shared/strings.js';
 import { loadSettings, subscribeSettings } from '../shared/settings.js';
 import { compileThemeById, guardBackgroundFor } from '../shared/themes.js';
 import { findPalette } from '../shared/palettes.js';
-import { siteDarkActive } from '../shared/scope.js';
+import { siteDarkActive, engineOwnsSite } from '../shared/scope.js';
 import { evaluateRules, luminanceOf, metaSchemeIsDark } from '../shared/exclusionRules.js';
 import { matchSiteTheme, compileSiteTheme } from '../shared/siteThemes.js';
 import { activateEngine, deactivateEngine, scheduleShadowScan, VARS_STYLE_ID } from './engine/engine.js';
@@ -162,15 +162,6 @@ function applyTheme(settings) {
   const siteUsable = site && !(settings.disabledSiteThemes ?? []).includes(site.id);
   if (settings.themeId === 'adaptive') { applyEngine(settings, site, siteUsable); return; }
   applyClassic(settings, site, siteUsable);
-}
-
-function engineOwnsSite(policy, site) {
-  // M2-BEHAVIOR §1: respect → site theme wins; ignore → engine always;
-  // skip-compatible → engine only on compatible-marked sites.
-  if (!site) return true;
-  if (policy === 'ignore') return true;
-  if (policy === 'respect') return false;
-  return Boolean(site.compatible);
 }
 
 function applyEngine(settings, site, siteUsable) {

@@ -22,3 +22,14 @@ export function siteDarkActive(settings, hostname) {
     ? hostnameInList(hostname, settings.inclusionList)
     : !hostnameInList(hostname, settings.exclusionList);
 }
+
+// M2-BEHAVIOR §1: which side owns a site's colors under the adaptive engine —
+// respect → a usable site theme wins; ignore → the engine always;
+// skip-compatible → the engine, except on compatible-marked sites. `site` is
+// the matched site theme, null when none applies or the user disabled it.
+export function engineOwnsSite(policy, site) {
+  if (!site) return true;
+  if (policy === 'ignore') return true;
+  if (policy === 'respect') return false;
+  return Boolean(site.compatible);
+}
