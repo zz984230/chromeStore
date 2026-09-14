@@ -257,7 +257,9 @@ test('tuning exclusivity: LongTaskTiming gate, alert copy, no-save revert', () =
   assert.ok(/tuningFallback\(typeof window\.PerformanceLongTaskTiming !== 'undefined', chosen\)/.test(mainSrc));
   assert.ok(/window\.alert\(STRINGS\.engineTuningUnsupported\)/.test(mainSrc),
     'the alert copy comes from strings.js');
-  assert.ok(/'#eng-tuning-performance'/.test(mainSrc), 'the revert re-checks the performance radio');
+  assert.ok(/ENGINE_CONTROLS\.find\(\(k\) => k\.path === 'tuning' && k\.value === tuned\)/.test(mainSrc),
+    'the revert target derives from ENGINE_CONTROLS, never a literal id');
+  assert.ok(!/'eng-tuning-/.test(mainSrc), 'control ids live in the shared table, never in main.js');
   assert.ok(/function acceptTuning\(/.test(mainSrc));
 });
 

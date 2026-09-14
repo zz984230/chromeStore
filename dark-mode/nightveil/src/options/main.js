@@ -175,7 +175,10 @@ function acceptTuning(chosen) {
   const tuned = tuningFallback(typeof window.PerformanceLongTaskTiming !== 'undefined', chosen);
   if (tuned === chosen) return true;
   window.alert(STRINGS.engineTuningUnsupported);
-  const keep = document.querySelector('#eng-tuning-performance');
+  // Revert target derives from the shared table (the 'tuning' radio row whose
+  // value is the effective choice) so renaming the id cannot break the fallback.
+  const row = ENGINE_CONTROLS.find((k) => k.path === 'tuning' && k.value === tuned);
+  const keep = row && document.getElementById(row.id);
   if (keep) keep.checked = true;
   return false;
 }
