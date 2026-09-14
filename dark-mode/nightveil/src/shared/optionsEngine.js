@@ -19,7 +19,8 @@ export function seatCheckboxState(themeId) {
 
 // Group hosts rendered inside #eng-controls, in order. M2c tasks 5-6 append
 // the 38 sub-option controls into these hosts (grouping per M2-BEHAVIOR §8,
-// original option groups a-n; j/k/l is the site policy tri-state below).
+// original option groups a-n; j/k/l is the site policy tri-state below, the
+// §9 variables plus the extraRules textarea fill eng-group-vars).
 export const ENGINE_GROUPS = [
   { id: 'eng-group-a', label: STRINGS.engineColorsGroupLabel },
   { id: 'eng-group-b', label: STRINGS.engineBackgroundsGroupLabel },
@@ -27,6 +28,7 @@ export const ENGINE_GROUPS = [
   { id: 'eng-group-fghi', label: STRINGS.engineScopeGroupLabel },
   { id: 'eng-group-jkl', label: STRINGS.engineSitePolicyGroupLabel },
   { id: 'eng-group-mn', label: STRINGS.enginePerformanceGroupLabel },
+  { id: 'eng-group-vars', label: STRINGS.engineVariablesGroupLabel },
 ];
 
 // engine.siteThemePolicy tri-state (M2-BEHAVIOR §1); the 'skip-compatible'
@@ -42,10 +44,11 @@ export const ENGINE_SITE_POLICIES = [
 export const ENGINE_BEHAVIOR_HOST = 'sec-options-behavior';
 
 // The §8 sub-option control table (M2-BEHAVIOR §8 — siteThemePolicy lives in
-// ENGINE_SITE_POLICIES, variables/extraRules arrive with task 6). src/options/
-// main.js renders every row from this table, so control ids, types and ranges
-// cannot drift from the acceptance queries that pin them. One row per control;
-// tuning is a radio pair sharing path 'tuning'.
+// ENGINE_SITE_POLICIES, the §9 variables in ENGINE_VARIABLE_CONTROLS and
+// extraRules in ENGINE_EXTRA_RULES_CONTROL below). src/options/main.js renders
+// every row from these tables, so control ids, types and ranges cannot drift
+// from the acceptance queries that pin them. One row per control; tuning is a
+// radio pair sharing path 'tuning'.
 export const ENGINE_CONTROLS = Object.freeze([
   // a — color rules
   { host: 'eng-group-a', id: 'eng-darken-text', path: 'darken.text', type: 'checkbox', label: STRINGS.engineDarkenTextLabel },
@@ -105,6 +108,48 @@ export const ENGINE_CONTROLS = Object.freeze([
 ]);
 
 export const ENGINE_CONTROL_IDS = Object.freeze(ENGINE_CONTROLS.map((c) => c.id));
+
+// The §9 variable editor table (M2-BEHAVIOR §9): 9 color pickers + 9 text
+// inputs over engine.variables. Paths carry the raw `--nv-*` key as their last
+// segment — dashes are ordinary object-key characters, setPath/engineValueAt
+// only split on dots. Color rows can only display #rrggbb; the renderer shows
+// colorInputValue(stored, default) so text-typed garbage still shows a color
+// without being written back.
+export const ENGINE_VARIABLE_CONTROLS = Object.freeze([
+  { host: 'eng-group-vars', id: 'eng-var-surface', path: 'variables.--nv-surface', type: 'color', label: STRINGS.engineVarSurfaceLabel },
+  { host: 'eng-group-vars', id: 'eng-var-text', path: 'variables.--nv-text', type: 'color', label: STRINGS.engineVarTextLabel },
+  { host: 'eng-group-vars', id: 'eng-var-link', path: 'variables.--nv-link', type: 'color', label: STRINGS.engineVarLinkLabel },
+  { host: 'eng-group-vars', id: 'eng-var-link-visited', path: 'variables.--nv-link-visited', type: 'color', label: STRINGS.engineVarLinkVisitedLabel },
+  { host: 'eng-group-vars', id: 'eng-var-cite', path: 'variables.--nv-cite', type: 'color', label: STRINGS.engineVarCiteLabel },
+  { host: 'eng-group-vars', id: 'eng-var-accent', path: 'variables.--nv-accent', type: 'color', label: STRINGS.engineVarAccentLabel },
+  { host: 'eng-group-vars', id: 'eng-var-edge', path: 'variables.--nv-edge', type: 'color', label: STRINGS.engineVarEdgeLabel },
+  { host: 'eng-group-vars', id: 'eng-var-ink', path: 'variables.--nv-ink', type: 'color', label: STRINGS.engineVarInkLabel },
+  { host: 'eng-group-vars', id: 'eng-var-mark', path: 'variables.--nv-mark', type: 'color', label: STRINGS.engineVarMarkLabel },
+  { host: 'eng-group-vars', id: 'eng-var-figure-opacity', path: 'variables.--nv-figure-opacity', type: 'text', label: STRINGS.engineVarFigureOpacityLabel },
+  { host: 'eng-group-vars', id: 'eng-var-image-brightness', path: 'variables.--nv-image-brightness', type: 'text', label: STRINGS.engineVarImageBrightnessLabel },
+  { host: 'eng-group-vars', id: 'eng-var-shadow-box', path: 'variables.--nv-shadow-box', type: 'text', label: STRINGS.engineVarShadowBoxLabel },
+  { host: 'eng-group-vars', id: 'eng-var-shadow-text', path: 'variables.--nv-shadow-text', type: 'text', label: STRINGS.engineVarShadowTextLabel },
+  { host: 'eng-group-vars', id: 'eng-var-transparent', path: 'variables.--nv-transparent', type: 'text', label: STRINGS.engineVarTransparentLabel },
+  { host: 'eng-group-vars', id: 'eng-var-image-veil', path: 'variables.--nv-image-veil', type: 'text', label: STRINGS.engineVarImageVeilLabel },
+  { host: 'eng-group-vars', id: 'eng-var-image-filter', path: 'variables.--nv-image-filter', type: 'text', label: STRINGS.engineVarImageFilterLabel },
+  { host: 'eng-group-vars', id: 'eng-var-blend', path: 'variables.--nv-blend', type: 'text', label: STRINGS.engineVarBlendLabel },
+  { host: 'eng-group-vars', id: 'eng-var-scrollbar', path: 'variables.--nv-scrollbar', type: 'text', label: STRINGS.engineVarScrollbarLabel },
+]);
+
+// §8 nativecssrules — one verbatim textarea in the variables group. Empty
+// string = user cleared = no extra rules appended; only null/undefined mean
+// the EXTRA_RULES_DEFAULT template (engine.js `??` semantics).
+export const ENGINE_EXTRA_RULES_CONTROL = Object.freeze({
+  host: 'eng-group-vars', id: 'eng-extra-rules', path: 'extraRules', type: 'textarea',
+  label: STRINGS.engineExtraRulesLabel,
+});
+
+// Display value for a color input: the stored value when it is a #rrggbb hex,
+// otherwise the variable's default — display only, nothing is written back
+// unless the user actually touches the picker.
+export function colorInputValue(stored, fallback) {
+  return /^#[0-9a-f]{6}$/i.test(stored ?? '') ? stored : fallback;
+}
 
 // m.3 (page-load) tuning needs LongTaskTiming support; without it the choice
 // falls back to m.2 (M2-BEHAVIOR §0-④).

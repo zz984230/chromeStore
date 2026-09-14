@@ -13,9 +13,11 @@ import { PALETTES } from '../shared/palettes.js';
 import { SITE_THEMES } from '../shared/siteThemes.js';
 import {
   SEAT_THEME_ID, seatCheckboxState, ENGINE_GROUPS, ENGINE_SITE_POLICIES,
-  ENGINE_CONTROLS, ENGINE_BEHAVIOR_HOST, assembleEnginePatch, controlValue,
-  tuningFallback, engineValueAt,
+  ENGINE_CONTROLS, ENGINE_BEHAVIOR_HOST, ENGINE_VARIABLE_CONTROLS,
+  ENGINE_EXTRA_RULES_CONTROL, colorInputValue, assembleEnginePatch,
+  controlValue, tuningFallback, engineValueAt,
 } from '../shared/optionsEngine.js';
+import { ENGINE_VARIABLES, EXTRA_RULES_DEFAULT } from '../shared/engineTheme.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -92,8 +94,8 @@ function renderPlaceholders() {
 }
 
 // ---- Section IV: adaptive engine (the §8 sub-option controls render from
-// shared/optionsEngine.js ENGINE_CONTROLS; the variable editors + extraRules
-// textarea arrive with M2c task 6) ----
+// shared/optionsEngine.js ENGINE_CONTROLS, the §9 variables from
+// ENGINE_VARIABLE_CONTROLS, extraRules from ENGINE_EXTRA_RULES_CONTROL) ----
 function renderEngine() {
   // Seat master switch: checked ⟺ themeId === 'adaptive'. Unchecking hands
   // the seat to the first classic theme — some theme must stay selected
@@ -112,6 +114,11 @@ function renderEngine() {
     const host = el('div', { id: g.id }, el('p', { class: 'hint' }, g.label));
     if (g.id === 'eng-group-jkl') host.append(sitePolicyBox());
     for (const c of ENGINE_CONTROLS.filter((k) => k.host === g.id)) host.append(engineControl(c));
+    if (g.id === 'eng-group-vars') {
+      host.append(note(STRINGS.engineVariablesNote));
+      for (const c of ENGINE_VARIABLE_CONTROLS) host.append(variableControl(c));
+      host.append(extraRulesBox());
+    }
     controls.append(host);
   }
   controls.addEventListener('change', onEngineControlChange);
@@ -138,6 +145,30 @@ function engineControl(c) {
   return el('label', {}, `${c.label} `, el('input', { type: 'text', id: c.id, size: '40', value: value ?? '' }));
 }
 
+// One §9 variable row: a picker for the color-valued variables, a free-text
+// input for the rest, plus the --nv-* literal as technical copy next to the
+// human label. A stored non-hex color displays the variable's default (display
+// only — nothing is written back unless the user touches the picker).
+function variableControl(c) {
+  const name = c.path.slice('variables.'.length);
+  const value = engineValueAt(current.engine, c.path);
+  const input = c.type === 'color'
+    ? el('input', { type: 'color', id: c.id, value: colorInputValue(value, ENGINE_VARIABLES[name]) })
+    : el('input', { type: 'text', id: c.id, size: '40', value: value ?? '' });
+  return el('label', {}, input, ` ${c.label} `, el('code', {}, name));
+}
+
+// §8 nativecssrules: verbatim textarea (empty = user cleared = no extra rules
+// appended; only null/undefined mean the default template). Changes ride the
+// fieldset's delegated autosave like every other engine control.
+function extraRulesBox() {
+  const c = ENGINE_EXTRA_RULES_CONTROL;
+  return el('div', {},
+    el('label', { for: c.id }, c.label),
+    el('textarea', { id: c.id, rows: '8' }, current.engine.extraRules ?? EXTRA_RULES_DEFAULT),
+    note(STRINGS.engineExtraRulesNote));
+}
+
 // m.3 (page-load) needs PerformanceLongTaskTiming; without it the original
 // alerts and keeps m.2, saving nothing (M2-BEHAVIOR §0-④).
 function acceptTuning(chosen) {
@@ -149,12 +180,15 @@ function acceptTuning(chosen) {
   return false;
 }
 
-// Delegated autosave for every §8 control (group hosts + the II-area pair):
-// resolve by id, convert by type, write the whole engine group assembled from
-// the current snapshot — advanced synchronously so rapid edits compose
-// instead of clobbering each other before storage echoes back.
+// Delegated autosave for every §8/§9 control and the extraRules textarea
+// (group hosts + the II-area pair): resolve by id, convert by type, write the
+// whole engine group assembled from the current snapshot — advanced
+// synchronously so rapid edits compose instead of clobbering each other
+// before storage echoes back.
 function onEngineControlChange(e) {
-  const c = ENGINE_CONTROLS.find((k) => k.id === e.target.id);
+  const c = ENGINE_CONTROLS.find((k) => k.id === e.target.id)
+    ?? ENGINE_VARIABLE_CONTROLS.find((k) => k.id === e.target.id)
+    ?? (ENGINE_EXTRA_RULES_CONTROL.id === e.target.id ? ENGINE_EXTRA_RULES_CONTROL : null);
   if (!c) return false;
   if (c.type === 'radio' && !acceptTuning(e.target.value)) return true;
   const raw = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -274,6 +308,18 @@ function syncFromSettings(s) {
     else if (node.type === 'radio') node.checked = node.value === v;
     else if (document.activeElement !== node) node.value = v ?? '';
   }
+  // §9 variables re-derive like the §8 rows; color inputs show the default
+  // color when the stored value is not a #rrggbb hex.
+  for (const c of ENGINE_VARIABLE_CONTROLS) {
+    const node = document.getElementById(c.id);
+    if (!node || document.activeElement === node) continue;
+    const v = engineValueAt(s.engine, c.path);
+    node.value = c.type === 'color'
+      ? colorInputValue(v, ENGINE_VARIABLES[c.path.slice('variables.'.length)])
+      : v ?? '';
+  }
+  const extra = document.getElementById(ENGINE_EXTRA_RULES_CONTROL.id);
+  if (extra && document.activeElement !== extra) extra.value = s.engine.extraRules ?? EXTRA_RULES_DEFAULT;
   for (const i of document.querySelectorAll('#sec-themes input[data-site]')) {
     i.checked = !(s.disabledSiteThemes ?? []).includes(i.getAttribute('data-site'));
   }

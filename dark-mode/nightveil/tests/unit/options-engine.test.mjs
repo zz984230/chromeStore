@@ -10,10 +10,12 @@ import { readFileSync } from 'node:fs';
 import {
   SEAT_THEME_ID, seatCheckboxState, ENGINE_GROUPS, ENGINE_SITE_POLICIES,
   ENGINE_CONTROLS, ENGINE_CONTROL_IDS, ENGINE_BEHAVIOR_HOST,
+  ENGINE_VARIABLE_CONTROLS, ENGINE_EXTRA_RULES_CONTROL, colorInputValue,
   assembleEnginePatch, controlValue, tuningFallback, engineValueAt,
 } from '../../src/shared/optionsEngine.js';
 import { STRINGS } from '../../src/shared/strings.js';
 import { PALETTES } from '../../src/shared/palettes.js';
+import { ENGINE_VARIABLES, EXTRA_RULES_DEFAULT } from '../../src/shared/engineTheme.js';
 import { engineDefaults } from '../../src/content/engine/contract.js';
 
 const mainSrc = readFileSync(new URL('../../src/options/main.js', import.meta.url), 'utf8');
@@ -28,10 +30,10 @@ test('seatCheckboxState truth table — true only for the adaptive seat', () => 
   assert.equal(seatCheckboxState(''), false);
 });
 
-test('engine group hosts: six ids in render order, labels from strings.js', () => {
+test('engine group hosts: seven ids in render order, labels from strings.js', () => {
   assert.deepEqual(ENGINE_GROUPS.map((g) => g.id), [
     'eng-group-a', 'eng-group-b', 'eng-group-cde',
-    'eng-group-fghi', 'eng-group-jkl', 'eng-group-mn',
+    'eng-group-fghi', 'eng-group-jkl', 'eng-group-mn', 'eng-group-vars',
   ]);
   const stringValues = Object.values(STRINGS);
   for (const g of ENGINE_GROUPS) {
@@ -262,4 +264,101 @@ test('sync re-derives every §8 control from settings and gates the seat', () =>
   assert.ok(/node\.checked = node\.value === v/.test(mainSrc), 'radio state follows engine.tuning');
   assert.ok(/node\.disabled = !seatCheckboxState\(s\.themeId\)/.test(mainSrc),
     'the section-II engine keys disable with the seat (#eng-controls covers the rest)');
+});
+
+// ---- Task 6: 18 variable editors + extraRules textarea ----
+
+// §9's nine color-valued variables; the other nine are free-text CSS values.
+const COLOR_VARS = new Set([
+  '--nv-surface', '--nv-text', '--nv-link', '--nv-link-visited', '--nv-cite',
+  '--nv-accent', '--nv-edge', '--nv-ink', '--nv-mark',
+]);
+
+test('ENGINE_VARIABLE_CONTROLS: 18 rows pinned to the §9 table, 9 colors + 9 text', () => {
+  assert.equal(ENGINE_VARIABLE_CONTROLS.length, 18);
+  assert.deepEqual(
+    ENGINE_VARIABLE_CONTROLS.map((c) => c.path.slice('variables.'.length)),
+    Object.keys(ENGINE_VARIABLES),
+    'paths carry the variable names in ENGINE_VARIABLES order',
+  );
+  const ids = ENGINE_VARIABLE_CONTROLS.map((c) => c.id);
+  assert.equal(new Set(ids).size, 18, 'ids are unique');
+  for (const c of ENGINE_VARIABLE_CONTROLS) {
+    const name = c.path.slice('variables.'.length);
+    assert.equal(c.host, 'eng-group-vars', `host for ${name}`);
+    assert.equal(c.id, `eng-var-${name.slice('--nv-'.length)}`, `id shape for ${name}`);
+    assert.equal(c.type, COLOR_VARS.has(name) ? 'color' : 'text', `control type for ${name}`);
+    assert.ok(Object.values(STRINGS).includes(c.label), `label must be a STRINGS entry: ${name}`);
+    if (c.type === 'color') {
+      assert.match(ENGINE_VARIABLES[name], /^#[0-9a-f]{6}$/, `color default must be #rrggbb: ${name}`);
+    }
+  }
+});
+
+test('ENGINE_EXTRA_RULES_CONTROL: one textarea row in the variables group', () => {
+  assert.equal(ENGINE_EXTRA_RULES_CONTROL.id, 'eng-extra-rules');
+  assert.equal(ENGINE_EXTRA_RULES_CONTROL.path, 'extraRules');
+  assert.equal(ENGINE_EXTRA_RULES_CONTROL.type, 'textarea');
+  assert.equal(ENGINE_EXTRA_RULES_CONTROL.host, 'eng-group-vars');
+  assert.ok(Object.values(STRINGS).includes(ENGINE_EXTRA_RULES_CONTROL.label),
+    'label must be a STRINGS entry');
+});
+
+test('every control path in both tables (plus extraRules) resolves against engineDefaults()', () => {
+  const engine = engineDefaults();
+  for (const c of [...ENGINE_CONTROLS, ...ENGINE_VARIABLE_CONTROLS, ENGINE_EXTRA_RULES_CONTROL]) {
+    assert.notEqual(engineValueAt(engine, c.path), undefined, `${c.path} must exist in engineDefaults()`);
+  }
+});
+
+test('assembleEnginePatch swaps one variable and preserves the other 17', () => {
+  const base = engineDefaults();
+  const next = assembleEnginePatch(base, 'variables.--nv-surface', '#101010');
+  assert.equal(next.variables['--nv-surface'], '#101010');
+  assert.equal(Object.keys(next.variables).length, 18);
+  for (const [name, value] of Object.entries(ENGINE_VARIABLES)) {
+    if (name !== '--nv-surface') assert.equal(next.variables[name], value, `${name} preserved`);
+  }
+  assert.equal(base.variables['--nv-surface'], '#292929', 'the snapshot stays untouched');
+  const text = assembleEnginePatch(base, 'variables.--nv-image-veil', 'rgba(0, 0, 0, 0.25)');
+  assert.equal(text.variables['--nv-image-veil'], 'rgba(0, 0, 0, 0.25)');
+  assert.equal(text.variables['--nv-blend'], 'multiply', 'text-variable siblings preserved');
+});
+
+test('extraRules saves verbatim — an empty string stays an empty string', () => {
+  const next = assembleEnginePatch(engineDefaults(), 'extraRules', '');
+  assert.equal(next.extraRules, '');
+  assert.notEqual(next.extraRules, null, 'empty string must not be coerced to the null default');
+  // Engine semantics: only null/undefined mean the default template.
+  assert.equal(next.extraRules ?? EXTRA_RULES_DEFAULT, '');
+});
+
+test('colorInputValue displays stored #rrggbb, falls back on everything else', () => {
+  assert.equal(colorInputValue('#292929', '#101010'), '#292929');
+  assert.equal(colorInputValue('#FFFFFF', '#101010'), '#FFFFFF', 'uppercase hex is still hex');
+  assert.equal(colorInputValue('rgb(1, 2, 3)', '#101010'), '#101010', 'text-typed garbage shows the default');
+  assert.equal(colorInputValue('#292', '#101010'), '#101010', 'short hex cannot fill a picker');
+  assert.equal(colorInputValue(undefined, '#101010'), '#101010');
+  assert.equal(colorInputValue(null, '#101010'), '#101010');
+  assert.equal(colorInputValue('', '#101010'), '#101010');
+});
+
+test('options main.js renders the 18 variable editors from the shared table', () => {
+  assert.ok(mainSrc.includes('ENGINE_VARIABLE_CONTROLS'), 'variable rows come from the shared table');
+  assert.ok(/for \(const c of ENGINE_VARIABLE_CONTROLS\)/.test(mainSrc),
+    'render and sync loop over the shared table');
+  assert.ok(/type: 'color'/.test(mainSrc), 'color variables render as pickers');
+  assert.ok(/colorInputValue\(/.test(mainSrc), 'non-hex stored values display the default color');
+  assert.ok(/el\('code', \{\}/.test(mainSrc), 'the --nv-* literal shows as technical copy next to the label');
+  assert.ok(/current\.engine\.extraRules \?\? EXTRA_RULES_DEFAULT/.test(mainSrc),
+    'the textarea starts from the stored rules or the default template');
+});
+
+test('variable and extraRules edits ride the delegated whole-engine autosave', () => {
+  assert.ok(/ENGINE_CONTROLS\.find\(\(k\) => k\.id === e\.target\.id\)\s*\?\?\s*ENGINE_VARIABLE_CONTROLS\.find/.test(mainSrc),
+    'the change delegation resolves variable rows too');
+  assert.ok(/ENGINE_EXTRA_RULES_CONTROL\.id === e\.target\.id/.test(mainSrc),
+    'extraRules resolves through the same delegation');
+  assert.ok(!/'eng-extra-rules'/.test(mainSrc), 'the textarea id lives in the shared table, never in main.js');
+  assert.ok(/getElementById\(ENGINE_EXTRA_RULES_CONTROL\.id\)/.test(mainSrc), 'sync re-derives the textarea');
 });
