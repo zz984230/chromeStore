@@ -212,7 +212,9 @@ function sitePolicyBox() {
   box.append(note(STRINGS.enginePolicyNote));
   box.addEventListener('change', (e) => {
     if (e.target.name === 'siteThemePolicy') {
-      save({ engine: { ...current.engine, siteThemePolicy: e.target.value } });
+      const next = { ...current.engine, siteThemePolicy: e.target.value };
+      current = { ...current, engine: next };
+      save({ engine: next });
     }
   });
   return box;

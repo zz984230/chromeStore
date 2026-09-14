@@ -76,8 +76,11 @@ test('seat and section-I radios interoperate through the themeId namespace', () 
   // palette check clears when the seat takes the namespace (and vice versa).
   assert.ok(/querySelectorAll\('#sec-themes input\[name="themeId"\]'\)/.test(mainSrc));
   assert.ok(/i\.checked = i\.value === s\.themeId/.test(mainSrc));
-  // Policy radios re-render from the settings subscription like the rest of the page.
-  assert.ok(/save\(\{ engine: \{ \.\.\.current\.engine, siteThemePolicy: e\.target\.value \} \}\)/.test(mainSrc));
+  // Policy radios re-render from the settings subscription like the rest of
+  // the page; the save advances `current` synchronously like the delegated path.
+  assert.ok(/\{ \.\.\.current\.engine, siteThemePolicy: e\.target\.value \}/.test(mainSrc));
+  assert.ok(/current = \{ \.\.\.current, engine: next \};\s*save\(\{ engine: next \}\)/.test(mainSrc),
+    'the policy save advances the snapshot so rapid edits compose');
   assert.ok(/querySelectorAll\('#sec-engine input\[name="siteThemePolicy"\]'\)/.test(mainSrc));
 });
 
