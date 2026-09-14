@@ -1,0 +1,18 @@
+{
+  "name": "video-pace-assistant",
+  "private": true,
+  "version": "0.1.0",
+  "description": "在任意网页调节视频播放档位的浏览器扩展。",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "icons": "node scripts/gen-icons.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
