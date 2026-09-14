@@ -30,6 +30,11 @@ test('fixtures server serves index.html and 404s unknown paths', async () => {
     assert.match(res.headers.get('content-type'), /text\/html/);
     assert.match(await res.text(), /NightVeil fixtures/);
 
+    // shadow.html must serve with its host markup intact (§5 fixture).
+    const shadow = await fetch(`http://localhost:${port}/shadow.html`);
+    assert.equal(shadow.status, 200);
+    assert.match(await shadow.text(), /host-one/);
+
     // Path-traversal regression (M0 终审遗留): encoded dot-dot must not escape ROOT.
     for (const evil of ['/..%2fpackage.json', '/%2e%2e%2fpackage.json']) {
       const trav = await fetch(`http://localhost:${port}${evil}`);
