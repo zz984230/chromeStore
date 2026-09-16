@@ -1,0 +1,20 @@
+/* public/content.css — 浮标样式（右上角圆角药丸，浮现后淡出） */
+.vpa-chip {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 2147483647;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(37, 42, 68, 0.92);
+  color: #eef0f6;
+  font: 600 13px/1.4 system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+}
+.vpa-chip--on {
+  opacity: 1;
+  transform: translateY(0);
+}
