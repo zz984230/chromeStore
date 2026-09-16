@@ -14,7 +14,7 @@ export function createKeeper({ trip, chip } = {}) {
     if (!samePace(video.playbackRate ?? 1, pace)) {
       fromUs.add(video);
       try { video.playbackRate = pace; } catch { /* 同上 */ }
-      // 微任务后清标记：覆盖同步与异步派发的自激 ratechange
+      // 微任务后清标记：覆盖同步派发的自激 ratechange（异步自激事件由速率相等短路兜底）
       queueMicrotask(() => fromUs.delete(video));
     }
     if (userDriven) {

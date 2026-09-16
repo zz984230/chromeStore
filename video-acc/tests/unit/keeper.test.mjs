@@ -77,13 +77,15 @@ test('守速恢复是静默的：不闪浮标、不复位熔断', async () => {
   assert.equal(resets.length, 1, '仅用户驱动那一次 reset');
 });
 
-test('熔断后不再恢复', () => {
+test('熔断后不再恢复', async () => {
   const deps = makeDeps();
-  deps.trip.allows = () => false; // 已熔断
+  deps.trip.allows = (k) => { deps.allowed.push(k); return false; }; // 已熔断
   const keeper = createKeeper({ trip: deps.trip, chip: deps.chip });
   const v = new FakeVideo();
   keeper.applyAll([v], 2);
+  await new Promise((r) => setTimeout(r, 0)); // 微任务后抑制标记清除
   v.playbackRate = 1; v.fire('ratechange');
+  assert.equal(deps.allowed.length, 1, '守速判定被询问（熔断门生效）');
   assert.equal(v.playbackRate, 1, '熔断后守速停手');
 });
 

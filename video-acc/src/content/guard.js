@@ -1,4 +1,4 @@
-// src/content/guard.js — 守速熔断：短窗内恢复次数超阈值即停手，直到用户手动调档复位
+// src/content/guard.js — 守速熔断：短窗内恢复次数超阈值即停手，直到用户手动调档复位或熔断窗口滑过
 export function createTripWatch({ windowMs = 800, ceiling = 8, now = Date.now, onTrip } = {}) {
   const ledger = new WeakMap(); // key → { count, since, tripped }
   return {
