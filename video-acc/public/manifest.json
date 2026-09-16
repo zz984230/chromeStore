@@ -23,6 +23,20 @@
   "background": {
     "service_worker": "background.js"
   },
+  "commands": {
+    "pace-up": {
+      "description": "加档（步进 0.25×）",
+      "suggested_key": { "default": "Alt+Period" }
+    },
+    "pace-down": {
+      "description": "减档（步进 0.25×）",
+      "suggested_key": { "default": "Alt+Comma" }
+    },
+    "pace-normal": {
+      "description": "回正到 1×",
+      "suggested_key": { "default": "Alt+0" }
+    }
+  },
   "permissions": ["storage", "activeTab"],
   "host_permissions": ["<all_urls>"],
   "content_scripts": [
