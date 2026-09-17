@@ -3,7 +3,9 @@
 export const STORAGE_KEY = 'vpa.settings';
 
 export const DEFAULT_SETTINGS = Object.freeze({
-  pace: 1, // 当前档位（M2 唯一字段；hold/跳过/续播随里程碑增补，靠回填升级）
+  pace: 1,     // 当前档位
+  hold: false, // 保持模式（M3）
+  heldPace: 1, // 记忆档位（M3）
 });
 
 function defaultStorage() {
@@ -38,4 +40,15 @@ export async function saveSettings(patch, storage = defaultStorage()) {
   });
   writeChain = run.catch(() => {});
   return run;
+}
+
+// 订阅本键变更（storage.onChanged 总线）；返回退订函数。
+// content 侧用于保持状态同步——content 从不写存储，收到的都是跨上下文变更。
+export function subscribeSettings(callback, storage = defaultStorage()) {
+  const listener = (changes) => {
+    const change = changes?.[STORAGE_KEY];
+    if (change?.newValue) callback(mergeWithDefaults(change.newValue));
+  };
+  storage.onChanged.addListener(listener);
+  return () => storage.onChanged.removeListener(listener);
 }
