@@ -11,7 +11,12 @@
       <h1>视频倍速助手</h1>
       <span class="ver" id="app-version">—</span>
     </header>
-    <p class="hint">调档面板建设中（M2 上线）</p>
+    <section class="stage">
+      <div class="figure" id="pace-figure">1×</div>
+      <input type="range" id="pace-dial" class="dial" min="0.07" max="16" step="0.05" value="1" aria-label="播放档位" />
+    </section>
+    <div class="chips" id="pace-chips"></div>
+    <p class="note" id="pace-note">读取中…</p>
   </main>
   <script src="popup.js"></script>
 </body>
