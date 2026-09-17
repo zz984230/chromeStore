@@ -35,4 +35,5 @@ test('128px 图标像素符合设计：靛蓝底、米白箭头、圆角透明',
   assert.deepEqual([...at(46, 64).subarray(0, 3)], [244, 244, 250], '箭头笔画颜色');
   assert.deepEqual([...at(64, 64).subarray(0, 3)], [37, 42, 68], '底板颜色');
   assert.ok(at(1, 1)[3] < 10, `圆角透明度 ${at(1, 1)[3]}`);
+  assert.deepEqual([...at(82, 64).subarray(0, 3)], [244, 244, 250], '第二个箭头笔画颜色');
 });
