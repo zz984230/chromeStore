@@ -51,6 +51,6 @@ _Avoid_: 自动下一集、next episode
 content script 注入的每个文档环境——主文档或任一 iframe，各自独立执行发现与守速。
 _Avoid_: 页面、tab
 
-**浮标（Badge）**:
+**浮标（Chip）**:
 调档时短暂显示在页面角落的档位指示（保持模式时带 🔒 前缀）。
-_Avoid_: 徽标、overlay
+_Avoid_: 徽标、badge、overlay（M2 代码用 chip：`.vpa-chip`/`createChip`，与参考插件的 badge 词汇脱钩）

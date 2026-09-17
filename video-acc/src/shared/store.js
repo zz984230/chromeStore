@@ -28,8 +28,12 @@ let writeChain = Promise.resolve();
 export async function saveSettings(patch, storage = defaultStorage()) {
   const run = writeChain.then(async () => {
     const merged = mergeWithDefaults({ ...(await loadSettings(storage)), ...patch });
-    return await new Promise((resolve) => {
-      storage.set({ [STORAGE_KEY]: merged }, () => resolve(merged));
+    return await new Promise((resolve, reject) => {
+      storage.set({ [STORAGE_KEY]: merged }, () => {
+        const err = globalThis.chrome?.runtime?.lastError;
+        if (err) reject(new Error(err?.message || err || 'storage.set 失败'));
+        else resolve(merged);
+      });
     });
   });
   writeChain = run.catch(() => {});

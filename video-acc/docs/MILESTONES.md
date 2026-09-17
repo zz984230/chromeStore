@@ -10,7 +10,7 @@
 - 遗留记录：tabbit 拦 chrome://，扩展加载/卡片/popup 需人工确认（协议注记）；AliPlayer `<video>` 在主文档、无 iframe（M2 发现机制主战场）；M2 起验收证据沉淀到 docs/verification/
 
 ## M2 核心调档链路 ✅（2026-09-17 关闭）
-- 范围：`paceMath`（档位数值）/ 设置存储（单键对象）/ 视频发现（MutationObserver + 兜底扫描）/ 逐视频接线（守速 + 熔断 + 换源重套）/ 浮标 / 后台命令中枢（Alt+`/`./`0` 三预置快捷键 + popup 消息）/ popup 调档 UI（滑块 + 预设档位）
+- 范围：`paceMath`（档位数值）/ 设置存储（单键对象）/ 视频发现（MutationObserver + 兜底扫描）/ 逐视频接线（守速 + 熔断 + 换源重套）/ 浮标 / 后台命令中枢（Alt+. / Alt+, / Alt+0 三预置快捷键 + popup 消息）/ popup 调档 UI（滑块 + 预设档位）
 - 验收映射：#2、#3、#7 —— 证据见 [verification/m2.md](verification/m2.md)（注入+0 异常、popup 1→2+浮标、键盘 2→2.25→1 实测时间线、截图与视觉核验）
 - 10/10 任务完成，38/38 单测
 - 遗留记录：suggested_key 对已装扩展新增 commands 不生效（商店新装不受影响）；CDP 键盘不触发扩展命令；M3 义务：并发写判别性测试（不相交字段）

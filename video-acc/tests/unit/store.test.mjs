@@ -32,6 +32,17 @@ test('saveSettings 并发写按到达顺序串行，无写丢失链断裂', asyn
   assert.equal((await loadSettings(mem)).pace, 2);
 });
 
+test('并发写不相交字段时两者都存活（判别串行化）', async () => {
+  const mem = new MemoryStorage({ [STORAGE_KEY]: { pace: 1 } });
+  await Promise.all([
+    saveSettings({ pace: 1.5 }, mem),
+    saveSettings({ hold: true }, mem), // hold 字段 M3 才入默认，靠未知字段透传保留
+  ]);
+  const s = await loadSettings(mem);
+  assert.equal(s.pace, 1.5, 'pace 写入存活');
+  assert.equal(s.hold, true, 'hold 写入存活（无字段覆盖丢失）');
+});
+
 test('未知字段透传保留（为 M3/M4 字段演进预留）', async () => {
   const mem = new MemoryStorage({ [STORAGE_KEY]: { pace: 1, hold: true } });
   assert.equal((await loadSettings(mem)).hold, true);

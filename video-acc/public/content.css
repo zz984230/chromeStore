@@ -10,8 +10,8 @@
   color: #eef0f6;
   font: 600 13px/1.4 system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
   opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transform: translateY(-6px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
   pointer-events: none;
 }
 .vpa-chip--on {

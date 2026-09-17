@@ -37,7 +37,8 @@ async function commit(pace) {
   pace = clampPace(pace);
   paint(pace);
   await saveSettings({ pace });
-  note.textContent = noteFor(await nudgeActiveTab(pace), pace);
+  const reply = await nudgeActiveTab(pace);
+  note.textContent = noteFor(reply && typeof reply.pace === 'number', pace);
 }
 
 dial.addEventListener('input', () => {

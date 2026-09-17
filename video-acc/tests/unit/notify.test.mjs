@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { nudgeActiveTab } from '../../src/shared/notify.js';
 import { APPLY_PACE } from '../../src/shared/protocol.js';
 
+const REPLY = { ok: true, pace: 1.5 };
+
 function tabsFake({ tabId = 1, fail = false } = {}) {
   const sent = [];
   return {
@@ -13,6 +15,7 @@ function tabsFake({ tabId = 1, fail = false } = {}) {
       sendMessage: async (id, msg) => {
         if (fail) throw new Error('Could not establish connection');
         sent.push({ id, msg });
+        return { ...REPLY };
       },
     },
   };
@@ -20,16 +23,16 @@ function tabsFake({ tabId = 1, fail = false } = {}) {
 
 test('推送到活动标签页成功', async () => {
   const { api, sent } = tabsFake({ tabId: 42 });
-  assert.equal(await nudgeActiveTab(1.5, api), true);
+  assert.deepEqual(await nudgeActiveTab(1.5, api), REPLY);
   assert.deepEqual(sent, [{ id: 42, msg: { vpa: APPLY_PACE, pace: 1.5 } }]);
 });
 
-test('发送失败（受限页）返回 false 不抛', async () => {
+test('发送失败（受限页）返回 null 不抛', async () => {
   const { api } = tabsFake({ fail: true });
-  assert.equal(await nudgeActiveTab(2, api), false);
+  assert.equal(await nudgeActiveTab(2, api), null);
 });
 
-test('无活动标签页返回 false', async () => {
+test('无活动标签页返回 null', async () => {
   const { api } = tabsFake({ tabId: null });
-  assert.equal(await nudgeActiveTab(2, api), false);
+  assert.equal(await nudgeActiveTab(2, api), null);
 });
