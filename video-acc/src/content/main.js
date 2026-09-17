@@ -4,6 +4,7 @@ import { createKeeper } from './keeper.js';
 import { createChip } from './chip.js';
 import { startDiscovery } from './discovery.js';
 import { APPLY_PACE, PROBE_PACE } from '../shared/protocol.js';
+import { formatPace } from '../shared/paceMath.js';
 
 export function wireContent({
   runtime = chrome.runtime,
@@ -30,7 +31,7 @@ export function wireContent({
 
   runtime.onMessage.addListener((msg, _sender, respond) => {
     if (msg?.vpa === APPLY_PACE) {
-      keeper.applyAll(videos(), msg.pace); // 用户驱动：闪浮标 + 复位熔断
+      keeper.applyAll(videos(), msg.pace, { resetTrip: true, flashText: formatPace(msg.pace) }); // 用户驱动：闪浮标 + 复位熔断
       respond?.({ ok: true, pace: keeper.lastPace() });
       return;
     }

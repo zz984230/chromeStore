@@ -24,16 +24,36 @@ function makeDeps() {
   };
 }
 
-test('applyAll 施档：速率、意图、最近档位、浮标（用户驱动）', () => {
+test('applyAll 施档：速率、意图、最近档位、浮标（显式副作用）', () => {
   const deps = makeDeps();
   const keeper = createKeeper({ trip: deps.trip, chip: deps.chip });
   const v = new FakeVideo();
-  keeper.applyAll([v], 2);
+  keeper.applyAll([v], 2, { resetTrip: true, flashText: '2×' });
   assert.equal(v.playbackRate, 2);
   assert.equal(v.defaultPlaybackRate, 2);
   assert.equal(keeper.intentOf(v), 2);
   assert.equal(keeper.lastPace(), 2);
-  assert.deepEqual(deps.flashed, ['2×']);
+  assert.deepEqual(deps.flashed, ['2×'], '浮标文本由调用方给定');
+});
+
+test('默认静默：无 opts 不闪浮标不复位熔断', () => {
+  const deps = makeDeps();
+  const resets = [];
+  deps.trip.reset = (k) => resets.push(k);
+  const keeper = createKeeper({ trip: deps.trip, chip: deps.chip });
+  const v = new FakeVideo();
+  keeper.applyAll([v], 1.5);
+  assert.equal(v.playbackRate, 1.5);
+  assert.deepEqual(deps.flashed, [], '默认不闪');
+  assert.deepEqual(resets, [], '默认不复位');
+});
+
+test('保持施档文本带 🔒 前缀由调用方传入', () => {
+  const deps = makeDeps();
+  const keeper = createKeeper({ trip: deps.trip, chip: deps.chip });
+  const v = new FakeVideo();
+  keeper.applyAll([v], 2, { resetTrip: true, flashText: '🔒 2×' });
+  assert.deepEqual(deps.flashed, ['🔒 2×']);
 });
 
 test('attach 幂等：重复 attach 不重复挂监听', () => {
@@ -70,11 +90,11 @@ test('守速恢复是静默的：不闪浮标、不复位熔断', async () => {
   const v = new FakeVideo();
   keeper.applyAll([v], 2);
   await new Promise((r) => setTimeout(r, 0)); // 微任务后抑制标记清除
-  assert.equal(deps.flashed.length, 1);
+  assert.equal(deps.flashed.length, 0);
   v.playbackRate = 1; v.fire('ratechange');
   assert.equal(v.playbackRate, 2, '恢复');
-  assert.equal(deps.flashed.length, 1, '恢复不再闪浮标');
-  assert.equal(resets.length, 1, '仅用户驱动那一次 reset');
+  assert.equal(deps.flashed.length, 0, '恢复不再闪浮标');
+  assert.equal(resets.length, 0, '施档与守速恢复均不复位');
 });
 
 test('熔断后不再恢复', async () => {

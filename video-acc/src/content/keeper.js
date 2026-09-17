@@ -1,5 +1,5 @@
 // src/content/keeper.js — 逐视频接管：施档、守速恢复、换源/播放重套
-import { samePace, formatPace } from '../shared/paceMath.js';
+import { samePace } from '../shared/paceMath.js';
 
 export function createKeeper({ trip, chip } = {}) {
   const intent = new WeakMap(); // video → 期望档位
@@ -7,7 +7,7 @@ export function createKeeper({ trip, chip } = {}) {
   const kept = new WeakSet();   // 已接线的视频
   let latest = null;            // 本帧最近一次应用的档位
 
-  function impose(video, pace, { userDriven }) {
+  function impose(video, pace, { resetTrip = false, flashText = null } = {}) {
     intent.set(video, pace);
     latest = pace;
     try { video.defaultPlaybackRate = pace; } catch { /* 受限元素忽略 */ }
@@ -17,10 +17,8 @@ export function createKeeper({ trip, chip } = {}) {
       // 微任务后清标记：覆盖同步派发的自激 ratechange（异步自激事件由速率相等短路兜底）
       queueMicrotask(() => fromUs.delete(video));
     }
-    if (userDriven) {
-      trip?.reset(video);            // 用户驱动：解除熔断、清计数
-      chip?.flash(formatPace(pace)); // 浮标提示
-    }
+    if (resetTrip) trip?.reset(video);            // 显式复位熔断（用户/保持施档）
+    if (flashText != null) chip?.flash(flashText); // 显式浮标（文本含 🔒 前缀时表示保持）
   }
 
   function attach(video) {
@@ -30,17 +28,17 @@ export function createKeeper({ trip, chip } = {}) {
       const want = intent.get(video);
       if (want == null || fromUs.has(video)) return;
       if (!samePace(video.playbackRate ?? 1, want) && trip?.allows(video)) {
-        impose(video, want, { userDriven: false }); // 站点覆盖 → 守速恢复（静默）
+        impose(video, want); // 站点覆盖 → 守速恢复（静默）
       }
     });
     video.addEventListener('loadedmetadata', () => {
       const want = intent.get(video);
-      if (want != null) impose(video, want, { userDriven: false }); // 换源重套
+      if (want != null) impose(video, want); // 换源重套（静默）
     });
     video.addEventListener('play', () => {
       const want = intent.get(video);
       if (want != null && !samePace(video.playbackRate ?? 1, want)) {
-        impose(video, want, { userDriven: false }); // 播放漂移纠回
+        impose(video, want); // 播放漂移纠回（静默）
       }
     });
   }
@@ -50,10 +48,10 @@ export function createKeeper({ trip, chip } = {}) {
     isKept: (video) => kept.has(video),
     intentOf: (video) => intent.get(video) ?? null,
     lastPace: () => latest,
-    applyAll(videos, pace, { userDriven = true } = {}) {
+    applyAll(videos, pace, opts = {}) {
       for (const v of videos) {
         attach(v); // 幂等：顺手接线新面孔
-        impose(v, pace, { userDriven });
+        impose(v, pace, opts);
       }
     },
   };
