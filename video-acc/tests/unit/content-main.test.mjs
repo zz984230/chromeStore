@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { wireContent } from '../../src/content/main.js';
 import { APPLY_PACE, PROBE_PACE } from '../../src/shared/protocol.js';
+import { RUN_ADVANCE } from '../../src/shared/protocol.js';
 
 class FakeVideo extends EventTarget {
   constructor() {
@@ -11,7 +12,12 @@ class FakeVideo extends EventTarget {
     this.defaultPlaybackRate = 1;
     this.nodeType = 1; // 过 discovery harvest 的元素节点门（同 tests/unit/discovery.test.mjs 先例）
     this.tagName = 'VIDEO';
+    this.loop = false;
+    this.duration = NaN;
+    this.currentTime = 0;
+    this.paused = true;
   }
+  fire(type) { this.dispatchEvent(new Event(type)); } // 同 tests/unit/keeper.test.mjs 先例
 }
 class FakeObserver {
   static instances = [];
@@ -159,4 +165,67 @@ test('保持关闭时发现的新视频不被施档', async () => {
   await new Promise((r) => setTimeout(r, 0));
   FakeObserver.instances.at(-1).cb([{ addedNodes: [late] }]);
   assert.equal(late.playbackRate, 1, 'hold 关闭不施档');
+});
+
+test('跳过：播放时越过片头', async () => {
+  const v = new FakeVideo();
+  const runtime = fakeRuntime();
+  const mem = new MemoryStorage({ [SETTINGS]: { skipOn: true, introSkip: 10, outroSkip: 0 } });
+  wireContent({ runtime, storage: mem, doc: fakeDoc([v]), MutationObserver: FakeObserver, setInterval: () => 0, makeChip: () => ({ flash: () => {} }) });
+  await new Promise((r) => setTimeout(r, 0));
+  v.currentTime = 2;
+  v.fire('play');
+  assert.equal(v.currentTime, 10, '片头跳过');
+});
+
+test('跳过：临近片尾——循环暂停、普通跳结尾', async () => {
+  const looped = new FakeVideo(); const linear = new FakeVideo();
+  looped.loop = true;
+  const mem = new MemoryStorage({ [SETTINGS]: { skipOn: true, introSkip: 0, outroSkip: 5 } });
+  const doc = { documentElement: {}, querySelectorAll: (sel) => (sel === 'video' ? [looped, linear] : []) };
+  wireContent({ runtime: fakeRuntime(), storage: mem, doc, MutationObserver: FakeObserver, setInterval: () => 0, makeChip: () => ({ flash: () => {} }) });
+  await new Promise((r) => setTimeout(r, 0));
+  for (const v of [looped, linear]) { v.duration = 100; v.currentTime = 97; }
+  const paused = [];
+  looped.pause = () => paused.push('loop');
+  linear.__defineSetter__('currentTime', function (t) { this.__t = t; });
+  linear.__defineGetter__('currentTime', function () { return this.__t ?? 97; });
+  looped.fire('timeupdate');
+  linear.fire('timeupdate');
+  assert.deepEqual(paused, ['loop'], '循环视频暂停');
+  assert.equal(linear.currentTime, 100, '普通视频跳到结尾');
+});
+
+test('跳过关闭时不干预', async () => {
+  const v = new FakeVideo();
+  const mem = new MemoryStorage({ [SETTINGS]: { skipOn: false, introSkip: 10 } });
+  wireContent({ runtime: fakeRuntime(), storage: mem, doc: fakeDoc([v]), MutationObserver: FakeObserver, setInterval: () => 0, makeChip: () => ({ flash: () => {} }) });
+  await new Promise((r) => setTimeout(r, 0));
+  v.currentTime = 2;
+  v.fire('play');
+  assert.equal(v.currentTime, 2);
+});
+
+test('advance.run 直接触发续播（不受总开关限制）', async () => {
+  const runtime = fakeRuntime();
+  let advanced = 0;
+  const doc = { documentElement: {}, querySelectorAll: (sel) => (sel === 'video' ? [] : []) };
+  // 用可注入的 runAdvance 替身：经 wireContent 的 makeAdvance 缝注入
+  wireContent({ runtime, doc, MutationObserver: FakeObserver, setInterval: () => 0, makeChip: () => ({ flash: () => {} }), makeAdvance: () => () => { advanced += 1; return true; } });
+  let reply = null;
+  runtime.listeners[0]({ vpa: RUN_ADVANCE }, {}, (r) => { reply = r; });
+  assert.equal(advanced, 1);
+  assert.deepEqual(reply, { ok: true });
+});
+
+test('自动续播：ended 后 300ms 仍暂停才触发', async () => {
+  const v = new FakeVideo(); // paused 默认 true（站点未连播）
+  let advanced = 0;
+  const mem = new MemoryStorage({ [SETTINGS]: { autoAdvance: true } });
+  wireContent({ runtime: fakeRuntime(), storage: mem, doc: fakeDoc([v]), MutationObserver: FakeObserver, setInterval: () => 0, makeChip: () => ({ flash: () => {} }), makeAdvance: () => () => { advanced += 1; return true; } });
+  await new Promise((r) => setTimeout(r, 0));
+  v.fire('ended');
+  assert.equal(advanced, 0, '300ms 延迟内未触发');
+  await new Promise((r) => setTimeout(r, 400));
+  assert.equal(advanced, 1, '延迟后触发');
 });
