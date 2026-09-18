@@ -99,7 +99,7 @@ test('快捷调参：±5 且调到正值自动启用', () => {
 });
 ```
 
-`tests/unit/store.test.mjs` 追加：
+`tests/unit/store.test.mjs` 追加（连带更新：既有「loadSettings 空库返回默认，缺字段回填」测试的期望字面量随 schema 增长——`{ pace: 1, hold: false, heldPace: 1, introSkip: 0, outroSkip: 0, skipOn: false, autoAdvance: false }`，与 M3 c75ba42 同款模式）：
 
 ```js
 test('schema 升级：M3 存储缺 M4 跳过字段回填默认', async () => {
@@ -167,7 +167,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
 - [ ] **Step 4: 跑测试确认通过 + 全量回归**
 
 Run: `node --test tests/unit/skip-plan.test.mjs tests/unit/store.test.mjs && npm test`
-Expected: skip-plan 4/4；store 10/10；全量 54/54（49 + 4 + 1）
+Expected: skip-plan 4/4；store 11/11；全量 56/56（51 + 5，基线含 M3 fix wave 的 2 项负向测试）
 
 - [ ] **Step 5: Commit**
 
