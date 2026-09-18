@@ -55,7 +55,7 @@ docs/verification/m4.md     验收证据 + 并排相似度自查结论
   - `retuneIntro(current, delta)→{introSkip, skipOn}`（±delta 后钳制；introSkip>0 自动 skipOn=true）
   - store `DEFAULT_SETTINGS` 增四字段（见全局约束）
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```js
 // tests/unit/skip-plan.test.mjs
@@ -112,12 +112,12 @@ test('schema 升级：M3 存储缺 M4 跳过字段回填默认', async () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 Run: `node --test tests/unit/skip-plan.test.mjs tests/unit/store.test.mjs`
 Expected: skip-plan FAIL（模块不存在）；store 新测试 FAIL（字段 undefined）
 
-- [ ] **Step 3: 写实现**
+- [x] **Step 3: 写实现**
 
 ```js
 // src/shared/skipPlan.js — 片头/片尾跳过的纯决策函数（行为规格见 M4 计划全局约束）
@@ -164,12 +164,12 @@ export const DEFAULT_SETTINGS = Object.freeze({
 });
 ```
 
-- [ ] **Step 4: 跑测试确认通过 + 全量回归**
+- [x] **Step 4: 跑测试确认通过 + 全量回归**
 
 Run: `node --test tests/unit/skip-plan.test.mjs tests/unit/store.test.mjs && npm test`
 Expected: skip-plan 4/4；store 11/11；全量 56/56（51 + 5，基线含 M3 fix wave 的 2 项负向测试）
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/shared/skipPlan.js src/shared/store.js tests/unit/skip-plan.test.mjs tests/unit/store.test.mjs
@@ -195,7 +195,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
   - `collectAdvanceCandidates(doc)→[{el,label,text,cls,disabled}]`（DOM 胶水，不单测）
   - `runAdvance(doc)→boolean`（收集→可见性过滤→打分→触发；DOM 胶水，不单测）
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```js
 // tests/unit/advance.test.mjs
@@ -238,12 +238,12 @@ test('英文强词与中文变体', () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 Run: `node --test tests/unit/advance.test.mjs`
 Expected: FAIL —— `Cannot find module .../advance.js`
 
-- [ ] **Step 3: 写实现**
+- [x] **Step 3: 写实现**
 
 ```js
 // src/content/advance.js — 自动续播：候选打分（纯）+ 收集与触发（胶水）
@@ -326,16 +326,16 @@ export function runAdvance(doc) {
 }
 ```
 
-- [ ] **Step 4: 跑测试确认通过 + 全量回归**
+- [x] **Step 4: 跑测试确认通过 + 全量回归**
 
 Run: `node --test tests/unit/advance.test.mjs && npm test`
 Expected: advance 4/4；全量 60/60（56 + 4）
 
-- [ ] **Step 5: 人工对照参考源（防抄袭门禁）**
+- [x] **Step 5: 人工对照参考源（防抄袭门禁）**
 
 对照 `fjhe.../2.1.0_0/content.js` 的 `NEXT_PATTERNS/NEXT_EXCLUDE/findNextButton/triggerNextVideo`（四桶数组 + 正则列表 + 事件序列）：本实现为单趟打分函数（数值权重 + -Infinity 否决）、自编正则集合（词表不可避免重叠但组合与结构不同）、`pokeTarget` 与其 `fire()` 序列同为指针事件惯例。在报告中记录比对结论。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/content/advance.js tests/unit/advance.test.mjs
@@ -356,7 +356,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 - Consumes: M3 keeper（`createKeeper({trip, chip})`）
 - Produces: `createKeeper({trip, chip, hooks = {}})`；`hooks.onPlay(video)`/`hooks.onTimeUpdate(video)`/`hooks.onEnded(video)` 存在时 attach 各挂一个对应监听（与既有施档监听并存互不干扰）
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `tests/unit/keeper.test.mjs` 追加：
 
@@ -399,12 +399,12 @@ function deps_free() {
 }
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 Run: `node --test tests/unit/keeper.test.mjs`
 Expected: FAIL —— hooks 回调未触发（attach 未挂 hooks 监听）
 
-- [ ] **Step 3: 写实现**
+- [x] **Step 3: 写实现**
 
 `src/content/keeper.js` 两处修改。签名行：
 
@@ -420,12 +420,12 @@ export function createKeeper({ trip, chip, hooks = {} } = {}) {
     if (hooks.onEnded) video.addEventListener('ended', () => hooks.onEnded(video));
 ```
 
-- [ ] **Step 4: 跑测试确认通过 + 全量回归**
+- [x] **Step 4: 跑测试确认通过 + 全量回归**
 
 Run: `node --test tests/unit/keeper.test.mjs && npm test`
 Expected: keeper 12/12；全量 62/62（60 + 2）
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/content/keeper.js tests/unit/keeper.test.mjs
@@ -452,7 +452,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
   - `hooks.onEnded`：autoAdvance 时 `setTimeout(...,300)` 后视频仍 `paused` 才 `runAdvance(doc)`
   - 消息 `advance.run` → `respond({ ok: runAdvance(doc) })`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `tests/unit/content-main.test.mjs` 追加（沿用文件内既有 fake 设施与 `MemoryStorage`/`SETTINGS`；`FakeVideo` 需补 `fire(type)` 方法与 `loop/duration/currentTime/paused` 字段——`fire` 循 keeper.test.mjs 先例，constructor 初始化 `this.loop=false; this.duration=NaN; this.currentTime=0; this.paused=true;`）：
 
@@ -523,12 +523,12 @@ test('自动续播：ended 后 300ms 仍暂停才触发', async () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 Run: `node --test tests/unit/content-main.test.mjs`
 Expected: FAIL —— `RUN_ADVANCE` 导出不存在、hooks 未接线、`makeAdvance` 参数不存在
 
-- [ ] **Step 3: 写实现**
+- [x] **Step 3: 写实现**
 
 `src/shared/protocol.js` 追加一行：
 
@@ -663,16 +663,16 @@ if (globalThis.chrome?.runtime?.id) wireContent({ storage: globalThis.chrome?.st
 
 （import 区需补 `clampSkip`：`import { introSeekTarget, outroAction, clampSkip } from '../shared/skipPlan.js';`）
 
-- [ ] **Step 4: 跑测试确认通过 + 全量回归**
+- [x] **Step 4: 跑测试确认通过 + 全量回归**
 
 Run: `node --test tests/unit/content-main.test.mjs && npm test`
 Expected: content-main 12/12（原 7 含 M3 fix-wave 1 + 新 5）；全量 67/67（62 + 5）
 
-- [ ] **Step 5: 人工对照参考源（防抄袭门禁）**
+- [x] **Step 5: 人工对照参考源（防抄袭门禁）**
 
 对照 `fjhe.../content.js` 的 skip/autonext 路径（`state.skipStart/skipEnd/skipEnabled/autoNextEnabled`、play 内嵌片头 seek、timeupdate 内嵌片尾分支、ended+300ms+`triggerNextVideo`、`skipChanged` 即时 seek）：本实现决策函数全部抽到 `skipPlan.js`、事件经 keeper hooks 分发、快照对象分域（skip/advance）而非平铺 state、`makeAdvance` 注入缝。在报告中记录比对结论。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/shared/protocol.js src/content/main.js tests/unit/content-main.test.mjs
@@ -696,7 +696,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 - Consumes: Task 1 `retuneIntro/INTRO_TUNING`；Task 4 `RUN_ADVANCE`；现有 `nudgeActiveTab` 模式
 - Produces: `pushAdvanceNow(tabsApi?)→Promise<boolean>`（推 `{vpa:RUN_ADVANCE}` 到活动页；不可达 false 不抛）；background 处理 `intro-minus`/`intro-plus`（`retuneIntro` 后写存储，走总线同步快照，不直推）与 `advance-now`（`pushAdvanceNow`）；manifest commands 增三条（无 suggested_key）
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `tests/unit/notify.test.mjs` 追加：
 
@@ -748,12 +748,12 @@ test('advance-now 推送活动页', async () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 Run: `node --test tests/unit/notify.test.mjs tests/unit/background.test.mjs`
 Expected: notify 新 2 项 FAIL（无 pushAdvanceNow）；background 新 3 项 FAIL（命令未处理）
 
-- [ ] **Step 3: 写实现**
+- [x] **Step 3: 写实现**
 
 `src/shared/notify.js` 追加：
 
@@ -803,12 +803,12 @@ export async function pushAdvanceNow(tabsApi = globalThis.chrome?.tabs) {
     }
 ```
 
-- [ ] **Step 4: 跑测试确认通过 + 构建 + 全量回归**
+- [x] **Step 4: 跑测试确认通过 + 构建 + 全量回归**
 
 Run: `node --test tests/unit/notify.test.mjs tests/unit/background.test.mjs && npm run build && npm test`
 Expected: notify 5/5、background 9/9；构建成功（manifest 合法）；全量 72/72（67 + 5）
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/shared/notify.js src/background/main.js public/manifest.json tests/unit/notify.test.mjs tests/unit/background.test.mjs
@@ -832,7 +832,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 **无单测**（DOM 胶水，Task 7 /tabbit 验收）；验证 = 构建 + 全量绿。
 
-- [ ] **Step 1: popup.html 两区块**（`hold-row` 之后、`pace-note` 之前插入）
+- [x] **Step 1: popup.html 两区块**（`hold-row` 之后、`pace-note` 之前插入）
 
 ```html
     <section class="slice">
@@ -854,7 +854,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 同时保持行按钮类改为 `.switch`（`hold-switch`→`switch`、`hold-dot`→`switch-dot`，id 不变）。
 
-- [ ] **Step 2: popup.css**——`.hold-switch`/`.hold-dot` 选择器改名 `.switch`/`.switch-dot`，追加：
+- [x] **Step 2: popup.css**——`.hold-switch`/`.hold-dot` 选择器改名 `.switch`/`.switch-dot`，追加：
 
 ```css
 .slice { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--plate-edge); }
@@ -879,7 +879,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 .go:hover { border-color: var(--glow); }
 ```
 
-- [ ] **Step 3: src/popup/main.js 接线**
+- [x] **Step 3: src/popup/main.js 接线**
 
 import 区补 `clampSkip`（自 `../shared/skipPlan.js`）与 `pushAdvanceNow`（自 `../shared/notify.js`）。元素引用区追加：
 
@@ -953,16 +953,16 @@ advanceNow.addEventListener('click', async () => {
 
 （原保持行 html 的类名改动同步到本文件无需 js 变更——`holdSwitch` 引用按 id 取，不受类名影响。）
 
-- [ ] **Step 4: 构建 + 全量回归**
+- [x] **Step 4: 构建 + 全量回归**
 
 Run: `npm run build && npm test`
 Expected: 构建成功；72/72
 
-- [ ] **Step 5: 人工对照参考源（防抄袭门禁）**
+- [x] **Step 5: 人工对照参考源（防抄袭门禁）**
 
 对照参考 popup 的 skip-section/autonext-section（`skipStart/skipEnd/skipToggle/autoNextToggle/nextNowBtn`、`sendSkip/setAutoNext/nextVideo` 后台往返）：本实现直写存储 + `pushAdvanceNow` 直推、id/文案/结构（分区 `.slice` + 统一 `.switch` 词汇）全自定。在报告中记录比对结论。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add public/popup.html public/popup.css src/popup/main.js
@@ -983,25 +983,25 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 - Consumes: Task 1–6 产物（构建后的 `extension/`）
 - Produces: 验收 #5/#6 通过证据 + 里程碑整体并排相似度自查结论 + M4 关账
 
-- [ ] **Step 1: 构建 + 用户重载扩展**
+- [x] **Step 1: 构建 + 用户重载扩展**
 
 Run: `npm run build`
 请用户在 chrome://extensions 点「重新加载 ↻」。
 
-- [ ] **Step 2: 用户一次性设置 + tabbit 自动化验收（#5/#6 全链路）**
+- [x] **Step 2: 用户一次性设置 + tabbit 自动化验收（#5/#6 全链路）**
 
 请用户在测试页 popup 中：片头设 `10`、片尾设 `3600`、开「跳过」、开「自动续播」。
 tabbit 单程序（无需更多人工）：`video.play()` → 轮询 `currentTime`（预期 ≥10，验收 #5 片头）→ 轮询至 `currentTime` 跳至 ≈duration（片尾 toEnd）→ 等 `ended` + 300ms → 观察页面导航/新视频出现（自动续播点击下一节，验收 #6）→ 读新页 `rate`（保持仍开则应为 heldPace）。任一步失败按自主迭代循环修复（3 连败停）。
 
-- [ ] **Step 3: 手动续播目检（#6 另一半）**
+- [x] **Step 3: 手动续播目检（#6 另一半）**
 
 请用户点 popup「立即续播」→ 反馈按钮状态文案（✓/⚠）；tabbit 读页面变化佐证。
 
-- [ ] **Step 4: 并排相似度自查（自主迭代纪律的里程碑级门禁）**
+- [x] **Step 4: 并排相似度自查（自主迭代纪律的里程碑级门禁）**
 
 控制器并排对照 `src/`+`public/` 与 `fjhe.../2.1.0_0/` 全部对应文件：标识符零清单、结构差异清单、行为参数对齐清单（0.07–16/0.25/800ms/8/300ms/1200ms/±5s 等）。结论写入 `docs/verification/m4.md`。
 
-- [ ] **Step 5: 证据沉淀与勾账**
+- [x] **Step 5: 证据沉淀与勾账**
 
 `docs/verification/m4.md`（时间线/触发方式/降级路径/自查结论）；`MILESTONES.md` M4 ✅ + 证据行；commit 同前例（`docs(m4): acceptance evidence ...`）。
 
