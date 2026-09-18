@@ -35,6 +35,7 @@ export function wireContent({
       if (!skip.on) return;
       const d = video.duration;
       if (!Number.isFinite(d) || d <= 0) return;
+      if (video.ended || d - video.currentTime <= 0.3) return; // 已结束/已贴尾：不再重复收尾（防播放器被连续 seek 打死）
       const act = outroAction({ remaining: d - video.currentTime, loop: !!video.loop, outroSkip: skip.outroSkip });
       if (act === 'pause') { try { video.pause(); } catch { /* 同上 */ } }
       else if (act === 'toEnd') { try { video.currentTime = d; } catch { /* 同上 */ } }

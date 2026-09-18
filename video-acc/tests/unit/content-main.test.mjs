@@ -229,3 +229,25 @@ test('自动续播：ended 后 300ms 仍暂停才触发', async () => {
   await new Promise((r) => setTimeout(r, 400));
   assert.equal(advanced, 1, '延迟后触发');
 });
+
+test('片尾收尾不重复触发：已贴尾/已结束不再 seek', async () => {
+  const v = new FakeVideo();
+  const mem = new MemoryStorage({ [SETTINGS]: { skipOn: true, introSkip: 0, outroSkip: 5 } });
+  wireContent({ runtime: fakeRuntime(), storage: mem, doc: fakeDoc([v]), MutationObserver: FakeObserver, setInterval: () => 0, makeChip: () => ({ flash: () => {} }) });
+  await new Promise((r) => setTimeout(r, 0));
+  v.duration = 100;
+  let seeks = 0;
+  Object.defineProperty(v, 'currentTime', {
+    get() { return this.__t ?? 97; },
+    set(t) { this.__t = t; seeks += 1; },
+    configurable: true,
+  });
+  v.fire('timeupdate'); // 97 → remaining 3 < 5 → toEnd（第一次收尾）
+  assert.equal(seeks, 1, '第一次收尾 seek');
+  v.fire('timeupdate'); // 已在 100 → remaining 0.5ε 内 → 守卫拦截
+  v.fire('timeupdate');
+  assert.equal(seeks, 1, '贴尾后不再重复 seek');
+  v.ended = true;
+  v.fire('timeupdate'); // ended 后同样拦截
+  assert.equal(seeks, 1, 'ended 后不再 seek');
+});
