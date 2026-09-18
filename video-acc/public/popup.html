@@ -17,11 +17,26 @@
     </section>
     <div class="chips" id="pace-chips"></div>
     <div class="hold-row">
-      <button class="hold-switch" id="hold-switch" type="button" aria-pressed="false">
-        <span class="hold-dot" aria-hidden="true"></span>
+      <button class="switch" id="hold-switch" type="button" aria-pressed="false">
+        <span class="switch-dot" aria-hidden="true"></span>
         <span id="hold-label">保持：关</span>
       </button>
     </div>
+    <section class="slice">
+      <div class="slice-title">跳过片段</div>
+      <label class="slice-row"><span>片头</span><input type="number" id="skip-intro" min="0" max="3600" step="1" value="0" /><span class="unit">秒</span></label>
+      <label class="slice-row"><span>片尾</span><input type="number" id="skip-outro" min="0" max="3600" step="1" value="0" /><span class="unit">秒</span></label>
+      <button class="switch" id="skip-switch" type="button" aria-pressed="false">
+        <span class="switch-dot" aria-hidden="true"></span><span id="skip-label">跳过：关</span>
+      </button>
+    </section>
+    <section class="slice">
+      <div class="slice-title">自动续播</div>
+      <button class="switch" id="advance-switch" type="button" aria-pressed="false">
+        <span class="switch-dot" aria-hidden="true"></span><span id="advance-label">续播：关</span>
+      </button>
+      <button class="go" id="advance-now" type="button">▶ 立即续播</button>
+    </section>
     <p class="note" id="pace-note">读取中…</p>
   </main>
   <script src="popup.js"></script>

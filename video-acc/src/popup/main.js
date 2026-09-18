@@ -1,7 +1,8 @@
 // src/popup/main.js — 弹窗：滑块与预设调档；状态行显示活动页实际/存储档位
 import { PRESETS, clampPace, formatPace, samePace } from '../shared/paceMath.js';
 import { loadSettings, saveSettings } from '../shared/store.js';
-import { nudgeActiveTab } from '../shared/notify.js';
+import { nudgeActiveTab, pushAdvanceNow } from '../shared/notify.js';
+import { clampSkip } from '../shared/skipPlan.js';
 import { PROBE_PACE } from '../shared/protocol.js';
 
 const figure = document.getElementById('pace-figure');
@@ -13,6 +14,15 @@ if (verEl) verEl.textContent = chrome.runtime.getManifest().version;
 const holdSwitch = document.getElementById('hold-switch');
 const holdLabel = document.getElementById('hold-label');
 let hold = false; // 本弹窗会话的保持快照
+const skipIntro = document.getElementById('skip-intro');
+const skipOutro = document.getElementById('skip-outro');
+const skipSwitch = document.getElementById('skip-switch');
+const skipLabel = document.getElementById('skip-label');
+const advanceSwitch = document.getElementById('advance-switch');
+const advanceLabel = document.getElementById('advance-label');
+const advanceNow = document.getElementById('advance-now');
+let skipOn = false;      // 本弹窗会话快照
+let autoAdvance = false; // 同上
 const warnWrite = (e) => console.warn('[视频倍速助手] popup 写入失败:', e?.message || e);
 
 const chipButtons = PRESETS.map((p) => {
@@ -42,6 +52,15 @@ function renderHold(heldPace) {
   holdLabel.textContent = hold ? `保持：${formatPace(heldPace)} — 新视频自动套用` : '保持：关';
 }
 
+function renderSkip() {
+  skipSwitch.setAttribute('aria-pressed', String(skipOn));
+  skipLabel.textContent = skipOn ? '跳过：开' : '跳过：关';
+}
+function renderAdvance() {
+  advanceSwitch.setAttribute('aria-pressed', String(autoAdvance));
+  advanceLabel.textContent = autoAdvance ? '续播：开' : '续播：关';
+}
+
 async function commit(pace) {
   pace = clampPace(pace);
   paint(pace);
@@ -66,6 +85,34 @@ chipsBox.addEventListener('click', (e) => {
   if (b) commit(Number(b.dataset.pace));
 });
 
+async function commitSkip() {
+  await saveSettings({
+    introSkip: clampSkip(skipIntro.value),
+    outroSkip: clampSkip(skipOutro.value),
+  });
+}
+skipIntro.addEventListener('change', commitSkip);
+skipOutro.addEventListener('change', commitSkip);
+
+skipSwitch.addEventListener('click', async () => {
+  skipOn = !skipOn;
+  renderSkip();
+  await saveSettings({ skipOn });
+});
+
+advanceSwitch.addEventListener('click', async () => {
+  autoAdvance = !autoAdvance;
+  renderAdvance();
+  await saveSettings({ autoAdvance });
+});
+
+advanceNow.addEventListener('click', async () => {
+  advanceNow.textContent = '⏳ 查找中…';
+  const ok = await pushAdvanceNow();
+  advanceNow.textContent = ok ? '✓ 已触发' : '⚠ 未找到下一节入口';
+  setTimeout(() => { advanceNow.textContent = '▶ 立即续播'; }, 1500);
+});
+
 async function toggleHold() {
   hold = !hold;
   const patch = hold ? { hold: true, heldPace: clampPace(Number(dial.value)) } : { hold: false };
@@ -80,6 +127,12 @@ holdSwitch.addEventListener('click', () => toggleHold().catch(warnWrite));
   paint(pace);
   hold = !!settings.hold;
   renderHold(settings.heldPace);
+  skipOn = !!settings.skipOn;
+  autoAdvance = !!settings.autoAdvance;
+  skipIntro.value = String(settings.introSkip);
+  skipOutro.value = String(settings.outroSkip);
+  renderSkip();
+  renderAdvance();
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const live = await new Promise((resolve) => {
