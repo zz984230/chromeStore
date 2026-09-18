@@ -1,7 +1,8 @@
 // src/background/main.js — 命令中枢：快捷键 → 单写存储 + 推活动页
 import { bumpPace, clampPace } from '../shared/paceMath.js';
 import { loadSettings, saveSettings } from '../shared/store.js';
-import { nudgeActiveTab } from '../shared/notify.js';
+import { retuneIntro, INTRO_TUNING } from '../shared/skipPlan.js';
+import { nudgeActiveTab, pushAdvanceNow } from '../shared/notify.js';
 
 export function wireBackground({
   commands = globalThis.chrome?.commands,
@@ -24,6 +25,16 @@ export function wireBackground({
       const s = await loadSettings(storage);
       const updates = s.hold ? { hold: false } : { hold: true, heldPace: clampPace(s.pace) };
       await saveSettings(updates, storage); // storage 总线广播到所有标签页
+      return;
+    }
+    if (id === 'intro-minus' || id === 'intro-plus') {
+      const s = await loadSettings(storage);
+      const tuned = retuneIntro(s.introSkip, id === 'intro-plus' ? INTRO_TUNING : -INTRO_TUNING);
+      await saveSettings(tuned, storage); // 总线同步各页快照（>0 自动启用）
+      return;
+    }
+    if (id === 'advance-now') {
+      await pushAdvanceNow(tabsApi);
       return;
     }
   });

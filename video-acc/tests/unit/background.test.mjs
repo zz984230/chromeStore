@@ -76,3 +76,31 @@ test('hold-toggle 再次触发关闭，heldPace 保留', async () => {
   assert.equal(mem.data[STORAGE_KEY].hold, false);
   assert.equal(mem.data[STORAGE_KEY].heldPace, 2, '关闭不清记忆');
 });
+
+test('intro-plus 调到 5 秒并自动启用跳过', async () => {
+  const mem = new MemoryStorage({ [STORAGE_KEY]: { introSkip: 0, skipOn: false } });
+  const commands = fakeCommands();
+  wireBackground({ commands, storage: mem, tabsApi: { query: async () => [{ id: 1 }], sendMessage: async () => {} }, version: '0.1.0', log: () => {} });
+  await commands.handlers[0]('intro-plus');
+  assert.equal(mem.data[STORAGE_KEY].introSkip, 5);
+  assert.equal(mem.data[STORAGE_KEY].skipOn, true);
+});
+
+test('intro-minus 减到 0 自动关闭', async () => {
+  const mem = new MemoryStorage({ [STORAGE_KEY]: { introSkip: 3, skipOn: true } });
+  const commands = fakeCommands();
+  wireBackground({ commands, storage: mem, tabsApi: { query: async () => [{}] }, version: '0.1.0', log: () => {} });
+  await commands.handlers[0]('intro-minus');
+  assert.equal(mem.data[STORAGE_KEY].introSkip, 0);
+  assert.equal(mem.data[STORAGE_KEY].skipOn, false);
+});
+
+test('advance-now 推送活动页', async () => {
+  const mem = new MemoryStorage();
+  const commands = fakeCommands();
+  const sent = [];
+  wireBackground({ commands, storage: mem, tabsApi: { query: async () => [{ id: 4 }], sendMessage: async (id, m) => sent.push({ id, m }) }, version: '0.1.0', log: () => {} });
+  await commands.handlers[0]('advance-now');
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].m.vpa, 'advance.run');
+});
