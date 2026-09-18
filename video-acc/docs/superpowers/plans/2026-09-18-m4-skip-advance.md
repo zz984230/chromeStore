@@ -329,7 +329,7 @@ export function runAdvance(doc) {
 - [ ] **Step 4: 跑测试确认通过 + 全量回归**
 
 Run: `node --test tests/unit/advance.test.mjs && npm test`
-Expected: advance 4/4；全量 58/58
+Expected: advance 4/4；全量 60/60（56 + 4）
 
 - [ ] **Step 5: 人工对照参考源（防抄袭门禁）**
 
@@ -423,7 +423,7 @@ export function createKeeper({ trip, chip, hooks = {} } = {}) {
 - [ ] **Step 4: 跑测试确认通过 + 全量回归**
 
 Run: `node --test tests/unit/keeper.test.mjs && npm test`
-Expected: keeper 12/12；全量 60/60
+Expected: keeper 12/12；全量 62/62（60 + 2）
 
 - [ ] **Step 5: Commit**
 
@@ -666,7 +666,7 @@ if (globalThis.chrome?.runtime?.id) wireContent({ storage: globalThis.chrome?.st
 - [ ] **Step 4: 跑测试确认通过 + 全量回归**
 
 Run: `node --test tests/unit/content-main.test.mjs && npm test`
-Expected: content-main 11/11（原 6 + 新 5）；全量 65/65
+Expected: content-main 11/11（原 6 + 新 5）；全量 67/67（62 + 5）
 
 - [ ] **Step 5: 人工对照参考源（防抄袭门禁）**
 
@@ -806,7 +806,7 @@ export async function pushAdvanceNow(tabsApi = globalThis.chrome?.tabs) {
 - [ ] **Step 4: 跑测试确认通过 + 构建 + 全量回归**
 
 Run: `node --test tests/unit/notify.test.mjs tests/unit/background.test.mjs && npm run build && npm test`
-Expected: notify 5/5、background 9/9；构建成功（manifest 合法）；全量 70/70
+Expected: notify 5/5、background 9/9；构建成功（manifest 合法）；全量 72/72（67 + 5）
 
 - [ ] **Step 5: Commit**
 
@@ -956,7 +956,7 @@ advanceNow.addEventListener('click', async () => {
 - [ ] **Step 4: 构建 + 全量回归**
 
 Run: `npm run build && npm test`
-Expected: 构建成功；70/70
+Expected: 构建成功；72/72
 
 - [ ] **Step 5: 人工对照参考源（防抄袭门禁）**
 
@@ -1011,5 +1011,5 @@ tabbit 单程序（无需更多人工）：`video.play()` → 轮询 `currentTim
 
 - **规格覆盖**：验收 #5（Task 7 Step 2 前半 + skipPlan 单测）、#6（Step 2 后半 + Step 3 + advance 单测）；行为规格表逐项落位（启用即生效 introSweep、循环暂停/普通 toEnd、±5 自动启用、300ms 站点连播避让、手动续播不受限）；3 命令 + 无键位说明（Task 5）；并排自查（Task 7 Step 4）。
 - **占位符扫描**：无 TBD/空泛步骤；所有代码块完整。
-- **类型一致性**：`skip`/`advance` 快照对象字段在 Task 4 内自洽；`RUN_ADVANCE` 字面量 Task 4 定义、Task 5/6 消费一致；`makeAdvance` 注入缝 Task 4 定义并在测试使用；`.switch` 改名 Task 6 内 html/css 同步；测试计数 54→58→60→65→70 逐任务对齐。
+- **类型一致性**：`skip`/`advance` 快照对象字段在 Task 4 内自洽；`RUN_ADVANCE` 字面量 Task 4 定义、Task 5/6 消费一致；`makeAdvance` 注入缝 Task 4 定义并在测试使用；`.switch` 改名 Task 6 内 html/css 同步；测试计数 56→60→62→67→72 逐任务对齐（基线含 M3 fix wave 2 项）。
 - **已知取舍**：collect/poke/runAdvance 胶水不单测（Task 7 实测）；popup 区块无单测（M2/M3 同例）；`__defineSetter__` 测试手法仅用于 FakeVideo 的 currentTime 模拟。
