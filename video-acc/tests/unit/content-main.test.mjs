@@ -5,10 +5,17 @@ import { wireContent } from '../../src/content/main.js';
 import { APPLY_PACE, PROBE_PACE } from '../../src/shared/protocol.js';
 
 class FakeVideo extends EventTarget {
-  constructor() { super(); this.playbackRate = 1; this.defaultPlaybackRate = 1; }
+  constructor() {
+    super();
+    this.playbackRate = 1;
+    this.defaultPlaybackRate = 1;
+    this.nodeType = 1; // 过 discovery harvest 的元素节点门（同 tests/unit/discovery.test.mjs 先例）
+    this.tagName = 'VIDEO';
+  }
 }
 class FakeObserver {
-  constructor(cb) { this.cb = cb; }
+  static instances = [];
+  constructor(cb) { this.cb = cb; FakeObserver.instances.push(this); }
   observe() {}
   disconnect() {}
 }
@@ -73,4 +80,72 @@ test('无关消息静默忽略', () => {
   let called = false;
   runtime.listeners[0]({ something: 'else' }, {}, () => { called = true; });
   assert.equal(called, false);
+});
+
+class MemoryStorage {
+  constructor(initial = {}) { this.data = structuredClone(initial); this.listeners = new Set(); }
+  get(key, cb) { cb(key in this.data ? { [key]: this.data[key] } : {}); }
+  set(obj, cb) { Object.assign(this.data, obj); cb(); }
+  emit(obj) { const changes = {}; for (const k of Object.keys(obj)) changes[k] = { newValue: obj[k] }; for (const l of this.listeners) l(changes, 'local'); }
+  get onChanged() { return { addListener: (l) => this.listeners.add(l), removeListener: (l) => this.listeners.delete(l) }; }
+}
+const SETTINGS = 'vpa.settings';
+
+test('启动快照：hold 开启时对现存视频施记忆档位（🔒 浮标）', async () => {
+  const v = new FakeVideo();
+  const runtime = fakeRuntime();
+  const flashes = [];
+  const { chip } = { chip: { flash: (t) => flashes.push(t) } };
+  const mem = new MemoryStorage({ [SETTINGS]: { pace: 2, hold: true, heldPace: 2 } });
+  wireContent({
+    runtime, storage: mem, doc: fakeDoc([v]),
+    MutationObserver: FakeObserver, setInterval: () => 0,
+    makeChip: () => chip,
+  });
+  await new Promise((r) => setTimeout(r, 0)); // 等 loadSettings 微任务
+  assert.equal(v.playbackRate, 2, '刷新后自动恢复记忆档位');
+  assert.deepEqual(flashes, ['🔒 2×']);
+});
+
+test('发现的新视频在保持模式下自动套用', async () => {
+  const runtime = fakeRuntime();
+  const flashes = [];
+  const chip = { flash: (t) => flashes.push(t) };
+  const mem = new MemoryStorage({ [SETTINGS]: { pace: 2, hold: true, heldPace: 2 } });
+  const videos = [];
+  const doc = { documentElement: {}, querySelectorAll: (sel) => (sel === 'video' ? videos : []) };
+  wireContent({
+    runtime, storage: mem, doc,
+    MutationObserver: FakeObserver, setInterval: () => 0,
+    makeChip: () => chip,
+  });
+  await new Promise((r) => setTimeout(r, 0)); // 快照就位
+  const late = new FakeVideo();
+  videos.push(late);
+  // 触发一次 observer 批次模拟新视频插入
+  const obs = FakeObserver.instances.at(-1);
+  obs.cb([{ addedNodes: [late] }]);
+  assert.equal(late.playbackRate, 2, '新视频自动套用记忆档位');
+  assert.deepEqual(flashes, ['🔒 2×']);
+});
+
+test('订阅回声：hold 下跨页套用为静默；hold 关闭时 pace 变更不套用', async () => {
+  const v = new FakeVideo();
+  const runtime = fakeRuntime();
+  const flashes = [];
+  const chip = { flash: (t) => flashes.push(t) };
+  const mem = new MemoryStorage({ [SETTINGS]: { pace: 1, hold: false, heldPace: 1 } });
+  wireContent({
+    runtime, storage: mem, doc: fakeDoc([v]),
+    MutationObserver: FakeObserver, setInterval: () => 0,
+    makeChip: () => chip,
+  });
+  await new Promise((r) => setTimeout(r, 0));
+  // hold 关闭：外部 pace 变更回声 → 不套用（活动页已由直推处理）
+  mem.emit({ [SETTINGS]: { pace: 3, hold: false, heldPace: 1 } });
+  assert.equal(v.playbackRate, 1, 'hold 关闭时回声不施档');
+  // hold 开启：heldPace 变更 → 静默套用
+  mem.emit({ [SETTINGS]: { pace: 3, hold: true, heldPace: 3 } });
+  assert.equal(v.playbackRate, 3, 'hold 开启时跨页套用');
+  assert.deepEqual(flashes, [], '回声套用全程静默');
 });
