@@ -24,6 +24,10 @@ function makeDeps() {
   };
 }
 
+function deps_free() {
+  return { trip: { allows: () => true, reset: () => {} }, chip: { flash: () => {} } };
+}
+
 test('applyAll 施档：速率、意图、最近档位、浮标（显式副作用）', () => {
   const deps = makeDeps();
   const keeper = createKeeper({ trip: deps.trip, chip: deps.chip });
@@ -139,4 +143,33 @@ test('未施过档的视频不受事件影响', () => {
   v.playbackRate = 4; v.fire('ratechange');
   assert.equal(v.playbackRate, 4, '无意图则不干预');
   assert.equal(keeper.lastPace(), null);
+});
+
+test('hooks：play/timeupdate/ended 各回调一次并携带视频', async () => {
+  const seen = { play: 0, timeupdate: 0, ended: 0 };
+  const keeper = createKeeper({
+    trip: deps_free().trip, chip: deps_free().chip,
+    hooks: {
+      onPlay: (v) => { seen.play += 1; assert.ok(v instanceof FakeVideo); },
+      onTimeUpdate: () => { seen.timeupdate += 1; },
+      onEnded: () => { seen.ended += 1; },
+    },
+  });
+  const v = new FakeVideo();
+  keeper.attach(v);
+  v.fire('play');
+  v.fire('timeupdate');
+  v.fire('timeupdate');
+  v.fire('ended');
+  assert.deepEqual(seen, { play: 1, timeupdate: 2, ended: 1 });
+});
+
+test('hooks 缺省时行为与 M3 完全一致', () => {
+  const d = deps_free();
+  const keeper = createKeeper({ trip: d.trip, chip: d.chip }); // 不传 hooks
+  const v = new FakeVideo();
+  keeper.attach(v);
+  v.fire('play');      // 施档纠回路径不受影响
+  v.fire('ended');     // 无 onEnded 也不报错
+  assert.equal(keeper.isKept(v), true);
 });

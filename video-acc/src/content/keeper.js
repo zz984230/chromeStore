@@ -1,7 +1,7 @@
 // src/content/keeper.js — 逐视频接管：施档、守速恢复、换源/播放重套
 import { samePace } from '../shared/paceMath.js';
 
-export function createKeeper({ trip, chip } = {}) {
+export function createKeeper({ trip, chip, hooks = {} } = {}) {
   const intent = new WeakMap(); // video → 期望档位
   const fromUs = new WeakSet(); // 我们自己的设速标记（防 ratechange 自激）
   const kept = new WeakSet();   // 已接线的视频
@@ -41,6 +41,9 @@ export function createKeeper({ trip, chip } = {}) {
         impose(video, want); // 播放漂移纠回（静默）
       }
     });
+    if (hooks.onPlay) video.addEventListener('play', () => hooks.onPlay(video));
+    if (hooks.onTimeUpdate) video.addEventListener('timeupdate', () => hooks.onTimeUpdate(video));
+    if (hooks.onEnded) video.addEventListener('ended', () => hooks.onEnded(video));
   }
 
   return {
