@@ -52,3 +52,27 @@ test('未知命令忽略', async () => {
   await commands.handlers[0]('something-else');
   assert.equal(mem.data[STORAGE_KEY].pace, 1);
 });
+
+test('hold-toggle 开启记忆当前档位并写存储', async () => {
+  const mem = new MemoryStorage({ [STORAGE_KEY]: { pace: 2, hold: false, heldPace: 1 } });
+  const commands = fakeCommands();
+  const sent = [];
+  wireBackground({
+    commands, storage: mem,
+    tabsApi: { query: async () => [{ id: 9 }], sendMessage: async (id, m) => sent.push({ id, m }) },
+    version: '0.1.0', log: () => {},
+  });
+  await commands.handlers[0]('hold-toggle');
+  assert.equal(mem.data[STORAGE_KEY].hold, true);
+  assert.equal(mem.data[STORAGE_KEY].heldPace, 2, '记忆 = 当前档位');
+  assert.deepEqual(sent, [], '保持状态走 storage 总线，不直推');
+});
+
+test('hold-toggle 再次触发关闭，heldPace 保留', async () => {
+  const mem = new MemoryStorage({ [STORAGE_KEY]: { pace: 2, hold: true, heldPace: 2 } });
+  const commands = fakeCommands();
+  wireBackground({ commands, storage: mem, tabsApi: { query: async () => [{}] }, version: '0.1.0', log: () => {} });
+  await commands.handlers[0]('hold-toggle');
+  assert.equal(mem.data[STORAGE_KEY].hold, false);
+  assert.equal(mem.data[STORAGE_KEY].heldPace, 2, '关闭不清记忆');
+});

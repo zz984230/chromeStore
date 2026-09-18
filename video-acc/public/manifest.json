@@ -35,6 +35,10 @@
     "pace-normal": {
       "description": "回正到 1×",
       "suggested_key": { "default": "Alt+0" }
+    },
+    "hold-toggle": {
+      "description": "切换保持（记忆当前档位并自动套用到新视频）",
+      "suggested_key": { "default": "Alt+L" }
     }
   },
   "permissions": ["storage", "activeTab"],
