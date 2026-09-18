@@ -1,6 +1,6 @@
 // src/shared/store.js — 单键设置存储：缺字段回填 + 同上下文写入串行
 // nightveil settings.js 家族模式；键名与 schema 属本项目自有（vpa.settings 单键对象，
-// 载入缺字段回填并随里程碑生长：M2 pace → M3 hold/heldPace → M4 skip/advance 待入）。
+// 载入缺字段回填并随里程碑生长：M2 pace → M3 hold/heldPace → M4 introSkip/outroSkip/skipOn/autoAdvance 均已入默认）。
 export const STORAGE_KEY = 'vpa.settings';
 
 export const DEFAULT_SETTINGS = Object.freeze({

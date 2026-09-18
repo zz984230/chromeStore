@@ -91,20 +91,22 @@ async function commitSkip() {
     outroSkip: clampSkip(skipOutro.value),
   });
 }
-skipIntro.addEventListener('change', commitSkip);
-skipOutro.addEventListener('change', commitSkip);
+skipIntro.addEventListener('change', () => commitSkip().catch(warnWrite));
+skipOutro.addEventListener('change', () => commitSkip().catch(warnWrite));
 
-skipSwitch.addEventListener('click', async () => {
+async function toggleSkip() {
   skipOn = !skipOn;
   renderSkip();
   await saveSettings({ skipOn });
-});
+}
+skipSwitch.addEventListener('click', () => toggleSkip().catch(warnWrite));
 
-advanceSwitch.addEventListener('click', async () => {
+async function toggleAdvance() {
   autoAdvance = !autoAdvance;
   renderAdvance();
   await saveSettings({ autoAdvance });
-});
+}
+advanceSwitch.addEventListener('click', () => toggleAdvance().catch(warnWrite));
 
 advanceNow.addEventListener('click', async () => {
   advanceNow.textContent = '⏳ 查找中…';

@@ -48,7 +48,7 @@ export function pokeTarget(el) {
   } catch { return false; }
 }
 
-// —— 以下为 DOM 胶水（不单测，Task 8 /tabbit 实测覆盖）——
+// —— 以下为 DOM 胶水（不单测，Task 7 /tabbit 实测覆盖）——
 
 export function collectAdvanceCandidates(doc) {
   const nodes = doc.querySelectorAll(
