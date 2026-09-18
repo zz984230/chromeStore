@@ -16,6 +16,12 @@
       <input type="range" id="pace-dial" class="dial" min="0.07" max="16" step="0.05" value="1" aria-label="播放档位" />
     </section>
     <div class="chips" id="pace-chips"></div>
+    <div class="hold-row">
+      <button class="hold-switch" id="hold-switch" type="button" aria-pressed="false">
+        <span class="hold-dot" aria-hidden="true"></span>
+        <span id="hold-label">保持：关</span>
+      </button>
+    </div>
     <p class="note" id="pace-note">读取中…</p>
   </main>
   <script src="popup.js"></script>

@@ -10,6 +10,9 @@ const chipsBox = document.getElementById('pace-chips');
 const note = document.getElementById('pace-note');
 const verEl = document.getElementById('app-version');
 if (verEl) verEl.textContent = chrome.runtime.getManifest().version;
+const holdSwitch = document.getElementById('hold-switch');
+const holdLabel = document.getElementById('hold-label');
+let hold = false; // 本弹窗会话的保持快照
 
 const chipButtons = PRESETS.map((p) => {
   const b = document.createElement('button');
@@ -33,10 +36,17 @@ function noteFor(live, pace) {
   return live ? `当前页面 ${formatPace(pace)}` : `已存 ${formatPace(pace)} · 本页未接管`;
 }
 
+function renderHold(heldPace) {
+  holdSwitch.setAttribute('aria-pressed', String(hold));
+  holdLabel.textContent = hold ? `保持：${formatPace(heldPace)} — 新视频自动套用` : '保持：关';
+}
+
 async function commit(pace) {
   pace = clampPace(pace);
   paint(pace);
-  await saveSettings({ pace });
+  const patch = { pace };
+  if (hold) patch.heldPace = pace; // 保持期间调档同步更新记忆
+  await saveSettings(patch);
   const reply = await nudgeActiveTab(pace);
   note.textContent = noteFor(reply && typeof reply.pace === 'number', pace);
 }
@@ -50,9 +60,19 @@ chipsBox.addEventListener('click', (e) => {
   if (b) commit(Number(b.dataset.pace));
 });
 
+holdSwitch.addEventListener('click', async () => {
+  hold = !hold;
+  const patch = hold ? { hold: true, heldPace: Number(dial.value) } : { hold: false };
+  renderHold(patch.heldPace ?? 1);
+  await saveSettings(patch);
+});
+
 (async () => {
-  const { pace } = await loadSettings();
+  const settings = await loadSettings();
+  const pace = settings.pace;
   paint(pace);
+  hold = !!settings.hold;
+  renderHold(settings.heldPace);
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const live = await new Promise((resolve) => {
