@@ -454,7 +454,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 - [ ] **Step 1: 写失败测试**
 
-`tests/unit/content-main.test.mjs` 追加（沿用文件内既有 fake 设施与 `MemoryStorage`/`SETTINGS`；`FakeVideo` 需补 `loop`、`duration`、`currentTime`、`paused` 字段——在类定义处加 `constructor` 初始化 `this.loop=false; this.duration=NaN; this.currentTime=0; this.paused=true;`）：
+`tests/unit/content-main.test.mjs` 追加（沿用文件内既有 fake 设施与 `MemoryStorage`/`SETTINGS`；`FakeVideo` 需补 `fire(type)` 方法与 `loop/duration/currentTime/paused` 字段——`fire` 循 keeper.test.mjs 先例，constructor 初始化 `this.loop=false; this.duration=NaN; this.currentTime=0; this.paused=true;`）：
 
 ```js
 import { RUN_ADVANCE } from '../../src/shared/protocol.js';
@@ -666,7 +666,7 @@ if (globalThis.chrome?.runtime?.id) wireContent({ storage: globalThis.chrome?.st
 - [ ] **Step 4: 跑测试确认通过 + 全量回归**
 
 Run: `node --test tests/unit/content-main.test.mjs && npm test`
-Expected: content-main 11/11（原 6 + 新 5）；全量 67/67（62 + 5）
+Expected: content-main 12/12（原 7 含 M3 fix-wave 1 + 新 5）；全量 67/67（62 + 5）
 
 - [ ] **Step 5: 人工对照参考源（防抄袭门禁）**
 
