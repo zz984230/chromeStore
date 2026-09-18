@@ -15,6 +15,7 @@
 - **行为规格（参考语义复刻，grilling 已批）**：片头=开始播放时位置仍在其内则 seek 过去（启用瞬间对播放中的视频立即生效）；片尾=剩余 < outroSkip 时循环视频 `pause()`、普通视频 `currentTime = duration` 触发自然 ended；快捷键片头 ±5 秒且调到 >0 自动启用；自动续播=ended 后延迟 300ms，视频仍暂停（站点未连播）才触发；手动续播不受总开关限制。
 - manifest 增补仅限上述 3 条命令（无 suggested_key）；其余任何 manifest 变更须用户同意。
 - UI/注释全中文；conventional commits + `Co-Authored-By: Claude Code <noreply@anthropic.com>`。
+- **防抄袭门禁报告必须引用实读的参考文件路径**（`fjhe.../2.1.0_0/` 在盘；M3 终审发现某任务门禁只对照了计划文档——禁止重演）。
 - 回归基线：49/49 单测；M3 收尾状态（含 popup verEl 防护、store lastError 拒斥、nudge 回包契约）。
 
 ## 文件地图

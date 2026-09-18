@@ -11,7 +11,7 @@
     "build": "node scripts/build.mjs",
     "watch": "node scripts/build.mjs --watch",
     "icons": "node scripts/gen-icons.mjs",
-    "test": "node --test"
+    "test": "node --test --test-isolation=none"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"
