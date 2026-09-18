@@ -13,6 +13,7 @@ if (verEl) verEl.textContent = chrome.runtime.getManifest().version;
 const holdSwitch = document.getElementById('hold-switch');
 const holdLabel = document.getElementById('hold-label');
 let hold = false; // 本弹窗会话的保持快照
+const warnWrite = (e) => console.warn('[视频倍速助手] popup 写入失败:', e?.message || e);
 
 const chipButtons = PRESETS.map((p) => {
   const b = document.createElement('button');
@@ -44,11 +45,16 @@ function renderHold(heldPace) {
 async function commit(pace) {
   pace = clampPace(pace);
   paint(pace);
-  const patch = { pace };
-  if (hold) patch.heldPace = pace; // 保持期间调档同步更新记忆
-  await saveSettings(patch);
-  const reply = await nudgeActiveTab(pace);
-  note.textContent = noteFor(reply && typeof reply.pace === 'number', pace);
+  try {
+    const patch = { pace };
+    if (hold) patch.heldPace = pace; // 保持期间调档同步更新记忆
+    await saveSettings(patch);
+    if (hold) renderHold(pace); // 保持期间调档同步记忆 → 标签同步
+    const reply = await nudgeActiveTab(pace);
+    note.textContent = noteFor(reply && typeof reply.pace === 'number', pace);
+  } catch (e) {
+    warnWrite(e);
+  }
 }
 
 dial.addEventListener('input', () => {
@@ -60,12 +66,13 @@ chipsBox.addEventListener('click', (e) => {
   if (b) commit(Number(b.dataset.pace));
 });
 
-holdSwitch.addEventListener('click', async () => {
+async function toggleHold() {
   hold = !hold;
-  const patch = hold ? { hold: true, heldPace: Number(dial.value) } : { hold: false };
+  const patch = hold ? { hold: true, heldPace: clampPace(Number(dial.value)) } : { hold: false };
   renderHold(patch.heldPace ?? 1);
   await saveSettings(patch);
-});
+}
+holdSwitch.addEventListener('click', () => toggleHold().catch(warnWrite));
 
 (async () => {
   const settings = await loadSettings();

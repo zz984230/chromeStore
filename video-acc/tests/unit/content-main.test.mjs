@@ -149,3 +149,14 @@ test('订阅回声：hold 下跨页套用为静默；hold 关闭时 pace 变更�
   assert.equal(v.playbackRate, 3, 'hold 开启时跨页套用');
   assert.deepEqual(flashes, [], '回声套用全程静默');
 });
+
+test('保持关闭时发现的新视频不被施档', async () => {
+  const late = new FakeVideo();
+  const videos = [late];
+  const doc = { documentElement: {}, querySelectorAll: (sel) => (sel === 'video' ? videos : []) };
+  const mem = new MemoryStorage({ [SETTINGS]: { pace: 2, hold: false, heldPace: 2 } });
+  wireContent({ runtime: fakeRuntime(), storage: mem, doc, MutationObserver: FakeObserver, setInterval: () => 0, makeChip: () => ({ flash: () => {} }) });
+  await new Promise((r) => setTimeout(r, 0));
+  FakeObserver.instances.at(-1).cb([{ addedNodes: [late] }]);
+  assert.equal(late.playbackRate, 1, 'hold 关闭不施档');
+});

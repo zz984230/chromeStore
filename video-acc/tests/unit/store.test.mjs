@@ -96,3 +96,12 @@ test('跨上下文策略：两个模块实例共享同一存储，顺序写均�
   assert.equal(s.heldPace, 1.5);
   assert.equal(s.pace, 2, 'B 的字段存活');
 });
+
+test('subscribeSettings 忽略外键变更', async () => {
+  const mem = new MemoryStorage();
+  const seen = [];
+  subscribeSettings((s) => seen.push(s), mem);
+  const listeners = [...mem.listeners];
+  listeners[0]({ 'some.other.key': { newValue: 1 } }, 'local');
+  assert.equal(seen.length, 0, '外键变更不派发');
+});
