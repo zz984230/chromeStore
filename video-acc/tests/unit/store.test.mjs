@@ -22,7 +22,7 @@ class MemoryStorage {
 test('loadSettings 空库返回默认，缺字段回填', async () => {
   assert.deepEqual(await loadSettings(new MemoryStorage()), DEFAULT_SETTINGS);
   const partial = new MemoryStorage({ [STORAGE_KEY]: {} });
-  assert.deepEqual(await loadSettings(partial), { pace: 1, hold: false, heldPace: 1 });
+  assert.deepEqual(await loadSettings(partial), { pace: 1, hold: false, heldPace: 1, introSkip: 0, outroSkip: 0, skipOn: false, autoAdvance: false });
 });
 
 test('saveSettings 浅合并补丁并持久化，返回合并结果', async () => {
@@ -104,4 +104,13 @@ test('subscribeSettings 忽略外键变更', async () => {
   const listeners = [...mem.listeners];
   listeners[0]({ 'some.other.key': { newValue: 1 } }, 'local');
   assert.equal(seen.length, 0, '外键变更不派发');
+});
+
+test('schema 升级：M3 存储缺 M4 跳过字段回填默认', async () => {
+  const mem = new MemoryStorage({ [STORAGE_KEY]: { pace: 2, hold: true, heldPace: 2 } });
+  const s = await loadSettings(mem);
+  assert.equal(s.introSkip, 0);
+  assert.equal(s.outroSkip, 0);
+  assert.equal(s.skipOn, false);
+  assert.equal(s.autoAdvance, false);
 });

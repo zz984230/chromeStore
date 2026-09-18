@@ -4,9 +4,13 @@
 export const STORAGE_KEY = 'vpa.settings';
 
 export const DEFAULT_SETTINGS = Object.freeze({
-  pace: 1,     // 当前档位
-  hold: false, // 保持模式（M3）
-  heldPace: 1, // 记忆档位（M3）
+  pace: 1,        // 当前档位
+  hold: false,    // 保持模式（M3）
+  heldPace: 1,    // 记忆档位（M3）
+  introSkip: 0,   // 片头跳过秒数（M4）
+  outroSkip: 0,   // 片尾跳过秒数（M4）
+  skipOn: false,  // 跳过总开关（M4）
+  autoAdvance: false, // 自动续播开关（M4）
 });
 
 function defaultStorage() {
