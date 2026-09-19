@@ -57,6 +57,12 @@
 - [ ] 命名债：clearVideoStages 实际清理全部媒体舞台标记，下次触碰时改名 clearMediaStages
 - [ ] 舞台子树内的图截文字双重渲染角落情况：舞台豁免使 sprite 背景幸存，而 text-indent 召回让真实文字也显示（2026-09-12 wave-7 审查发现；真例出现时给召回规则加舞台排除或拆分规则）
 
+## M3+ 终审递延（2026-09-19，fable 选项页重设计终审 triage）
+
+- [ ] 色板键盘可达性：swatch 仅点击（span），键盘用户只能选到首个配色——补 tabindex/role 或视觉隐藏 radio（相对 M3 每配色 radio 是可达性回归）
+- [ ] 行标签关联：CT 滑杆/定时时间框/启用开关的 row-label 是 span 非 label——AT 用户得到无名输入（设计稿同款，择机统一补 label 关联）
+- [ ] 死键清扫：strings.js ~14 个零引用键 + optionsM3 SECTION_ORDER/sectionKeyOf 死导出（部分被测试钉住）——下轮文案/结构变动时一并清
+
 ## M3 终审递延（2026-09-19，fable 全分支终审 triage）
 
 - [ ] lateCheck 迟到排除路径补 applyColorTemp 调用（三重交集才触发：dark + 色温开 + 迟到 meta 排除；含未命中分支行为已与原版一致——下次触碰 content/main.js 时顺手补一行）
