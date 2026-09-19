@@ -7,7 +7,7 @@ import { loadSettings, saveSettings, subscribeSettings } from '../shared/setting
 import { iconPathsFor } from '../shared/icons.js';
 import { hostnameFromUrl, menuSpec, menuClickPatch, toolbarClickPatch } from '../shared/actions.js';
 import { hostnameInList } from '../shared/scope.js';
-import { ALARM_ON, ALARM_OFF, alarmStatePatch, syncAlarms } from '../shared/schedule.js';
+import { alarmStatePatch, syncAlarms } from '../shared/schedule.js';
 
 const MENU_ID = 'nv-site-list';
 

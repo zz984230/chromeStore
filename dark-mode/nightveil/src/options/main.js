@@ -95,12 +95,16 @@ function renderThemes() {
 // ---- M3 sections/controls（M3-BEHAVIOR §1/§2/§3/§6）----
 function renderGuardControls() {
   const fg = current.flashGuard ?? {};
+  // Master sits OUTSIDE the fieldset it toggles (renderEngine pattern): a
+  // disabled fieldset disables every descendant control, which would brick
+  // re-enabling from inside.
   const master = el('label', {}, el('input', { type: 'checkbox', id: 'fg-enabled', checked: fg.enabled }), ` ${STRINGS.guardGroupLabel}`);
-  const box = el('fieldset', { id: 'fg-controls', disabled: fg.enabled === false }, master,
-    ...FLASHGUARD_MODES.map((m) => el('label', {},
-      el('input', { type: 'radio', name: 'fgMode', id: `fg-mode-${m.value}`, value: m.value, checked: fg.mode === m.value }), ` ${m.label}`)),
-    el('label', {}, `${STRINGS.guardDelayLabel} `, el('input', { type: 'number', id: 'fg-delay', min: '0', max: '10000', value: fg.delayMs })),
-    el('label', {}, `${STRINGS.guardThresholdLabel} `, el('input', { type: 'number', id: 'fg-threshold', min: '1', max: '1000000', value: fg.threshold })));
+  const box = el('div', {}, master,
+    el('fieldset', { id: 'fg-controls', disabled: fg.enabled === false },
+      ...FLASHGUARD_MODES.map((m) => el('label', {},
+        el('input', { type: 'radio', name: 'fgMode', id: `fg-mode-${m.value}`, value: m.value, checked: fg.mode === m.value }), ` ${m.label}`)),
+      el('label', {}, `${STRINGS.guardDelayLabel} `, el('input', { type: 'number', id: 'fg-delay', min: '0', max: '10000', value: fg.delayMs })),
+      el('label', {}, `${STRINGS.guardThresholdLabel} `, el('input', { type: 'number', id: 'fg-threshold', min: '1', max: '1000000', value: fg.threshold }))));
   box.addEventListener('change', (e) => {
     const next = { ...(current.flashGuard ?? {}) };
     if (e.target.id === 'fg-enabled') next.enabled = e.target.checked;
@@ -121,15 +125,17 @@ function renderColorTempControls() {
   const slider = (id, label, max, value) => el('label', {}, `${label} `,
     el('input', { type: 'range', id, min: '0', max: String(max), step: '1', value }), ' ',
     el('output', { for: id }, String(value)));
+  // Same pattern as renderGuardControls: master outside the fieldset it toggles.
   const master = el('label', {}, el('input', { type: 'checkbox', id: 'ct-enabled', checked: ct.enabled }), ` ${STRINGS.colorTempGroupLabel}`);
-  const box = el('fieldset', { id: 'ct-controls', disabled: ct.enabled === false }, master,
-    slider('ct-red', STRINGS.ctRedLabel, 255, ct.red),
-    slider('ct-green', STRINGS.ctGreenLabel, 255, ct.green),
-    slider('ct-blue', STRINGS.ctBlueLabel, 255, ct.blue),
-    slider('ct-opacity', STRINGS.ctOpacityLabel, 100, ct.opacity),
-    el('p', { class: 'hint' }, STRINGS.ctListLabel),
-    el('textarea', { id: 'ct-list', 'data-ct-list': '' }, (ct.excludedHosts ?? []).join('\n')),
-    note(STRINGS.ctListHint));
+  const box = el('div', {}, master,
+    el('fieldset', { id: 'ct-controls', disabled: ct.enabled === false },
+      slider('ct-red', STRINGS.ctRedLabel, 255, ct.red),
+      slider('ct-green', STRINGS.ctGreenLabel, 255, ct.green),
+      slider('ct-blue', STRINGS.ctBlueLabel, 255, ct.blue),
+      slider('ct-opacity', STRINGS.ctOpacityLabel, 100, ct.opacity),
+      el('p', { class: 'hint' }, STRINGS.ctListLabel),
+      el('textarea', { id: 'ct-list', 'data-ct-list': '' }, (ct.excludedHosts ?? []).join('\n')),
+      note(STRINGS.ctListHint)));
   // 原版滑杆 input 实时存（§6.4）；列表 textarea change 存（nightveil 列表约定）。
   box.addEventListener('input', (e) => {
     if (e.target.type !== 'range') return;

@@ -54,7 +54,12 @@ function dismissGuardSoon(delayMs) {
   guardTimer = setTimeout(() => removeStyle(GUARD_STYLE_ID), delayMs);
 }
 
-function armGuard(settings, bgOverride, { recheck = false } = {}) {
+function armGuard(settings, bgOverride, { recheck = false, reload = false } = {}) {
+  if (reload) { // §10-5：storage 变更渲染——立即摘除，不重挂
+    if (guardTimer) { clearTimeout(guardTimer); guardTimer = null; }
+    removeStyle(GUARD_STYLE_ID);
+    return;
+  }
   if (recheck) return; // §10-4：recheck 渲染既不重挂也不强摘——既有定时器自理
   if (!shouldArmGuard(settings, { isTopFrame: window === window.top, isRecheckRender: false })) {
     removeStyle(GUARD_STYLE_ID);
@@ -208,7 +213,7 @@ function applyEngine(settings, site, siteUsable, opts) {
     const threshold = Number(settings.flashGuard?.threshold) || 1000;
     const lightPage = document.querySelectorAll('*').length < threshold;
     activateEngine(settings, lightPage
-      ? { onFirstRule: () => dismissGuardSoon(Number(settings.flashGuard?.delayMs) || 200) }
+      ? { onFirstRule: () => dismissGuardSoon(Number.isFinite(Number(settings.flashGuard?.delayMs)) ? Number(settings.flashGuard.delayMs) : 200) }
       : undefined);
     return;
   }
@@ -320,4 +325,4 @@ function render(settings, opts = {}) {
 }
 
 loadSettings().then(render);
-subscribeSettings(render);
+subscribeSettings((s) => render(s, { reload: true }));
