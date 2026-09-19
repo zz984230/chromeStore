@@ -16,7 +16,7 @@
 | M2a | 引擎核心（颜色库 + 遍历改写 + 变量 + 模式接入） | ✅ | 2026-09-13 /tabbit 逐项 + 修复波 4 轮 |
 | M2b | 动态性（两种变更追踪模式 + 重扫调度） | ✅ | 2026-09-13 /tabbit 动态断言 + 修复波 |
 | M2c | 配置面（30+ 子选项 + 第 IV 分区 + 映射表） | ✅ | 2026-09-14 D8 挂载 + 用户开关电池 + 四站抽查 |
-| M3 | 完整选项（色温/防白闪/定时/用户样式） | 🟨 | 实现完成 2026-09-19，/tabbit 验收待跑 |
+| M3 | 完整选项（色温/防白闪/定时/用户样式） | ✅ | 2026-09-19 /tabbit 逐项 + 用户配合电池；终审 Ready to merge |
 | M3+ | Backlog 消化（站点补齐、差评修复、增强） | ⬜ | — |
 
 ---
@@ -86,12 +86,12 @@
 ## M3 · 完整选项
 
 **功能**
-- [ ] Color Temperature（RGBA 滤镜 + 排除域名 + 右键入口）
-- [ ] Flash Guard 完整版（brightness / hide / simple dark 三模式 + 延迟 + 重页面阈值）
-- [ ] Schedule（每日定时开/关，alarms）
-- [ ] User CSS 编辑器（textarea + 行为提示，对应原版 behave.js 的编辑体验可简化）
-- [ ] 样式防删监测（checkstylesheet 对等项）、documentroot 选项、nativerecheck 延迟
-- [ ] 选项字体大小设置
+- [x] Color Temperature（RGBA 滤镜 + 排除域名 + 右键入口）
+- [x] Flash Guard 完整版（brightness / hide / simple dark 三模式 + 延迟 + 重页面阈值）
+- [x] Schedule（每日定时开/关，alarms）
+- [x] User CSS 编辑器（textarea + 行为提示，对应原版 behave.js 的编辑体验可简化）
+- [x] 样式防删监测（checkstylesheet 对等项）、documentroot 选项、nativerecheck 延迟
+- [x] 选项字体大小设置
 
 **验收**：II / III / V / VI / VII 分区逐项对照行为清单；全量回归（tests/）通过
 
@@ -111,3 +111,5 @@
 - 2026-09-13：M2 grilling（/grill-with-docs）敲定设计基线：①任务 0 行为清单建档先行——通读原版源码提炼纯行为、用户审定后关门（ADR-0003 附录）；②引擎架构——isolated content script 运行 + 跨域样式表 background SW 代取 + 自写最小颜色库 + 桶分类 var() 间接层（ADR-0004）；③拆 M2a/M2b/M2c 三段；④媒体舞台标记不并入变更追踪；⑤现代颜色语法与 adoptedStyleSheets 局限入 BACKLOG；⑥真实站点抽查定新浪财经/知乎/MDN（无站点主题覆盖，测引擎裸能力）；⑦动态断言用 ≤1s 轮询、性能数值记录不硬断。
 - 2026-09-13：任务 0 建档完成（docs/M2-BEHAVIOR.md，待用户审定关门）。十项确认全部落定，其中两项推翻 grilling 工作假设：①引擎是主题第 41 席而非正交模式（dark_41 单选，出厂默认即引擎——默认值是否跟随待拍板）；②站点主题非「照常叠加」而是 j/k/l 三态策略（默认仅忽略兼容款：google/support/accounts/myaccount/duckduckgo 让位引擎）。另勘正 BACKLOG：shadow root 内样式表原版可处理（选项 g 含主世界 attachShadow hook），文档级 adoptedStyleSheets 仍追不到。
 - 2026-09-13：**M2a 终审闭环**（fable 全分支审查，17→23 提交）。判定 With fixes → 修复波 5 提交（safeCount 防 invalid selector 崩扫、根 varMap 全值读取、站点回退补 nv-simple 基础层组合、HTML 嗅探大小写不敏感 + 死变量清理、测试名 146）→ 复审 **Ready to merge: Yes**。缓期项：@media/@supports 条件包裹 + engine 子组两级合并 → M2c 前置门（上方 M2c 条目）；引擎性能类 Minor（null-sheet 窗口、emit 逐属性 token 重算、克隆过期）→ M2b observer 工作一并处理。
+
+**M3（2026-09-19 完成子阶段）**：完整选项全部交付。设计 spec（specs/2026-09-19-m3-full-options-design.md）→ 行为建档（M3-BEHAVIOR.md，R1~R5 拍板关门）→ 单计划 11 任务子代理流水线（5 个计划级缺陷被实现者/终审拦截：darkBackground opts 透传、keyframes 包裹层下钻、编辑器 selEnd 算术、extension/ 为构建产物改落 public/、fieldset 困锁 master——后者为终审 Chromium 实证的 Critical）。终审（fable 全分支 13+2 提交）「With fixes」→ 修复波 502ae4e → 复审 **Ready to merge: Yes**。测试 162→212；防抄袭标识符零命中。验收证据（/tabbit + 用户配合）：①http 预览挂载全量控件断言 + master-outside-fieldset 结构证明；②M2 基线三页回归逐值一致（vars.html 链接色 rgb(141,178,229) 精确复现）+ media 视觉零缺陷；③色温——四变量注入/fixed·multiply·z-max 计算/iframe 零染色/wikipedia 暖调视觉（f.lux 式、文字可读）/第三菜单入口（文案「Exclude from color temperature」+路由+排除生效+与暗色排除表独立）/开关往返（往返点击本身即 Critical-1 修复活体证明）；④guard brightness 模式——存续窗口内 CSS 字节精确 + filter 实效 + 5000ms 可调延迟摘除；⑤custom 席位——nv-classic 逐字节=用户输入、#123456/#fedcba 生效、引擎/站点层全拆；⑥定时实弹——**17:09:00 精确到秒翻转**（权限→alarm→settings 总线→全 tab 重渲染→色温状态机自动回挂暖色层）；首次失败根因=设时已过 16:45 排次日（用户态时序误差，非缺陷）；⑦出厂 Reset 覆盖 M3 全部新键（页面全拆+默认回填+明日 alarm 清除）。递延入 BACKLOG：lateCheck-CT、ui.sectionOpen 部分合并测试、master 布局结构钉子。
