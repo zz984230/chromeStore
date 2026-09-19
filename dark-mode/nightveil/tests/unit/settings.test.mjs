@@ -110,3 +110,35 @@ test('legacy full-engine-absent settings upgrade keeps exclusionRules backfill',
   assert.equal(s.engine.contextAware, true);
   assert.equal(s.exclusionRules.metaScheme, true);
 });
+
+// ---- M3 keys (plan 2026-09-19-m3-full-options Task 1) ----
+test('M3 defaults carry the four new nested groups and three top-level keys', async () => {
+  const mem = new MemoryStorage();
+  const s = await loadSettings(mem);
+  assert.equal(s.userCss, '');
+  assert.equal(s.documentRoot, false);
+  assert.equal(s.reattachStyles, true);
+  assert.deepEqual(s.colorTemperature, { enabled: false, red: 255, green: 227, blue: 199, opacity: 100, excludedHosts: [] });
+  assert.deepEqual(s.flashGuard, { enabled: true, mode: 'simple-dark', delayMs: 200, threshold: 1000 });
+  assert.deepEqual(s.schedule, { enabled: false, onTime: '', offTime: '' });
+  assert.deepEqual(s.ui, { fontSize: 13, sectionOpen: { themes: false, options: false, usercss: false, engine: true, exclusion: false, inclusion: false, schedule: false } });
+});
+
+test('M3 nested groups deep-merge: partial colorTemperature backfills siblings', async () => {
+  const mem = new MemoryStorage({ [STORAGE_KEY]: { colorTemperature: { enabled: true }, schedule: { onTime: '07:30' } } });
+  const s = await loadSettings(mem);
+  assert.equal(s.colorTemperature.enabled, true);
+  assert.equal(s.colorTemperature.red, 255);
+  assert.deepEqual(s.colorTemperature.excludedHosts, []);
+  assert.equal(s.schedule.onTime, '07:30');
+  assert.equal(s.schedule.offTime, '');
+  assert.equal(s.ui.sectionOpen.engine, true);
+});
+
+test('legacy M2 settings upgrade fills all M3 groups', async () => {
+  const mem = new MemoryStorage({ [STORAGE_KEY]: { state: 'dark', themeId: 'adaptive' } });
+  const s = await loadSettings(mem);
+  assert.equal(s.flashGuard.mode, 'simple-dark');
+  assert.equal(s.ui.fontSize, 13);
+  assert.deepEqual(s.schedule, { enabled: false, onTime: '', offTime: '' });
+});

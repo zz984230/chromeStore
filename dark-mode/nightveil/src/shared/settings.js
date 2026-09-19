@@ -27,6 +27,17 @@ export const DEFAULT_SETTINGS = Object.freeze({
     cookies: '',                       // comma list of cookie names
   },
   engine: engineDefaults(),
+  // ---- M3（plan 2026-09-19-m3-full-options；M3-BEHAVIOR §8）----
+  userCss: '',                // themeId 'custom' 席位的样式文本
+  documentRoot: false,        // true → 样式元素挂 documentElement 而非 head
+  reattachStyles: true,       // 引擎重扫时重挂被删的引擎元素（§5.3）
+  colorTemperature: { enabled: false, red: 255, green: 227, blue: 199, opacity: 100, excludedHosts: [] },
+  flashGuard: { enabled: true, mode: 'simple-dark', delayMs: 200, threshold: 1000 },
+  schedule: { enabled: false, onTime: '', offTime: '' },
+  ui: {
+    fontSize: 13,
+    sectionOpen: { themes: false, options: false, usercss: false, engine: true, exclusion: false, inclusion: false, schedule: false },
+  },
 });
 
 export function defaultStorage() {
@@ -35,12 +46,13 @@ export function defaultStorage() {
   return cs;
 }
 
-const NESTED_GROUPS = ['exclusionRules', 'engine'];
+const NESTED_GROUPS = ['exclusionRules', 'engine', 'colorTemperature', 'flashGuard', 'schedule', 'ui'];
 // Engine sub-groups the M2c options UI writes partially: stored subgroup
 // objects deep-merge over defaults (second level) so sibling fields backfill.
 // exclusionRules stays one-level by design.
 const NESTED_SUBGROUPS = {
   engine: ['darken', 'fallback', 'alphaRange', 'luminanceRange', 'nearWhiteAdjust', 'contextAwareTargets', 'variables'],
+  ui: ['sectionOpen'],
 };
 function mergeWithDefaults(stored) {
   const merged = { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
