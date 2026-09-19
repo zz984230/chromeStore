@@ -253,7 +253,7 @@ function render(settings, opts = {}) {
     // forces white (never-trigger). Hold the guard, decide at DOM ready:
     // strip → measure → re-apply runs in one synchronous task, so there is
     // no paint between teardown and the decision.
-    armGuard(settings);
+    armGuard(settings, undefined, opts);
     whenDomReady(() => {
       if (gen !== renderGeneration) return;
       teardown();
