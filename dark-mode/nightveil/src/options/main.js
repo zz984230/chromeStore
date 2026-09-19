@@ -20,6 +20,7 @@ import {
 import { ENGINE_VARIABLES, EXTRA_RULES_DEFAULT } from '../shared/engineTheme.js';
 import { SECTION_ORDER, sectionKeyOf, FLASHGUARD_MODES, parseHostList, clampNumber } from '../shared/optionsM3.js';
 import { USER_CSS_THEME_ID } from '../shared/themes.js';
+import { wireEditor } from './editor.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -161,6 +162,7 @@ function renderUserCssSection() {
   const box = el('div', {}, el('p', { class: 'hint' }, STRINGS.userCssAreaLabel), ta, note(STRINGS.sectionUserCssNote));
   // 原版 keyup 逐键保存（M3-BEHAVIOR §4.1）。
   ta.addEventListener('keyup', () => save({ userCss: ta.value }));
+  wireEditor(ta);
   section('sec-usercss', STRINGS.sectionUserCssLabel, box);
 }
 
@@ -299,9 +301,11 @@ function variableControl(c) {
 // fieldset's delegated autosave like every other engine control.
 function extraRulesBox() {
   const c = ENGINE_EXTRA_RULES_CONTROL;
+  const ta = el('textarea', { id: c.id, rows: '8' }, current.engine.extraRules ?? EXTRA_RULES_DEFAULT);
+  wireEditor(ta);
   return el('div', {},
     el('label', { for: c.id }, c.label),
-    el('textarea', { id: c.id, rows: '8' }, current.engine.extraRules ?? EXTRA_RULES_DEFAULT),
+    ta,
     note(STRINGS.engineExtraRulesNote));
 }
 
