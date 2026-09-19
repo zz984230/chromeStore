@@ -1,7 +1,8 @@
 // tests/unit/options-m3.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SECTION_ORDER, sectionKeyOf, FLASHGUARD_MODES, parseHostList, clampNumber, SEAT_CARDS } from '../../src/shared/optionsM3.js';
+import { SECTION_ORDER, sectionKeyOf, FLASHGUARD_MODES, parseHostList, clampNumber, SEAT_CARDS, seatRadioValue } from '../../src/shared/optionsM3.js';
+import { PALETTES } from '../../src/shared/palettes.js';
 
 test('SECTION_ORDER mirrors the seven details ids in options.html order', () => {
   assert.deepEqual(SECTION_ORDER, ['sec-themes', 'sec-options', 'sec-usercss', 'sec-engine', 'sec-exclusion', 'sec-inclusion', 'sec-schedule']);
@@ -25,4 +26,10 @@ test('clampNumber: empty → fallback, out-of-range clamps', () => {
 
 test('SEAT_CARDS maps the three theme seats onto themeId values', () => {
   assert.deepEqual(SEAT_CARDS.map((c) => c.themeId), ['adaptive', 'classic', 'custom']);
+});
+
+test('seatRadioValue: adaptive/custom pass through, any palette id lands on the first palette', () => {
+  assert.equal(seatRadioValue('adaptive'), 'adaptive');
+  assert.equal(seatRadioValue('custom'), 'custom');
+  assert.equal(seatRadioValue('nv-midnight'), PALETTES[0].id);
 });

@@ -1,6 +1,7 @@
 // src/shared/optionsM3.js
 // M3 选项页的控件表与纯辅助（渲染在 src/options/main.js；本模块 node --test 直测）。
 import { STRINGS } from './strings.js';
+import { PALETTES } from './palettes.js';
 
 export const SECTION_ORDER = ['sec-themes', 'sec-options', 'sec-usercss', 'sec-engine', 'sec-exclusion', 'sec-inclusion', 'sec-schedule'];
 export const sectionKeyOf = (sectionId) => sectionId.slice('sec-'.length);
@@ -28,3 +29,9 @@ export const SEAT_CARDS = [
   { themeId: 'classic', title: STRINGS.themeSeatClassicLabel, desc: STRINGS.themeSeatClassicDesc },
   { themeId: 'custom', title: STRINGS.themeSeatCustomLabel, desc: STRINGS.themeSeatCustomDesc },
 ];
+
+// 席位 radio 的 value 域（§3-2）：adaptive/custom 原值，classic 席落为首个调色板 id。
+// M3+2 从 options/main.js 迁入共享——popup 席位卡用同一派生勾选。
+export function seatRadioValue(themeId) {
+  return themeId === 'adaptive' || themeId === 'custom' ? themeId : PALETTES[0].id;
+}

@@ -20,7 +20,7 @@ import {
   controlValue, tuningFallback, engineValueAt,
 } from '../shared/optionsEngine.js';
 import { ENGINE_VARIABLES, EXTRA_RULES_DEFAULT } from '../shared/engineTheme.js';
-import { FLASHGUARD_MODES, parseHostList, clampNumber, SEAT_CARDS } from '../shared/optionsM3.js';
+import { FLASHGUARD_MODES, parseHostList, clampNumber, SEAT_CARDS, seatRadioValue } from '../shared/optionsM3.js';
 import { wireEditor } from './editor.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -76,11 +76,6 @@ function renderDusk() {
 // themes.js USER_CSS_THEME_ID='custom' 同域）；其余值（含全部调色板 id）一律 classic 席。
 function seatValue(themeId) {
   return themeId === 'adaptive' || themeId === 'custom' ? themeId : 'classic';
-}
-// 席位 radio 的 value 域（§3-2）：adaptive/custom 原值，classic 席落为首个调色板 id。
-function seatRadioValue(themeId) {
-  const v = seatValue(themeId);
-  return v === 'classic' ? PALETTES[0].id : v;
 }
 
 let seatPanel = null; // 席位下方的附属面板容器（classic/custom/adaptive 三态）
