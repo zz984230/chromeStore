@@ -183,4 +183,11 @@ export const STRINGS = Object.freeze({
   colortempSectionLabel: '色温',
   colortempSectionNote: '给亮色页面蒙一层暖光',
   ctEnableLabel: '启用色温',
+  // ---- M3+2（Task 2 新增 popup 键，Task 3 消费；开关主标题复用 duskTitleOn/Off）----
+  popupGlobalSubOn: '全局 · 再点一次收起', popupGlobalSubOff: '全局 · 点击拉上',
+  popupSiteActiveExclude: '本站生效中 · 点击排除', popupSiteExcluded: '已排除 · 点击恢复',
+  popupSiteActiveInclude: '仅列表内生效 · 已加入', popupSiteNotIncluded: '仅列表内生效 · 点击加入',
+  popupSitePillOn: '生效', popupSitePillExclude: '排除', popupSitePillInclude: '加入',
+  popupThemeLabel: '主题', popupColorTempLabel: '色温', popupDensityLabel: '浓度',
+  popupAllSettings: '全部设置', popupBrandLine: '夜幕 NightVeil',
 });

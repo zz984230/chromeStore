@@ -13,6 +13,7 @@ const OPTIONS = {
     background: 'src/background/main.js',
     content: 'src/content/main.js',
     options: 'src/options/main.js',
+    popup: 'src/popup/main.js',
   },
   outdir: 'extension',
   bundle: true,

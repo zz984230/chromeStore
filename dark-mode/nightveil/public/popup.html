@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>夜幕</title>
+<style>
+  /* 设计系统移植自 docs/superpowers/designs/2026-09-19-popup-mockup.html（已认可稿）。
+     稿件画布专属的不移植：body 深色底 #0c0e14、.panel 边框/阴影/360px 定宽、
+     .variant-tag、演示 <script>——popup 即面板本身，故 body 背景取 var(--bg)、
+     宽度 360px 由 body 承担；两变体合一（结构以变体一为基底），内容由 Task 3 填充。 */
+  :root {
+    --bg: #12141c;
+    --surface: #1a1e2a;
+    --surface-2: #202634;
+    --line: #2a3040;
+    --line-soft: #232838;
+    --ink: #e8ebf4;
+    --ink-2: #9aa3b8;
+    --ink-3: #6b7488;
+    --gold: #e3c987;
+    --gold-soft: rgba(227, 201, 135, .14);
+    --dusk: #8fb3d9;
+    --radius: 10px;
+    --font-serif: "Noto Serif SC", "Songti SC", serif;
+    --font-sans: "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    margin: 0; width: 360px; background: var(--bg); color: var(--ink);
+    font: 400 13px/1.6 var(--font-sans);
+  }
+
+  /* ---- popup 头：紧凑天际线开关 ---- */
+  .dusk-mini {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    background:
+      radial-gradient(60% 46px at 20% 100%, rgba(143,179,217,.13), transparent 70%),
+      radial-gradient(46% 36px at 80% 100%, rgba(227,201,135,.10), transparent 70%);
+  }
+  .dusk-mini .copy { display: flex; flex-direction: column; }
+  .dusk-mini .copy b { font: 600 15px/1.3 var(--font-serif); letter-spacing: .04em; }
+  .dusk-mini .copy span { color: var(--ink-3); font-size: 11px; }
+  .dusk-switch { position: relative; flex: none; width: 92px; height: 42px; cursor: pointer; }
+  .dusk-switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .sky {
+    position: absolute; inset: 0; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--surface); overflow: hidden;
+    transition: background .5s ease, border-color .5s ease;
+  }
+  .orb {
+    position: absolute; top: 50%; left: 10px; width: 20px; height: 20px; border-radius: 50%;
+    translate: 0 -50%;
+    background: var(--dusk); box-shadow: 0 0 10px rgba(143,179,217,.5);
+    transition: left .4s cubic-bezier(.45,0,.25,1), background .4s ease, box-shadow .4s ease;
+  }
+  .orb::after {
+    content: ""; position: absolute; inset: 3px 0 0 3px; border-radius: 50%;
+    background: var(--surface); opacity: 0; transition: opacity .4s ease .08s;
+  }
+  .stars { position: absolute; inset: 0; opacity: 0; transition: opacity .4s ease .12s; }
+  .stars i { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: var(--ink-2); }
+  .stars i:nth-child(1) { top: 9px; right: 24px; } .stars i:nth-child(2) { top: 24px; right: 44px; }
+  .stars i:nth-child(3) { top: 15px; right: 60px; }
+  .dusk-switch input:checked ~ .sky { background: #171b28; border-color: #39415a; }
+  .dusk-switch input:checked ~ .sky .orb { left: 62px; background: var(--gold); box-shadow: 0 0 12px rgba(227,201,135,.55); }
+  .dusk-switch input:checked ~ .sky .orb::after { opacity: 1; background: #171b28; }
+  .dusk-switch input:checked ~ .sky .stars { opacity: 1; }
+  .dusk-switch input:focus-visible ~ .sky { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* ---- 当前站点行 ---- */
+  .site-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px; border-bottom: 1px solid var(--line-soft);
+  }
+  .site-ico {
+    flex: none; width: 26px; height: 26px; border-radius: 7px;
+    background: var(--surface-2); border: 1px solid var(--line);
+    display: grid; place-items: center; color: var(--ink-3); font-size: 12px;
+  }
+  .site-name { flex: 1; min-width: 0; }
+  .site-name b { display: block; font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .site-name span { display: block; color: var(--ink-3); font-size: 11px; }
+  .site-pill {
+    flex: none; border: 1px solid var(--line); border-radius: 999px;
+    background: none; color: var(--ink-2); font: 500 12px/1 var(--font-sans);
+    padding: 7px 14px; cursor: pointer; transition: border-color .2s, color .2s, background .2s;
+  }
+  .site-pill.on { border-color: var(--gold); color: var(--gold); background: var(--gold-soft); }
+  .site-pill:hover { border-color: var(--ink-3); color: var(--ink); }
+  .site-pill.on:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* ---- 分组 ---- */
+  .grp { padding: 12px 18px 14px; border-bottom: 1px solid var(--line-soft); }
+  .grp-label { color: var(--ink-3); font-size: 11px; margin-bottom: 9px; letter-spacing: .02em; }
+  .seats-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .seat-mini {
+    border: 1px solid var(--line); border-radius: 9px; background: var(--surface);
+    padding: 9px 10px; cursor: pointer; text-align: left; color: var(--ink);
+    transition: border-color .2s, background .2s; position: relative;
+  }
+  .seat-mini:hover { border-color: var(--ink-3); }
+  .seat-mini input { position: absolute; opacity: 0; pointer-events: none; }
+  .seat-mini .t { display: block; font-size: 12px; font-weight: 500; }
+  .seat-mini:has(input:checked) { border-color: var(--gold); background: var(--gold-soft); }
+  .seat-mini:has(input:checked) .t { color: var(--gold); }
+  .seat-mini:focus-within { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* ---- 行控件（紧凑） ---- */
+  .row { display: flex; align-items: center; gap: 12px; }
+  .row output { color: var(--ink-3); font-size: 11px; min-width: 2.2em; text-align: right; }
+  input[type="range"] {
+    flex: 1; appearance: none; height: 4px; border-radius: 2px;
+    background: linear-gradient(90deg, var(--gold) var(--fill, 100%), var(--surface-2) var(--fill, 100%));
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--ink); border: 3px solid var(--bg); box-shadow: 0 0 0 1px var(--line);
+  }
+  input[type="range"]:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+  .inline-switch { position: relative; display: inline-block; width: 36px; height: 20px; flex: none; }
+  .inline-switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .inline-switch .track {
+    position: absolute; inset: 0; border-radius: 999px; background: var(--surface-2);
+    border: 1px solid var(--line); transition: background .25s, border-color .25s;
+  }
+  .inline-switch .knob {
+    position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--ink-3); transition: left .25s, background .25s;
+  }
+  .inline-switch input:checked ~ .track { background: var(--gold-soft); border-color: var(--gold); }
+  .inline-switch input:checked ~ .knob { left: 19px; background: var(--gold); }
+  .inline-switch input:focus-visible ~ .track { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .ct-dot { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line); }
+  .dimmed { opacity: .55; pointer-events: none; }
+
+  /* ---- 底部 ---- */
+  .foot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px; color: var(--ink-3); font-size: 12px;
+  }
+  .foot .link {
+    background: none; border: none; color: var(--ink-2); font: 400 12px/1 var(--font-sans);
+    cursor: pointer; padding: 4px 2px;
+  }
+  .foot .link:hover { color: var(--gold); }
+  .foot .link:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+  <!-- 挂点（Task 3 render 填充）：容器自带结构类名，内部 DOM 由 src/popup/main.js 构建 -->
+  <div class="dusk-mini" id="pp-dusk-host"></div>
+  <div class="site-row" id="pp-site-row"></div>
+  <div class="grp" id="pp-seats"></div>
+  <div class="grp" id="pp-ct"></div>
+  <div class="foot" id="pp-foot"></div>
+
+<script src="popup.js"></script>
+</body>
+</html>
