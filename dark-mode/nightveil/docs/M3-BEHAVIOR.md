@@ -1,6 +1,6 @@
 # M3 行为清单（完整选项能力面建档）
 
-> 日期：2026-09-19 ｜ 状态：**待用户审定关门**
+> 日期：2026-09-19 ｜ 状态：**✅ 已审定关门（2026-09-19，见 §11）**
 > 上游：specs/2026-09-19-m3-full-options-design.md（D1~D4 已拍板）
 > 参考实现：dmghijelimhndkbmpgbldicpogfkceaj/0.5.7_0（下称「原版」，行号均指该目录内文件）
 > 通读范围：inject.js（全量）、common.js（全量）、chrome.js（全量）、config.js、runtime.js、background.js、options.js（全量）、options.html（控件面）、native.js（定向：checkstylesheet/threshold/keyframes）、inject.css（全量）
@@ -224,6 +224,13 @@ Reset（confirm → 清库重写默认）、storage 同步渲染（>10 键变更
 13. 选项页 >10 键 storage 变更 → 渲染 300ms 防抖（Reset 场景）。
 14. 色温三滑杆 input 实时存（每拖动一格一写）；opacity 显示值带 '%'，RGB 显示原值。
 
-## 11. 拍板记录
+## 11. 拍板记录（2026-09-19 用户审定通过，本节即关门凭证）
 
-（待用户审定后填写：R1~R5 裁决 + 映射表命名认可或修改 + 怪癖清单确认。本节填写即关门。）
+- **R1 色温**：照抄——色温为亮色态功能（dark 态移除、仅包含模式未命中分支重建）；排除表独立；亮色态+色温开时右键菜单换「Exclude from color temperature」。
+- **R2 防白闪**：照抄三模式/延迟/阈值/action；simple 模式 html 背景沿用调色板感知版本（M1 已接受偏差的延续），`*` 级规则与 display/brightness 模式字面照抄；**修正 M1 偏差：guard 仅顶层帧**；recheck 渲染不重挂。
+- **R3 定时**：照抄——一次性 alarm 次日重排、手动切换不动 alarm、无自建补判（靠 Chrome 跨重启补发）、SW 启动幂等重建。
+- **R4 User CSS**：照抄——custom 席位只注用户 CSS 无基础层、站点层优先时让位、keyup 逐键保存；编辑器 D4 档（Tab 软缩进 2 + 括号/引号配对 + 退格删整对；不做 autoIndent/overwrite/replaceTab）；custom 与 engine.extraRules 两文本域都挂。
+- **R5 杂项**：nativerecheck(+timeout) 判 **M2c 已交付**（engine.recheck/recheckDelay 等价映射），M3 仅复核控件；documentroot、checkstylesheet 照抄（含重挂目标恒为 documentElement、cssText 恢复丢注释两怪癖）。
+- **§8 映射表**：命名认可（colorTemperature / flashGuard.mode 枚举收敛 / schedule / themeId 'custom' + userCss / documentRoot / reattachStyles / ui.* ；nativerecheck 沿用既有 engine.recheck/recheckDelay）。
+- **§10 怪癖清单**：14 条全部确认照抄不改。
+- **衍生裁决**：keyframes 债务修复时去重键扩为「名+条件链」（§7.1）。
