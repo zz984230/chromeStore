@@ -16,7 +16,8 @@
       "32": "icons/toolbar/32.png",
       "48": "icons/toolbar/48.png",
       "64": "icons/toolbar/64.png"
-    }
+    },
+    "default_popup": "popup.html"
   },
   "background": {
     "service_worker": "background.js"

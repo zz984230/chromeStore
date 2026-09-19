@@ -23,5 +23,5 @@ test('build produces a complete loadable extension directory', () => {
   assert.deepEqual(manifest.permissions, ['storage', 'contextMenus']);
   assert.deepEqual(manifest.optional_permissions, ['alarms']);
   assert.deepEqual(manifest.host_permissions, ['<all_urls>']);
-  assert.equal(manifest.action.default_popup, undefined, 'no popup by design');
+  assert.equal(manifest.action.default_popup, 'popup.html');
 });
