@@ -19,7 +19,7 @@ test('build produces a complete loadable extension directory', () => {
 
   const manifest = JSON.parse(readFileSync('extension/manifest.json', 'utf8'));
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.name, 'NightVeil');
+  assert.equal(manifest.name, '夜幕');
   assert.deepEqual(manifest.permissions, ['storage', 'contextMenus']);
   assert.deepEqual(manifest.optional_permissions, ['alarms']);
   assert.deepEqual(manifest.host_permissions, ['<all_urls>']);
