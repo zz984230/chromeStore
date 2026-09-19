@@ -29,12 +29,21 @@ export function wrapConditional(atKeyword, conditionText, ruleText) {
   return `@${atKeyword} ${cond} { ${ruleText} }`;
 }
 
-// §4 d.2: @keyframes blocks copy wholesale into the engine sheet — the block
-// text is the original name plus the accumulated keyframe cssText.
-export function copyKeyframesBlock(keyframesRule) {
+// §4 d.2 + M3 §7.1：复制块进引擎表；外层 @media/@supports 条件链按原序包裹
+// （原版原位改写天然保留条件——复制路线必须显式补包裹）。
+export function copyKeyframesBlock(keyframesRule, conditions = []) {
   const parts = [];
   for (const kf of keyframesRule.cssRules) parts.push(kf.cssText);
-  return `@keyframes ${keyframesRule.name} { ${parts.join(' ')} }`;
+  const body = `@keyframes ${keyframesRule.name} { ${parts.join(' ')} }`;
+  return conditions.length
+    ? conditions.reduceRight((acc, c) => wrapConditional(c.at, c.text, acc), body)
+    : body;
+}
+
+// kfKey 的条件片段：同名不同条件的块各自成键（原版无去重，nightveil 的按名
+// 去重是自优化——键不随条件扩容会漏扫第二条条件块）。
+export function conditionsKeyFragment(conditions) {
+  return conditions.map((c) => `@${c.at} ${c.text}`).join(' && ');
 }
 
 const state = {
@@ -335,6 +344,8 @@ function rewriteStyleRule(rule, conditions = [], emitFn = emit) {
   }
 }
 
+// 注：keyframe 规则（副本）同样喂进 varMap —— 与原版原位遍历的收集面一致
+// （M3-BEHAVIOR §7.2，行为等价，仅补说明）。
 function collectCustomProps(rule) {
   const style = rule.style;
   for (let i = 0; i < style.length; i++) {
@@ -348,14 +359,14 @@ function collectCustomProps(rule) {
 // §4 d.2: copy the keyframes block into the engine sheet once per name, then
 // rewrite the COPY's keyframe rules in place — property sets land directly on
 // the copied rules (setProperty), never on the engine-sheet selector path.
-function rewriteKeyframes(rule) {
+function rewriteKeyframes(rule, conditions = []) {
   const target = state.shadowTarget ?? state.sheetEl;
   const sheet = target?.sheet ?? target; // constructed shadow sheets insert directly
   if (!sheet) return;
-  const kfKey = `${targetKey(target)}|${rule.name}`;
+  const kfKey = `${targetKey(target)}|${rule.name}|${conditionsKeyFragment(conditions)}`;
   if (state.writtenKeyframes.has(kfKey)) return;
   let index;
-  try { index = sheet.insertRule(copyKeyframesBlock(rule), 0); } catch { return; }
+  try { index = sheet.insertRule(copyKeyframesBlock(rule, conditions), 0); } catch { return; }
   state.writtenKeyframes.add(kfKey);
   const copy = sheet.cssRules[index];
   if (!copy?.cssRules) return;
@@ -376,7 +387,7 @@ function visitRule(rule, conditions = []) {
   if (isMedia && !e.processMediaQueries) return;
   if (isSupports && !e.processSupports) return;
   if (isKeyframes && !e.processKeyframes) return;
-  if (isKeyframes) { rewriteKeyframes(rule); return; }
+  if (isKeyframes) { rewriteKeyframes(rule, conditions); return; }
   // §4: the condition chain accumulates outer-first down the parent chain
   // (嵌套 @media 内 @supports → 双层包裹)
   let childConditions = conditions;

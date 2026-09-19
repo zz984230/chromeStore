@@ -4,7 +4,7 @@
 // the wiring threads them through visitRule/insertEngineRule without DOM.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { wrapConditional, copyKeyframesBlock } from '../../src/content/engine/engine.js';
+import { wrapConditional, copyKeyframesBlock, conditionsKeyFragment } from '../../src/content/engine/engine.js';
 
 test('wrapConditional wraps a media condition around the rule text', () => {
   assert.equal(
@@ -39,4 +39,22 @@ test('copyKeyframesBlock reproduces the block wholesale with keyframes in order'
   assert.equal(
     copyKeyframesBlock(rule),
     '@keyframes fade { from { color: #fff } to { color: #000 } }');
+});
+
+// ---- M3 keyframes conditions threading (plan Task 6; M3-BEHAVIOR §7.1) ----
+
+test('copyKeyframesBlock wraps the copy in the accumulated condition chain (outer first)', () => {
+  const rule = { name: 'fade', cssRules: [{ cssText: 'from { color: #fff }' }] };
+  const conds = [{ at: 'media', text: '(min-width: 0px)' }, { at: 'supports', text: '(display: grid)' }];
+  assert.equal(
+    copyKeyframesBlock(rule, conds),
+    '@media (min-width: 0px) { @supports (display: grid) { @keyframes fade { from { color: #fff } } } }');
+});
+
+test('conditionsKeyFragment distinguishes identical names under different conditions (dedup-key widening)', () => {
+  const a = conditionsKeyFragment([{ at: 'media', text: '(min-width: 0px)' }]);
+  const b = conditionsKeyFragment([{ at: 'media', text: '(max-width: 600px)' }]);
+  const none = conditionsKeyFragment([]);
+  assert.notEqual(a, b);
+  assert.notEqual(a, none);
 });
