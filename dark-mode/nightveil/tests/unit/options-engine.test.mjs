@@ -60,7 +60,7 @@ test('options main.js wires the skeleton from the shared module', () => {
   assert.ok(mainSrc.includes('seatCheckboxState('), 'seat state must come from the shared helper');
   assert.ok(mainSrc.includes('ENGINE_GROUPS'), 'group hosts must come from the shared data');
   assert.ok(mainSrc.includes('ENGINE_SITE_POLICIES'), 'policy radios must come from the shared data');
-  assert.ok(mainSrc.includes("'eng-seat'"), 'seat checkbox id');
+  assert.ok(!mainSrc.includes("'eng-seat'"), 'the advanced seat master is gone — the first-screen adaptive seat card owns the seat (M3+)');
   assert.ok(mainSrc.includes("'eng-controls'"), 'controls container id');
   assert.ok(/disabled:\s*!seatCheckboxState\(current\.themeId\)/.test(mainSrc),
     'controls container starts disabled unless the seat is checked');
@@ -69,9 +69,11 @@ test('options main.js wires the skeleton from the shared module', () => {
 });
 
 test('seat and section-I radios interoperate through the themeId namespace', () => {
-  // Checking the seat saves the seat; unchecking falls back to the first
-  // classic theme (some theme must stay selected — original dark_41 semantics).
-  assert.ok(/save\(\{ themeId: e\.target\.checked \? SEAT_THEME_ID : PALETTES\[0\]\.id \}\)/.test(mainSrc));
+  // The seat radios (first-screen seat cards) save the picked themeId as-is;
+  // the namespace stays single-select via the shared name attribute (a theme
+  // must stay selected — original dark_41 semantics).
+  assert.ok(mainSrc.includes('save({ themeId: e.target.value })'),
+    'seat radios save themeId through the shared namespace');
   // Every themeId radio is re-derived on each settings change, so a stale
   // palette check clears when the seat takes the namespace (and vice versa).
   // M3+: the themeId namespace holds the three seat cards; the classic seat's
@@ -244,7 +246,7 @@ test('options main.js renders §8 controls from the shared table', () => {
     'group hosts and the behavior box fill from the table');
   assert.ok(/function engineControl\(/.test(mainSrc), 'one generic row renderer');
   const hardcoded = [...mainSrc.matchAll(/id:\s*'(eng-[a-z0-9-]+)'/g)].map((m) => m[1]).sort();
-  assert.deepEqual(hardcoded, ['eng-controls', 'eng-seat'],
+  assert.deepEqual(hardcoded, ['eng-controls'],
     'control ids must come from ENGINE_CONTROLS, never literals');
 });
 

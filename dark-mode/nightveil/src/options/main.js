@@ -1,8 +1,8 @@
 // src/options/main.js
 // M3+ options page: first screen (dusk switch / theme seats / color
-// temperature / schedule / sites) plus an interim advanced fold that re-homes
-// the M3 sections into the #sec-advanced adv-group hosts (Task 4 finalizes
-// that fold). All copy comes from shared/strings.js; control data from
+// temperature / schedule / sites) plus the advanced fold (#sec-advanced)
+// hosting the remaining M3 controls in four adv-groups — engine / guard /
+// rules / misc. All copy comes from shared/strings.js; control data from
 // palettes/siteThemes. Edits autosave via saveSettings; storage.onChanged
 // keeps open pages in sync. When chrome.storage is unavailable (http fixture
 // mount) the page renders a disabled preview from defaults so rendering stays
@@ -14,7 +14,7 @@ import {
 import { PALETTES } from '../shared/palettes.js';
 import { SITE_THEMES } from '../shared/siteThemes.js';
 import {
-  SEAT_THEME_ID, seatCheckboxState, ENGINE_GROUPS, ENGINE_SITE_POLICIES,
+  seatCheckboxState, ENGINE_GROUPS, ENGINE_SITE_POLICIES,
   ENGINE_CONTROLS, ENGINE_BEHAVIOR_HOST, ENGINE_VARIABLE_CONTROLS,
   ENGINE_EXTRA_RULES_CONTROL, colorInputValue, assembleEnginePatch,
   controlValue, tuningFallback, engineValueAt,
@@ -35,8 +35,10 @@ function el(tag, attrs = {}, ...children) {
   return node;
 }
 
-function section(id, summaryText, ...body) {
-  $(`#${id}`).append(el('summary', {}, summaryText), ...body);
+// adv-group 宿主的组标题：.adv-group h4（设计系统 CSS 既定）；这些宿主是普通
+// div，不是 details——折叠开合只属于外层 #sec-advanced。
+function section(id, headingText, ...body) {
+  $(`#${id}`).append(el('h4', {}, headingText), ...body);
 }
 
 function note(text) { return el('p', { class: 'hint' }, text); }
@@ -297,28 +299,29 @@ function renderSites() {
   host.append(el('div', {}, modeRow, ta, note(STRINGS.sitesHint)));
 }
 
-// ---- 高级折叠外壳（临时：Task 4 重排；summary 文案来自 Task 2 键）----
+// ---- 高级折叠外壳（summary 文案来自 Task 2 键；开合态持久化 ui.sectionOpen.advanced）----
 function renderAdvancedShell() {
   $('#adv-summary').append(
-    el('span', { class: 'chev' }, '▶'),
+    el('span', { class: 'chev', 'aria-hidden': 'true' }, '▶'), // 装饰性几何符号，非文案
     STRINGS.advancedLabel,
     el('span', { class: 'count' }, STRINGS.advancedCountLabel));
+  const details = $('#sec-advanced');
+  details.open = Boolean(current.ui?.sectionOpen?.advanced);
+  // toggle 在程序性赋值时也会触发——与当前快照同值时是同步回声，不落盘。
+  details.addEventListener('toggle', () => {
+    if (Boolean(current.ui?.sectionOpen?.advanced) === details.open) return;
+    const next = { ...current.ui, sectionOpen: { advanced: details.open } };
+    current = { ...current, ui: next };
+    save({ ui: next });
+  });
 }
 
-// ---- 高级：自适应引擎（M3 原样，容器改挂 #adv-engine；Task 4 重排）----
+// ---- 高级：自适应引擎（M2c 控件机制原样；席位本身是首屏的自适应席卡片）----
 function renderEngine() {
-  // Seat master switch: checked ⟺ themeId === 'adaptive'. Unchecking hands
-  // the seat to the first classic theme — some theme must stay selected
-  // (original dark_41 semantics; picking a section-I radio does the same).
-  const seat = el('label', {},
-    el('input', { type: 'checkbox', id: 'eng-seat', checked: seatCheckboxState(current.themeId) }),
-    ` ${STRINGS.engineSeatLabel}`);
-  seat.addEventListener('change', (e) => {
-    save({ themeId: e.target.checked ? SEAT_THEME_ID : PALETTES[0].id });
-  });
-
-  // fieldset disabled natively disables every control that lands inside —
-  // same mechanism the page already trusts for grouped controls.
+  // No master switch here: the seat is the first-screen adaptive seat card,
+  // so the fieldset's disabled state derives from seatCheckboxState(themeId)
+  // directly. fieldset disabled natively disables every control that lands
+  // inside — same mechanism the page already trusts for grouped controls.
   const controls = el('fieldset', { id: 'eng-controls', disabled: !seatCheckboxState(current.themeId) });
   for (const g of ENGINE_GROUPS) {
     const host = el('div', { id: g.id }, el('p', { class: 'hint' }, g.label));
@@ -333,7 +336,7 @@ function renderEngine() {
   }
   controls.addEventListener('change', onEngineControlChange);
 
-  section('adv-engine', STRINGS.advEngineLabel, seat, note(STRINGS.sectionEngineNote), controls);
+  section('adv-engine', STRINGS.advEngineLabel, note(STRINGS.sectionEngineNote), controls);
 }
 
 // One §8 control row; values read from the last rendered settings snapshot.
@@ -437,7 +440,7 @@ function sitePolicyBox() {
   return box;
 }
 
-// ---- 高级：防白闪（M3 原样，容器改挂 #adv-guard；Task 4 重排）----
+// ---- 高级：防白闪（M3 原样，#adv-guard 组）----
 function renderGuard() {
   section('adv-guard', STRINGS.advGuardLabel, renderGuardControls());
 }
@@ -445,7 +448,7 @@ function renderGuard() {
 // ---- M3 guard 控件（M3-BEHAVIOR §1，原样保留）----
 function renderGuardControls() {
   const fg = current.flashGuard ?? {};
-  // Master sits OUTSIDE the fieldset it toggles (renderEngine pattern): a
+  // Master sits OUTSIDE the fieldset it toggles (renderColorTemp 同款惯例): a
   // disabled fieldset disables every descendant control, which would brick
   // re-enabling from inside.
   const master = el('label', {}, el('input', { type: 'checkbox', id: 'fg-enabled', checked: fg.enabled }), ` ${STRINGS.guardGroupLabel}`);
@@ -470,7 +473,7 @@ function renderGuardControls() {
   return box;
 }
 
-// ---- 高级：页面规则（M3 原样，容器改挂 #adv-rules；Task 4 重排）----
+// ---- 高级：页面规则（M3 原样，#adv-rules 组，data-rule 委托照旧）----
 function renderRules() {
   const r = current.exclusionRules ?? {};
   const rules = el('fieldset', {}, el('legend', {}, STRINGS.rulesLabel));
@@ -493,7 +496,7 @@ function renderRules() {
   section('adv-rules', STRINGS.advRulesLabel, rules);
 }
 
-// 站点主题精修层开关（M3 Section I 的 sites 半区原样，容器改挂 #adv-misc；Task 4 重排）。
+// 站点主题精修层开关（M3 Section I 的 sites 半区原样，#adv-misc 组内）。
 function siteThemesBox() {
   const sites = el('fieldset', {}, el('legend', {}, STRINGS.siteThemesLabel));
   const siteBox = el('div', { class: 'cols' });
@@ -527,8 +530,8 @@ function renderFontSizeControl() {
   return row;
 }
 
-// ---- 高级：杂项（行为残项 + 挂载开关/字号 + 站点主题 + 两个列表；
-// 容器改挂 #adv-misc，Task 4 重排）----
+// ---- 高级：杂项（行为残项 + 挂载开关/字号 + 站点主题 + 排除/包含完整列表；
+// #adv-misc 组，列表是首屏站点卡当前模式的完整版备份视图）----
 function renderMisc() {
   // 行为残项：perSiteToggle + II-area engine 键（复查对，随引擎席位禁用）。
   const behavior = el('fieldset', { id: ENGINE_BEHAVIOR_HOST }, el('legend', {}, STRINGS.behaviorLabel));
@@ -557,20 +560,20 @@ function renderMisc() {
     if (e.target.getAttribute('data-m3key')) save({ [e.target.getAttribute('data-m3key')]: e.target.checked });
   });
 
-  section('adv-misc', STRINGS.advMiscLabel, behavior, mount, siteThemesBox());
-  renderListSection('adv-misc', STRINGS.sectionExclusionLabel, 'exclusionList', STRINGS.exclusionListLabel);
-  renderListSection('adv-misc', STRINGS.sectionInclusionLabel, 'inclusionList', STRINGS.inclusionListLabel);
-}
+  // 排除/包含完整列表：首屏站点卡的完整版备份视图（两份都可见可编辑，
+  // 不随 siteMode 换绑）。data-list 委托语义照旧：去空去重后整表落盘。
+  const listBox = (key, labelText) => {
+    const ta = el('textarea', { 'data-list': key }, (current[key] ?? []).join('\n'));
+    ta.addEventListener('change', () => {
+      const list = ta.value.split('\n').map((s) => s.trim()).filter(Boolean);
+      save({ [key]: [...new Set(list)] });
+    });
+    return el('div', {}, el('p', { class: 'hint' }, labelText), ta, note(STRINGS.listEditHint));
+  };
 
-// ---- hostname 列表（M3 原样，容器改挂 #adv-misc；Task 4 重排）----
-function renderListSection(id, summary, key, labelText) {
-  const ta = el('textarea', { 'data-list': key }, (current[key] ?? []).join('\n'));
-  const box = el('div', {}, el('p', { class: 'hint' }, labelText), ta, note(STRINGS.listEditHint));
-  ta.addEventListener('change', () => {
-    const list = ta.value.split('\n').map((s) => s.trim()).filter(Boolean);
-    save({ [key]: [...new Set(list)] });
-  });
-  section(id, summary, box);
+  section('adv-misc', STRINGS.advMiscLabel, behavior, mount, siteThemesBox(),
+    listBox('exclusionList', STRINGS.exclusionListLabel),
+    listBox('inclusionList', STRINGS.inclusionListLabel));
 }
 
 // ---- Reset ----
@@ -635,11 +638,12 @@ function syncFromSettings(s) {
   if (siteList && document.activeElement !== siteList) {
     siteList.value = ((s.inclusionMode ? s.inclusionList : s.exclusionList) ?? []).join('\n');
   }
-  // ---- 高级（临时安置，Task 4 重排）----
-  // The eng-seat checkbox mirrors the first-screen adaptive seat; #eng-controls
-  // follows it (fieldset disabled covers the whole group).
-  const seat = document.querySelector('#eng-seat');
-  if (seat) seat.checked = seatCheckboxState(s.themeId);
+  // ---- 高级 ----
+  // 折叠开合态从存储重派（程序性赋值触发的 toggle 与快照同值，不会再落盘）。
+  const adv = document.getElementById('sec-advanced');
+  if (adv) adv.open = Boolean(s.ui?.sectionOpen?.advanced);
+  // The seat is the first-screen adaptive seat card; #eng-controls derives
+  // from it directly (fieldset disabled covers the whole group).
   const controls = document.querySelector('#eng-controls');
   if (controls) controls.disabled = !seatCheckboxState(s.themeId);
   for (const i of document.querySelectorAll('#adv-engine input[name="siteThemePolicy"]')) {

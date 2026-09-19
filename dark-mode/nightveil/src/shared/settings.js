@@ -36,7 +36,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   schedule: { enabled: false, onTime: '', offTime: '' },
   ui: {
     fontSize: 13,
-    sectionOpen: { themes: false, options: false, usercss: false, engine: true, exclusion: false, inclusion: false, schedule: false },
+    // M3+：唯一可折叠区是 #sec-advanced；旧七键（themes/engine/…）在已存设置里
+    // 经深合并无害残留，不做迁移。
+    sectionOpen: { advanced: false },
   },
 });
 
