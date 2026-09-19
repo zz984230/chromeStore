@@ -5,6 +5,7 @@
 import { STRINGS } from '../shared/strings.js';
 import { loadSettings, subscribeSettings } from '../shared/settings.js';
 import { compileThemeById, guardBackgroundFor } from '../shared/themes.js';
+import { guardCssFor, shouldArmGuard } from '../shared/flashGuard.js';
 import { findPalette } from '../shared/palettes.js';
 import { siteDarkActive, engineOwnsSite } from '../shared/scope.js';
 import { evaluateRules, luminanceOf, metaSchemeIsDark } from '../shared/exclusionRules.js';
@@ -14,7 +15,6 @@ import { ENGINE_VARIABLES } from '../shared/engineTheme.js';
 
 const CLASSIC_STYLE_ID = 'nv-classic';
 const GUARD_STYLE_ID = 'nv-guard';
-const GUARD_REMOVE_DELAY_MS = 200;
 const SITE_STYLE_ID = 'nv-site';
 const SITE_ATTR = 'data-nv-site';
 const STAGE_ATTR = 'data-nv-stage';
@@ -44,23 +44,27 @@ function removeStyle(id) {
 }
 
 let guardTimer = null;
-// Guard dismissal machinery, shared by armGuard's load-bound path and the
-// engine's first-rule hook (§2-4): clear any pending dismissal, then (re)arm
-// the one module timer that removes the guard style. Removal is idempotent,
-// so a double dismissal (first rule + load timer) is harmless.
-function dismissGuardSoon() {
+// Guard dismissal（§2.3-2/3）：清 pending 定时器后按设置的 delayMs 摘除。
+function dismissGuardSoon(delayMs) {
   if (guardTimer) clearTimeout(guardTimer);
-  guardTimer = setTimeout(() => removeStyle(GUARD_STYLE_ID), GUARD_REMOVE_DELAY_MS);
+  guardTimer = setTimeout(() => removeStyle(GUARD_STYLE_ID), delayMs);
 }
 
-function armGuard(settings, bgOverride) {
+function armGuard(settings, bgOverride, { recheck = false } = {}) {
+  if (recheck) return; // §10-4：recheck 渲染既不重挂也不强摘——既有定时器自理
+  if (!shouldArmGuard(settings, { isTopFrame: window === window.top, isRecheckRender: false })) {
+    removeStyle(GUARD_STYLE_ID);
+    return;
+  }
+  const fg = settings.flashGuard ?? {};
+  const delay = Number.isFinite(Number(fg.delayMs)) ? Number(fg.delayMs) : 200;
   const bg = bgOverride ?? guardBackgroundFor(findPalette(settings.themeId));
-  injectStyle(GUARD_STYLE_ID, `html { background-color: ${bg} !important; }`);
+  injectStyle(GUARD_STYLE_ID, guardCssFor(fg.mode ?? 'simple-dark', bg));
   if (guardTimer) clearTimeout(guardTimer);
   if (document.readyState === 'complete') {
-    dismissGuardSoon();
+    dismissGuardSoon(delay);
   } else {
-    window.addEventListener('load', dismissGuardSoon, { once: true });
+    window.addEventListener('load', () => dismissGuardSoon(delay), { once: true });
   }
 }
 
@@ -157,23 +161,26 @@ function teardown() {
   clearVideoStages();
 }
 
-function applyTheme(settings) {
+function applyTheme(settings, opts) {
   const site = matchSiteTheme(location.hostname);
   const siteUsable = site && !(settings.disabledSiteThemes ?? []).includes(site.id);
-  if (settings.themeId === 'adaptive') { applyEngine(settings, site, siteUsable); return; }
-  applyClassic(settings, site, siteUsable);
+  if (settings.themeId === 'adaptive') { applyEngine(settings, site, siteUsable, opts); return; }
+  applyClassic(settings, site, siteUsable, opts);
 }
 
-function applyEngine(settings, site, siteUsable) {
-  armGuard(settings, ENGINE_VARIABLES['--nv-surface']);   // guard with the engine surface color
+function applyEngine(settings, site, siteUsable, opts) {
+  armGuard(settings, ENGINE_VARIABLES['--nv-surface'], opts);   // guard with the engine surface color
   if (engineOwnsSite(settings.engine.siteThemePolicy, siteUsable ? site : null)) {
     removeStyle(SITE_STYLE_ID);
     document.documentElement.removeAttribute(SITE_ATTR);
     // §2-4: a light page renders its first engine rule almost immediately —
     // dismiss the guard on that rule instead of waiting for load+200ms.
     // Heavy pages keep the load-bound path (their first paint lags load).
-    const lightPage = document.querySelectorAll('*').length < 1000;
-    activateEngine(settings, lightPage ? { onFirstRule: dismissGuardSoon } : undefined);
+    const threshold = Number(settings.flashGuard?.threshold) || 1000;
+    const lightPage = document.querySelectorAll('*').length < threshold;
+    activateEngine(settings, lightPage
+      ? { onFirstRule: () => dismissGuardSoon(Number(settings.flashGuard?.delayMs) || 200) }
+      : undefined);
     return;
   }
   deactivateEngine();
@@ -193,9 +200,9 @@ function applyEngine(settings, site, siteUsable) {
   }, { once: true });
 }
 
-function applyClassic(settings, site, siteUsable) {
+function applyClassic(settings, site, siteUsable, opts) {
   deactivateEngine();
-  armGuard(settings);
+  armGuard(settings, undefined, opts);
   injectStyle(CLASSIC_STYLE_ID, compileThemeById(settings.themeId));
   if (siteUsable) {
     document.documentElement.setAttribute(SITE_ATTR, site.id);
@@ -229,7 +236,7 @@ let renderGeneration = 0;
 // Most recent render input, kept for the post-load recheck re-render (§6).
 let lastSettings = null;
 
-function render(settings) {
+function render(settings, opts = {}) {
   lastSettings = settings;
   const gen = ++renderGeneration;
   const rules = settings.exclusionRules ?? {};
@@ -251,11 +258,11 @@ function render(settings) {
       if (gen !== renderGeneration) return;
       teardown();
       if (evaluateRules(rules, collectRuleSignals(true))) return; // page opts out — stays off
-      applyTheme(settings);
+      applyTheme(settings, opts);
     });
     return;
   }
-  applyTheme(settings);
+  applyTheme(settings, opts);
   // Late re-check: a dark-scheme meta may sit past the parsed head. Strip if
   // the page opts out late. (bg luma needs the delayed branch above.)
   const lateCheck = () => {
@@ -274,7 +281,7 @@ function render(settings) {
       && document.readyState !== 'complete') {
     window.addEventListener('load', () => {
       if (gen !== renderGeneration) return;
-      setTimeout(() => { if (gen === renderGeneration) render(lastSettings); },
+      setTimeout(() => { if (gen === renderGeneration) render(lastSettings, { recheck: true }); },
         Number(settings.engine.recheckDelay) || 0);
     }, { once: true });
   }
