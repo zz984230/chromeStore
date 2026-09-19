@@ -470,9 +470,21 @@ export function engineRefreshContext() {
   state.htmlProps = htmlPropTokens(document);
 }
 
+// §5.3 checkstylesheet 对等项：每次引擎重扫前，若引擎元素被站点脚本摘除且
+// reattach 开着，重挂到 documentElement（规则在元素的 CSSStyleSheet 句柄里
+// 存活，无需文本恢复——与原版结果等价、机制更简）。
+function reattachEngineStyles() {
+  if (!state.reattach) return;
+  const parent = document.documentElement ?? document.head;   // §10-8：重挂目标恒为 documentElement
+  for (const el of [state.varsEl, state.sheetEl]) {
+    if (el && el.isConnected === false) parent.appendChild(el);
+  }
+}
+
 // Full reentrant scan: refresh context, then rescan every reachable sheet —
 // plus, while processInlineStyles (f) is on, every [style] element.
 export function engineRescanAll() {
+  reattachEngineStyles();
   engineRefreshContext();
   for (const sheet of document.styleSheets) scanSheet(sheet);
   if (state.engine?.processInlineStyles === true) {
@@ -578,6 +590,8 @@ export function activateEngine(settings, { onFirstRule } = {}) {
   state.engine = engine;
   state.writtenSelectors = new Set();
   state.writtenKeyframes = new Set();
+  state.docRoot = settings.documentRoot === true;            // §5.2 注入父节点选择
+  state.reattach = settings.reattachStyles !== false;        // §5.3 防删重挂开关
   conditionedRules.clear();
   state.onFirstRule = onFirstRule ?? null;
   document.documentElement.setAttribute(ACTIVE_ATTR, '');
@@ -827,7 +841,11 @@ function mountStyle(id, css) {
   if (!el) {
     el = document.createElement('style');
     el.id = id;
-    (document.head ?? document.documentElement).appendChild(el);
+    // documentRoot 开 → 挂 documentElement（M3-BEHAVIOR §5.2）；否则 head 优先。
+    const parent = state.docRoot
+      ? (document.documentElement ?? document.head)
+      : (document.head ?? document.documentElement);
+    parent.appendChild(el);
   }
   el.textContent = css;
   return el;

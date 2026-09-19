@@ -35,7 +35,10 @@ function injectStyle(id, css) {
   if (!el) {
     el = document.createElement('style');
     el.id = id;
-    (document.head ?? document.documentElement).appendChild(el);
+    const parent = lastSettings?.documentRoot
+      ? (document.documentElement ?? document.head)
+      : (document.head ?? document.documentElement);
+    parent.appendChild(el);
   }
   el.textContent = css;
 }

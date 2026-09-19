@@ -153,3 +153,88 @@ test('re-activation keeps element-MO count at one per activation (always-on obse
   assert.equal(elementMOs[0].disconnectCount, 1, 'previous element-MO detached, not leaked');
   deactivateEngine();
 });
+
+// ---- M3 documentRoot + reattachStyles (plan Task 5; M3-BEHAVIOR §5) --------
+
+// Document stub for the mount-parent/reattach pins: same jsdom-free shape as
+// makeStubDom, but the caller supplies the head/documentElement nodes (their
+// appendChild records where the mount landed). The factory wraps each
+// appendChild to keep the getElementById registry in sync and mark the node
+// connected — mirroring how a real appendChild makes a node reachable.
+function makeDocumentStub({ head, root }) {
+  const byId = new Map();
+  for (const parent of [head, root]) {
+    const record = parent.appendChild;
+    parent.appendChild = (node) => {
+      byId.set(node.id, node);
+      node.isConnected = true;
+      return record(node);
+    };
+  }
+  root.classList ??= []; // htmlPropTokens iterates these on every rescan pass
+  root.attributes ??= [];
+  return {
+    documentElement: root,
+    head,
+    body: null,
+    readyState: 'complete',
+    styleSheets: [],
+    getElementById: (id) => byId.get(id) ?? null,
+    createElement: () => ({
+      id: '',
+      textContent: '',
+      isConnected: false,
+      remove() { for (const [id, el] of byId) if (el === this) byId.delete(id); },
+      sheet: { cssRules: [], insertRule() { return 0; } },
+    }),
+    querySelector: () => null,
+    querySelectorAll: () => [],
+  };
+}
+
+test('documentRoot true mounts engine styles on documentElement, not head (§5.2)', async (t) => {
+  const { activateEngine, deactivateEngine, VARS_STYLE_ID } = await import('../../src/content/engine/engine.js');
+  const { engineDefaults } = await import('../../src/content/engine/contract.js');
+  const appended = [];
+  const head = { appendChild: (n) => appended.push(['head', n.id]) };
+  const root = { appendChild: (n) => appended.push(['root', n.id]), style: { setProperty() {} }, setAttribute() {}, getAttribute: () => null, removeAttribute() {} };
+  installGlobals(t, makeDocumentStub({ head, root }));
+  const settings = { documentRoot: true, reattachStyles: true, engine: engineDefaults() };
+  activateEngine(settings, {});
+  assert.ok(appended.some(([where, id]) => where === 'root' && id === VARS_STYLE_ID),
+    'vars 元素应挂 documentElement');
+  deactivateEngine();
+});
+
+test('engineRescanAll re-attaches a detached sheet element when reattachStyles on (§5.3)', async (t) => {
+  const { activateEngine, deactivateEngine, engineRescanAll, SHEET_STYLE_ID } = await import('../../src/content/engine/engine.js');
+  const { engineDefaults } = await import('../../src/content/engine/contract.js');
+  const appended = [];
+  const head = { appendChild: (n) => appended.push(n.id) };
+  const root = { appendChild: (n) => appended.push(n.id), style: { setProperty() {} }, setAttribute() {}, getAttribute: () => null, removeAttribute() {} };
+  installGlobals(t, makeDocumentStub({ head, root }));
+  activateEngine({ documentRoot: false, reattachStyles: true, engine: engineDefaults() }, {});
+  appended.length = 0;
+  // 模拟站点脚本删掉引擎表元素：元素对象仍在（sheet 句柄不丢），但脱离 DOM。
+  const el = globalThis.document.getElementById(SHEET_STYLE_ID);
+  el.isConnected = false;
+  engineRescanAll();
+  assert.ok(appended.includes(SHEET_STYLE_ID), '重扫应把脱离的引擎表元素重挂（documentElement）');
+  deactivateEngine();
+});
+
+test('reattachStyles off leaves detached elements alone until the next render (§5.3)', async (t) => {
+  const { activateEngine, deactivateEngine, engineRescanAll, SHEET_STYLE_ID } = await import('../../src/content/engine/engine.js');
+  const { engineDefaults } = await import('../../src/content/engine/contract.js');
+  const appended = [];
+  const head = { appendChild: (n) => appended.push(n.id) };
+  const root = { appendChild: (n) => appended.push(n.id), style: { setProperty() {} }, setAttribute() {}, getAttribute: () => null, removeAttribute() {} };
+  installGlobals(t, makeDocumentStub({ head, root }));
+  activateEngine({ documentRoot: false, reattachStyles: false, engine: engineDefaults() }, {});
+  appended.length = 0;
+  const el = globalThis.document.getElementById(SHEET_STYLE_ID);
+  el.isConnected = false;
+  engineRescanAll();
+  assert.equal(appended.length, 0, '关闭时重扫不得重挂');
+  deactivateEngine();
+});
