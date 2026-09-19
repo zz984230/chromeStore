@@ -21,3 +21,10 @@ export function clampNumber(value, min, max, fallback) {
   if (value === '' || value === null || value === undefined || !Number.isFinite(n)) return fallback;
   return Math.max(min, Math.min(max, n));
 }
+
+// 主题三席卡片（M3+ 首屏）：themeId 值域与席位 UI 的映射。
+export const SEAT_CARDS = [
+  { themeId: 'adaptive', title: STRINGS.themeSeatEngineLabel, desc: STRINGS.themeSeatEngineDesc },
+  { themeId: 'classic', title: STRINGS.themeSeatClassicLabel, desc: STRINGS.themeSeatClassicDesc },
+  { themeId: 'custom', title: STRINGS.themeSeatCustomLabel, desc: STRINGS.themeSeatCustomDesc },
+];

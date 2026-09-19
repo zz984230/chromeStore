@@ -1,10 +1,12 @@
 // src/options/main.js
-// Seven-section options page (I themes / II options / III user-css / IV
-// engine / V exclusion / VI inclusion / VII schedule). All copy comes from
-// shared/strings.js; control data from palettes/siteThemes. Edits autosave
-// via saveSettings; storage.onChanged keeps open pages in sync. When
-// chrome.storage is unavailable (http fixture mount) the page renders a
-// disabled preview from defaults so rendering stays verifiable.
+// M3+ options page: first screen (dusk switch / theme seats / color
+// temperature / schedule / sites) plus an interim advanced fold that re-homes
+// the M3 sections into the #sec-advanced adv-group hosts (Task 4 finalizes
+// that fold). All copy comes from shared/strings.js; control data from
+// palettes/siteThemes. Edits autosave via saveSettings; storage.onChanged
+// keeps open pages in sync. When chrome.storage is unavailable (http fixture
+// mount) the page renders a disabled preview from defaults so rendering stays
+// verifiable.
 import { STRINGS } from '../shared/strings.js';
 import {
   DEFAULT_SETTINGS, defaultStorage, loadSettings, saveSettings, subscribeSettings,
@@ -18,8 +20,7 @@ import {
   controlValue, tuningFallback, engineValueAt,
 } from '../shared/optionsEngine.js';
 import { ENGINE_VARIABLES, EXTRA_RULES_DEFAULT } from '../shared/engineTheme.js';
-import { SECTION_ORDER, sectionKeyOf, FLASHGUARD_MODES, parseHostList, clampNumber } from '../shared/optionsM3.js';
-import { USER_CSS_THEME_ID } from '../shared/themes.js';
+import { FLASHGUARD_MODES, parseHostList, clampNumber, SEAT_CARDS } from '../shared/optionsM3.js';
 import { wireEditor } from './editor.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -40,6 +41,10 @@ function section(id, summaryText, ...body) {
 
 function note(text) { return el('p', { class: 'hint' }, text); }
 
+function secHead(title, noteText) {
+  return el('div', { class: 'sec-head' }, el('h3', {}, title), el('span', { class: 'note' }, noteText));
+}
+
 function storageAvailable() {
   try { defaultStorage(); return true; } catch { return false; }
 }
@@ -51,102 +56,160 @@ function save(patch) {
   if (writable) saveSettings(patch).catch((e) => console.error(STRINGS.optionsSaveError, e));
 }
 
-// ---- Section I: themes ----
-function renderThemes() {
-  const families = [
-    [STRINGS.overlayFamilyLabel, PALETTES.filter((p) => p.family === 'overlay')],
-    [STRINGS.invertFamilyLabel, PALETTES.filter((p) => p.family === 'invert')],
-  ];
-  const classic = el('fieldset', {}, el('legend', {}, STRINGS.classicThemeLabel));
-  for (const [label, palettes] of families) {
-    const group = el('div', { class: 'cols' });
-    for (const p of palettes) {
-      group.append(el('label', {},
-        el('input', { type: 'radio', name: 'themeId', value: p.id, checked: current.themeId === p.id }),
-        ` ${p.label}`));
+// ---- 首屏：天际线大开关 ----
+function renderDusk() {
+  const host = $('#nv-dusk-host');
+  const on = current.state === 'dark';
+  const title = el('h2', { id: 'nv-dusk-title' }, on ? STRINGS.duskTitleOn : STRINGS.duskTitleOff);
+  const sub = el('p', {}, on ? STRINGS.duskSubOn : STRINGS.duskSubOff);
+  const input = el('input', { type: 'checkbox', id: 'nv-state', checked: on });
+  const sw = el('label', { class: 'dusk-switch' }, input,
+    el('span', { class: 'sky' }, el('span', { class: 'stars' }, ...[1, 2, 3, 4].map(() => el('i'))), el('span', { class: 'orb' })));
+  host.append(el('div', { class: 'dusk-copy' }, title, sub), sw);
+  input.addEventListener('change', () => save({ state: input.checked ? 'dark' : 'light' }));
+}
+
+// ---- 首屏：主题三席 + 席位附属面板 ----
+// 语义钉死（plan §3-1）：themeId 原值为 'adaptive'|'custom' 即归其席位（与
+// themes.js USER_CSS_THEME_ID='custom' 同域）；其余值（含全部调色板 id）一律 classic 席。
+function seatValue(themeId) {
+  return themeId === 'adaptive' || themeId === 'custom' ? themeId : 'classic';
+}
+// 席位 radio 的 value 域（§3-2）：adaptive/custom 原值，classic 席落为首个调色板 id。
+function seatRadioValue(themeId) {
+  const v = seatValue(themeId);
+  return v === 'classic' ? PALETTES[0].id : v;
+}
+
+let seatPanel = null; // 席位下方的附属面板容器（classic/custom/adaptive 三态）
+let renderedPanel = null; // 当前已渲染的面板种类——变化时才整体重建
+
+function renderThemeSeats() {
+  const host = $('#sec-theme');
+  host.append(secHead(STRINGS.sectionThemesLabel, STRINGS.themeSeatNote));
+  const seats = el('div', { class: 'seats' });
+  for (const card of SEAT_CARDS) {
+    const value = card.themeId === 'classic' ? PALETTES[0].id : card.themeId;
+    // classic 席位 radio 的 value 用首个调色板 id（themeId 值域约束）；三席单选互斥仍走 name 命名空间。
+    seats.append(el('label', { class: 'seat' },
+      el('input', { type: 'radio', name: 'themeId', value, checked: seatRadioValue(current.themeId) === value }),
+      el('span', { class: 'seat-title' }, card.title),
+      el('span', { class: 'seat-desc' }, card.desc)));
+  }
+  // classic 席已激活时其 radio 本就勾选，再点卡片不触发 change——不会把已选调色板重置回首列。
+  seats.addEventListener('change', (e) => {
+    if (e.target.name !== 'themeId') return;
+    current = { ...current, themeId: e.target.value };
+    save({ themeId: e.target.value });
+    syncSeatPanel(current); // 预览态没有 storage 回声，也即时换面板
+  });
+  seatPanel = el('div', { id: 'seat-panel' });
+  host.append(seats, seatPanel);
+  renderedPanel = null;
+  syncSeatPanel(current); // 渲染期决策：按当前 themeId 落面板
+}
+
+// 40 套调色板色板行：bg 内联样式，aria-pressed 标当前，点击存 themeId（§3-3）。
+function swatchRow(activeId) {
+  const row = el('div', { class: 'swatches' });
+  for (const p of PALETTES) {
+    // invert 家族没有 bg 色值，色板以中性深色占位（title 仍标真实款式名）。
+    const sw = el('span', {
+      class: 'swatch', title: p.label, 'data-palette': p.id,
+      style: `background:${p.colors ? p.colors.bg : '#101014'}`,
+      'aria-pressed': String(p.id === activeId),
+    });
+    sw.addEventListener('click', () => {
+      current = { ...current, themeId: p.id };
+      save({ themeId: p.id });
+      syncSeatPanel(current);
+    });
+    row.append(sw);
+  }
+  return row;
+}
+
+// classic → .palette-pop 色板 / custom → userCss 编辑器（M3 Task 8/10 代码整体搬移）/
+// adaptive → 容器隐藏。themeId 变化（渲染期或同步期）时重建面板内容。
+function syncSeatPanel(s) {
+  if (!seatPanel) return;
+  const kind = seatValue(s.themeId);
+  if (kind !== renderedPanel) {
+    renderedPanel = kind;
+    seatPanel.replaceChildren();
+    if (kind === 'classic') {
+      seatPanel.append(el('div', { class: 'palette-pop open' },
+        el('div', { class: 'pop-label' }, STRINGS.paletteLabel), swatchRow(s.themeId)));
+    } else if (kind === 'custom') {
+      const ta = el('textarea', { id: 'usercss', rows: '12' }, s.userCss ?? '');
+      // 原版 keyup 逐键保存（M3-BEHAVIOR §4.1）。
+      ta.addEventListener('keyup', () => save({ userCss: ta.value }));
+      wireEditor(ta);
+      seatPanel.append(el('div', { class: 'palette-pop open' },
+        el('p', { class: 'hint' }, STRINGS.userCssAreaLabel), ta, note(STRINGS.sectionUserCssNote)));
     }
-    classic.append(el('p', { class: 'hint' }, label), group);
+  } else if (kind === 'classic') {
+    for (const sw of seatPanel.querySelectorAll('.swatch')) {
+      sw.setAttribute('aria-pressed', String(sw.getAttribute('data-palette') === s.themeId));
+    }
+  } else if (kind === 'custom') {
+    const uc = seatPanel.querySelector('#usercss');
+    if (uc && document.activeElement !== uc) uc.value = s.userCss ?? '';
   }
-  classic.append(el('p', { class: 'hint' }, STRINGS.customThemeLabel), el('div', { class: 'cols' },
-    el('label', {}, el('input', { type: 'radio', name: 'themeId', value: USER_CSS_THEME_ID, checked: current.themeId === USER_CSS_THEME_ID }), ` ${STRINGS.customThemeLabel}`)));
-  classic.addEventListener('change', (e) => {
-    if (e.target.name === 'themeId') save({ themeId: e.target.value });
-  });
-
-  const sites = el('fieldset', {}, el('legend', {}, STRINGS.siteThemesLabel));
-  const siteBox = el('div', { class: 'cols' });
-  for (const t of SITE_THEMES) {
-    siteBox.append(el('label', {},
-      el('input', { type: 'checkbox', 'data-site': t.id, checked: !(current.disabledSiteThemes ?? []).includes(t.id) }),
-      ` ${t.label}`));
-  }
-  sites.append(siteBox, note(STRINGS.siteThemesNote));
-  sites.addEventListener('change', (e) => {
-    if (!e.target.getAttribute('data-site')) return;
-    const disabled = [...sites.querySelectorAll('input[data-site]')]
-      .filter((i) => !i.checked)
-      .map((i) => i.getAttribute('data-site'));
-    save({ disabledSiteThemes: disabled });
-  });
-
-  section('sec-themes', STRINGS.sectionThemesLabel, classic, sites);
+  seatPanel.hidden = kind === 'adaptive';
 }
 
-// ---- M3 sections/controls（M3-BEHAVIOR §1/§2/§3/§6）----
-function renderGuardControls() {
-  const fg = current.flashGuard ?? {};
-  // Master sits OUTSIDE the fieldset it toggles (renderEngine pattern): a
-  // disabled fieldset disables every descendant control, which would brick
-  // re-enabling from inside.
-  const master = el('label', {}, el('input', { type: 'checkbox', id: 'fg-enabled', checked: fg.enabled }), ` ${STRINGS.guardGroupLabel}`);
-  const box = el('div', {}, master,
-    el('fieldset', { id: 'fg-controls', disabled: fg.enabled === false },
-      ...FLASHGUARD_MODES.map((m) => el('label', {},
-        el('input', { type: 'radio', name: 'fgMode', id: `fg-mode-${m.value}`, value: m.value, checked: fg.mode === m.value }), ` ${m.label}`)),
-      el('label', {}, `${STRINGS.guardDelayLabel} `, el('input', { type: 'number', id: 'fg-delay', min: '0', max: '10000', value: fg.delayMs })),
-      el('label', {}, `${STRINGS.guardThresholdLabel} `, el('input', { type: 'number', id: 'fg-threshold', min: '1', max: '1000000', value: fg.threshold }))));
-  box.addEventListener('change', (e) => {
-    const next = { ...(current.flashGuard ?? {}) };
-    if (e.target.id === 'fg-enabled') next.enabled = e.target.checked;
-    else if (e.target.name === 'fgMode') next.mode = e.target.value;
-    else if (e.target.id === 'fg-delay') next.delayMs = clampNumber(e.target.value, 0, 10000, current.flashGuard.delayMs);
-    else if (e.target.id === 'fg-threshold') next.threshold = clampNumber(e.target.value, 1, 1000000, current.flashGuard.threshold);
-    else return;
-    if ((e.target.id === 'fg-delay' || e.target.id === 'fg-threshold') && e.target.value === '') return; // 空数字不落盘
-    current = { ...current, flashGuard: next };
-    save({ flashGuard: next });
-    document.getElementById('fg-controls').disabled = next.enabled === false;
-  });
-  return box;
+// ---- 首屏：色温组（M3 §6 控件逻辑整体迁入，ids 原样保留）----
+// 设计稿移植（docs/superpowers/designs/2026-09-19-options-redesign-mockup.html）：
+// 滑杆 --fill 百分比 + 预览圆点实时混色。
+function fillSlider(input) {
+  const p = (input.value - input.min) / (input.max - input.min) * 100;
+  input.style.setProperty('--fill', `${p}%`);
+}
+function syncCtDot(ct) {
+  const dot = document.getElementById('ct-dot');
+  if (!dot) return;
+  dot.style.background = `rgb(${ct.red} ${ct.green} ${ct.blue} / ${ct.opacity / 100})`;
+  dot.style.opacity = ct.enabled ? 1 : 0.3;
 }
 
-function renderColorTempControls() {
+function renderColorTemp() {
+  const host = $('#sec-colortemp');
+  host.append(secHead(STRINGS.colortempSectionLabel, STRINGS.colortempSectionNote));
   const ct = current.colorTemperature ?? {};
-  const slider = (id, label, max, value) => el('label', {}, `${label} `,
-    el('input', { type: 'range', id, min: '0', max: String(max), step: '1', value }), ' ',
+  const sliderRow = (id, label, max, value) => el('div', { class: 'row' },
+    el('span', { class: 'row-label' }, label),
+    el('input', { type: 'range', id, min: '0', max: String(max), step: '1', value }),
     el('output', { for: id }, String(value)));
-  // Same pattern as renderGuardControls: master outside the fieldset it toggles.
-  const master = el('label', {}, el('input', { type: 'checkbox', id: 'ct-enabled', checked: ct.enabled }), ` ${STRINGS.colorTempGroupLabel}`);
-  const box = el('div', {}, master,
-    el('fieldset', { id: 'ct-controls', disabled: ct.enabled === false },
-      slider('ct-red', STRINGS.ctRedLabel, 255, ct.red),
-      slider('ct-green', STRINGS.ctGreenLabel, 255, ct.green),
-      slider('ct-blue', STRINGS.ctBlueLabel, 255, ct.blue),
-      slider('ct-opacity', STRINGS.ctOpacityLabel, 100, ct.opacity),
-      el('p', { class: 'hint' }, STRINGS.ctListLabel),
-      el('textarea', { id: 'ct-list', 'data-ct-list': '' }, (ct.excludedHosts ?? []).join('\n')),
-      note(STRINGS.ctListHint)));
+  // 同 renderGuardControls 惯例：master 在它所 toggle 的 fieldset 外侧——disabled
+  // fieldset 会连 re-enable 的开关一起禁掉。
+  const enableRow = el('div', { class: 'row' },
+    el('label', { class: 'inline-switch' },
+      el('input', { type: 'checkbox', id: 'ct-enabled', checked: ct.enabled }),
+      el('span', { class: 'track' }), el('span', { class: 'knob' })),
+    el('span', { class: 'row-label' }, STRINGS.ctEnableLabel),
+    el('span', { class: 'ct-dot', id: 'ct-dot', style: 'margin-left:auto' }));
+  const controls = el('fieldset', { id: 'ct-controls', disabled: ct.enabled === false },
+    sliderRow('ct-red', STRINGS.ctRedLabel, 255, ct.red),
+    sliderRow('ct-green', STRINGS.ctGreenLabel, 255, ct.green),
+    sliderRow('ct-blue', STRINGS.ctBlueLabel, 255, ct.blue),
+    sliderRow('ct-opacity', STRINGS.ctOpacityLabel, 100, ct.opacity),
+    el('p', { class: 'hint' }, STRINGS.ctListLabel),
+    el('textarea', { id: 'ct-list', 'data-ct-list': '' }, (ct.excludedHosts ?? []).join('\n')),
+    note(STRINGS.ctListHint));
+  const box = el('div', {}, enableRow, controls);
   // 原版滑杆 input 实时存（§6.4）；列表 textarea change 存（nightveil 列表约定）。
   box.addEventListener('input', (e) => {
     if (e.target.type !== 'range') return;
-    const next = { ...(current.colorTemperature ?? {}) };
     const k = { 'ct-red': 'red', 'ct-green': 'green', 'ct-blue': 'blue', 'ct-opacity': 'opacity' }[e.target.id];
     if (!k) return;
-    next[k] = Number(e.target.value);
+    const next = { ...(current.colorTemperature ?? {}), [k]: Number(e.target.value) };
     const out = box.querySelector(`output[for="${e.target.id}"]`);
     if (out) out.textContent = e.target.value;
+    fillSlider(e.target);
     current = { ...current, colorTemperature: next };
     save({ colorTemperature: next });
+    syncCtDot(next);
   });
   box.addEventListener('change', (e) => {
     if (e.target.id === 'ct-enabled') {
@@ -154,36 +217,41 @@ function renderColorTempControls() {
       current = { ...current, colorTemperature: next };
       save({ colorTemperature: next });
       document.getElementById('ct-controls').disabled = next.enabled === false;
+      syncCtDot(next);
     } else if (e.target.id === 'ct-list') {
       const next = { ...(current.colorTemperature ?? {}), excludedHosts: parseHostList(e.target.value) };
       current = { ...current, colorTemperature: next };
       save({ colorTemperature: next });
     }
   });
-  return box;
+  host.append(box); // 先挂载——syncCtDot/fillSlider 按 id/类查元素
+  for (const node of controls.querySelectorAll('input[type="range"]')) fillSlider(node);
+  syncCtDot(ct);
 }
 
-function renderUserCssSection() {
-  const ta = el('textarea', { id: 'usercss', rows: '12' }, current.userCss ?? '');
-  const box = el('div', {}, el('p', { class: 'hint' }, STRINGS.userCssAreaLabel), ta, note(STRINGS.sectionUserCssNote));
-  // 原版 keyup 逐键保存（M3-BEHAVIOR §4.1）。
-  ta.addEventListener('keyup', () => save({ userCss: ta.value }));
-  wireEditor(ta);
-  section('sec-usercss', STRINGS.sectionUserCssLabel, box);
-}
-
+// ---- 首屏：定时组（M3 §3 逻辑整体迁入 + 时间行 .dimmed 联动）----
 function renderScheduleSection() {
+  const host = $('#sec-schedule');
+  host.append(secHead(STRINGS.sectionScheduleLabel, STRINGS.sectionScheduleNote));
   const sch = current.schedule ?? {};
-  const box = el('fieldset', {},
-    el('label', {}, el('input', { type: 'checkbox', id: 'sch-enabled', checked: sch.enabled }), ` ${STRINGS.sectionScheduleLabel}`),
-    el('label', {}, `${STRINGS.scheduleOnLabel} `, el('input', { type: 'time', id: 'sch-on', value: sch.onTime })),
-    el('label', {}, `${STRINGS.scheduleOffLabel} `, el('input', { type: 'time', id: 'sch-off', value: sch.offTime })),
-    note(STRINGS.sectionScheduleNote));
+  const timeRow = el('div', { class: 'row', id: 'sch-times' },
+    el('span', { class: 'row-label' }, STRINGS.scheduleOnLabel),
+    el('input', { type: 'time', id: 'sch-on', value: sch.onTime }),
+    el('span', { class: 'row-label' }, STRINGS.scheduleOffLabel),
+    el('input', { type: 'time', id: 'sch-off', value: sch.offTime }));
+  const enableRow = el('div', { class: 'row' },
+    el('label', { class: 'inline-switch' },
+      el('input', { type: 'checkbox', id: 'sch-enabled', checked: sch.enabled }),
+      el('span', { class: 'track' }), el('span', { class: 'knob' })),
+    el('span', { class: 'row-label' }, STRINGS.sectionScheduleLabel));
+  const box = el('div', {}, enableRow, timeRow, note(STRINGS.sectionScheduleNote));
   const saveSchedule = (patch) => {
     const next = { ...(current.schedule ?? {}), ...patch };
     current = { ...current, schedule: next };
     save({ schedule: next });
   };
+  const dimTimes = (enabled) => timeRow.classList.toggle('dimmed', !enabled);
+  dimTimes(Boolean(sch.enabled));
   box.addEventListener('change', (e) => {
     if (e.target.id === 'sch-on') saveSchedule({ onTime: e.target.value });
     else if (e.target.id === 'sch-off') saveSchedule({ offTime: e.target.value });
@@ -191,7 +259,7 @@ function renderScheduleSection() {
       if (e.target.checked && writable) {
         // 原版：勾选定时开关即请求 alarms 权限，拒绝则回退（M3-BEHAVIOR §3.1）。
         chrome.permissions.request({ permissions: ['alarms'] }, (granted) => {
-          if (granted) { saveSchedule({ enabled: true }); }
+          if (granted) { saveSchedule({ enabled: true }); dimTimes(true); }
           else {
             e.target.checked = false;
             window.alert(STRINGS.schedulePermissionAlert);
@@ -199,47 +267,45 @@ function renderScheduleSection() {
         });
       } else {
         saveSchedule({ enabled: e.target.checked });
+        dimTimes(e.target.checked);
       }
     }
   });
-  section('sec-schedule', STRINGS.sectionScheduleLabel, box);
+  host.append(box);
 }
 
-// §6.1 字号：number 10-22，change 存，--font-size 变量即时应用。
-function renderFontSizeControl() {
-  const input = el('input', { type: 'number', id: 'ui-fontsize', min: '10', max: '22', step: '1', value: current.ui?.fontSize ?? 13 });
-  const row = el('label', {}, `${STRINGS.fontSizeLabel} `, input);
-  input.addEventListener('change', () => {
-    if (input.value === '') return; // 空数字不落盘
-    const v = clampNumber(input.value, 10, 22, current.ui.fontSize);
-    const next = { ...current.ui, fontSize: v };
-    current = { ...current, ui: next };
-    save({ ui: next });
+// ---- 首屏：站点组（siteMode 双选 ↔ inclusionMode；单 textarea 随模式换绑）----
+function renderSites() {
+  const host = $('#sec-sites');
+  host.append(secHead(STRINGS.sitesSectionLabel, STRINGS.sitesSectionNote));
+  const modeRow = el('div', { class: 'site-mode' },
+    el('label', {}, el('input', { type: 'radio', name: 'siteMode', value: 'exclude', checked: !current.inclusionMode }), ` ${STRINGS.siteModeExcludeLabel}`),
+    el('label', {}, el('input', { type: 'radio', name: 'siteMode', value: 'include', checked: Boolean(current.inclusionMode) }), ` ${STRINGS.siteModeIncludeLabel}`));
+  const ta = el('textarea', { id: 'site-list', spellcheck: 'false' });
+  const listText = (s, inclusionMode) => ((inclusionMode ? s.inclusionList : s.exclusionList) ?? []).join('\n');
+  ta.value = listText(current, Boolean(current.inclusionMode));
+  modeRow.addEventListener('change', (e) => {
+    if (e.target.name !== 'siteMode') return;
+    const inclusionMode = e.target.value === 'include';
+    current = { ...current, inclusionMode };
+    save({ inclusionMode });
+    ta.value = listText(current, inclusionMode); // 切换即换绑到当前模式的列表
   });
-  return row;
+  ta.addEventListener('change', () => {
+    save({ [current.inclusionMode ? 'inclusionList' : 'exclusionList']: parseHostList(ta.value) });
+  });
+  host.append(el('div', {}, modeRow, ta, note(STRINGS.sitesHint)));
 }
 
-// §6.2 分区折叠持久化：details toggle → ui.sectionOpen 补丁。
-function applySectionState() {
-  for (const id of SECTION_ORDER) {
-    const d = document.getElementById(id);
-    if (!d) continue;
-    d.open = Boolean(current.ui?.sectionOpen?.[sectionKeyOf(id)]);
-    d.addEventListener('toggle', () => {
-      if (!writable) return;
-      const next = { ...current.ui, sectionOpen: { ...(current.ui?.sectionOpen ?? {}), [sectionKeyOf(id)]: d.open } };
-      current = { ...current, ui: next };
-      save({ ui: next });
-    });
-  }
-}
-function applyFontSize(v) {
-  document.documentElement.style.setProperty('--font-size', `${v}px`);
+// ---- 高级折叠外壳（临时：Task 4 重排；summary 文案来自 Task 2 键）----
+function renderAdvancedShell() {
+  $('#adv-summary').append(
+    el('span', { class: 'chev' }, '▶'),
+    STRINGS.advancedLabel,
+    el('span', { class: 'count' }, STRINGS.advancedCountLabel));
 }
 
-// ---- Section IV: adaptive engine (the §8 sub-option controls render from
-// shared/optionsEngine.js ENGINE_CONTROLS, the §9 variables from
-// ENGINE_VARIABLE_CONTROLS, extraRules from ENGINE_EXTRA_RULES_CONTROL) ----
+// ---- 高级：自适应引擎（M3 原样，容器改挂 #adv-engine；Task 4 重排）----
 function renderEngine() {
   // Seat master switch: checked ⟺ themeId === 'adaptive'. Unchecking hands
   // the seat to the first classic theme — some theme must stay selected
@@ -267,7 +333,7 @@ function renderEngine() {
   }
   controls.addEventListener('change', onEngineControlChange);
 
-  section('sec-engine', STRINGS.sectionEngineLabel, seat, note(STRINGS.sectionEngineNote), controls);
+  section('adv-engine', STRINGS.advEngineLabel, seat, note(STRINGS.sectionEngineNote), controls);
 }
 
 // One §8 control row; values read from the last rendered settings snapshot.
@@ -371,30 +437,41 @@ function sitePolicyBox() {
   return box;
 }
 
-// ---- Section II: options (behavior + exclusion rules) ----
-function renderBehavior() {
-  const box = el('fieldset', { id: ENGINE_BEHAVIOR_HOST }, el('legend', {}, STRINGS.behaviorLabel));
-  box.append(
-    el('label', {}, el('input', { type: 'radio', name: 'state', value: 'light', checked: current.state === 'light' }), ` ${STRINGS.stateLightLabel}`),
-    el('label', {}, el('input', { type: 'radio', name: 'state', value: 'dark', checked: current.state === 'dark' }), ` ${STRINGS.stateDarkLabel}`),
-    el('label', {}, el('input', { type: 'checkbox', 'data-key': 'inclusionMode', checked: current.inclusionMode }), ` ${STRINGS.inclusionModeLabel}`),
-    note(STRINGS.inclusionModeNote),
-    el('label', {}, el('input', { type: 'checkbox', 'data-key': 'perSiteToggle', checked: current.perSiteToggle }), ` ${STRINGS.perSiteToggleLabel}`),
-  );
-  // II-area engine keys per §8: the recheck pair. They disable with the seat —
-  // no engine, no effect (sync re-derives this like the #eng-controls fieldset).
-  for (const c of ENGINE_CONTROLS.filter((k) => k.host === ENGINE_BEHAVIOR_HOST)) {
-    const row = engineControl(c);
-    row.querySelector('input').disabled = !seatCheckboxState(current.themeId);
-    box.append(row);
-  }
-  box.addEventListener('change', (e) => {
-    if (onEngineControlChange(e)) return;
-    if (e.target.name === 'state') save({ state: e.target.value });
-    else if (e.target.getAttribute('data-key')) save({ [e.target.getAttribute('data-key')]: e.target.checked });
-    else if (e.target.getAttribute('data-m3key')) save({ [e.target.getAttribute('data-m3key')]: e.target.checked });
-  });
+// ---- 高级：防白闪（M3 原样，容器改挂 #adv-guard；Task 4 重排）----
+function renderGuard() {
+  section('adv-guard', STRINGS.advGuardLabel, renderGuardControls());
+}
 
+// ---- M3 guard 控件（M3-BEHAVIOR §1，原样保留）----
+function renderGuardControls() {
+  const fg = current.flashGuard ?? {};
+  // Master sits OUTSIDE the fieldset it toggles (renderEngine pattern): a
+  // disabled fieldset disables every descendant control, which would brick
+  // re-enabling from inside.
+  const master = el('label', {}, el('input', { type: 'checkbox', id: 'fg-enabled', checked: fg.enabled }), ` ${STRINGS.guardGroupLabel}`);
+  const box = el('div', {}, master,
+    el('fieldset', { id: 'fg-controls', disabled: fg.enabled === false },
+      ...FLASHGUARD_MODES.map((m) => el('label', {},
+        el('input', { type: 'radio', name: 'fgMode', id: `fg-mode-${m.value}`, value: m.value, checked: fg.mode === m.value }), ` ${m.label}`)),
+      el('label', {}, `${STRINGS.guardDelayLabel} `, el('input', { type: 'number', id: 'fg-delay', min: '0', max: '10000', value: fg.delayMs })),
+      el('label', {}, `${STRINGS.guardThresholdLabel} `, el('input', { type: 'number', id: 'fg-threshold', min: '1', max: '1000000', value: fg.threshold }))));
+  box.addEventListener('change', (e) => {
+    const next = { ...(current.flashGuard ?? {}) };
+    if (e.target.id === 'fg-enabled') next.enabled = e.target.checked;
+    else if (e.target.name === 'fgMode') next.mode = e.target.value;
+    else if (e.target.id === 'fg-delay') next.delayMs = clampNumber(e.target.value, 0, 10000, current.flashGuard.delayMs);
+    else if (e.target.id === 'fg-threshold') next.threshold = clampNumber(e.target.value, 1, 1000000, current.flashGuard.threshold);
+    else return;
+    if ((e.target.id === 'fg-delay' || e.target.id === 'fg-threshold') && e.target.value === '') return; // 空数字不落盘
+    current = { ...current, flashGuard: next };
+    save({ flashGuard: next });
+    document.getElementById('fg-controls').disabled = next.enabled === false;
+  });
+  return box;
+}
+
+// ---- 高级：页面规则（M3 原样，容器改挂 #adv-rules；Task 4 重排）----
+function renderRules() {
   const r = current.exclusionRules ?? {};
   const rules = el('fieldset', {}, el('legend', {}, STRINGS.rulesLabel));
   rules.append(
@@ -413,18 +490,79 @@ function renderBehavior() {
         : e.target.value;
     save({ exclusionRules: { ...(current.exclusionRules ?? {}), [key]: val } });
   });
-
-  section('sec-options', STRINGS.sectionOptionsLabel,
-    box, rules,
-    renderGuardControls(),
-    renderColorTempControls(),
-    el('fieldset', {},
-      el('label', {}, el('input', { type: 'checkbox', 'data-m3key': 'documentRoot', checked: current.documentRoot }), ` ${STRINGS.documentRootLabel}`),
-      el('label', {}, el('input', { type: 'checkbox', 'data-m3key': 'reattachStyles', checked: current.reattachStyles }), ` ${STRINGS.reattachStylesLabel}`),
-      renderFontSizeControl()));
+  section('adv-rules', STRINGS.advRulesLabel, rules);
 }
 
-// ---- Sections V / VI: hostname lists ----
+// 站点主题精修层开关（M3 Section I 的 sites 半区原样，容器改挂 #adv-misc；Task 4 重排）。
+function siteThemesBox() {
+  const sites = el('fieldset', {}, el('legend', {}, STRINGS.siteThemesLabel));
+  const siteBox = el('div', { class: 'cols' });
+  for (const t of SITE_THEMES) {
+    siteBox.append(el('label', {},
+      el('input', { type: 'checkbox', 'data-site': t.id, checked: !(current.disabledSiteThemes ?? []).includes(t.id) }),
+      ` ${t.label}`));
+  }
+  sites.append(siteBox, note(STRINGS.siteThemesNote));
+  sites.addEventListener('change', (e) => {
+    if (!e.target.getAttribute('data-site')) return;
+    const disabled = [...sites.querySelectorAll('input[data-site]')]
+      .filter((i) => !i.checked)
+      .map((i) => i.getAttribute('data-site'));
+    save({ disabledSiteThemes: disabled });
+  });
+  return sites;
+}
+
+// §6.1 字号：number 10-22，change 存，--font-size 变量即时应用。
+function renderFontSizeControl() {
+  const input = el('input', { type: 'number', id: 'ui-fontsize', min: '10', max: '22', step: '1', value: current.ui?.fontSize ?? 13 });
+  const row = el('label', {}, `${STRINGS.fontSizeLabel} `, input);
+  input.addEventListener('change', () => {
+    if (input.value === '') return; // 空数字不落盘
+    const v = clampNumber(input.value, 10, 22, current.ui.fontSize);
+    const next = { ...current.ui, fontSize: v };
+    current = { ...current, ui: next };
+    save({ ui: next });
+  });
+  return row;
+}
+
+// ---- 高级：杂项（行为残项 + 挂载开关/字号 + 站点主题 + 两个列表；
+// 容器改挂 #adv-misc，Task 4 重排）----
+function renderMisc() {
+  // 行为残项：perSiteToggle + II-area engine 键（复查对，随引擎席位禁用）。
+  const behavior = el('fieldset', { id: ENGINE_BEHAVIOR_HOST }, el('legend', {}, STRINGS.behaviorLabel));
+  behavior.append(
+    el('label', {}, el('input', { type: 'checkbox', 'data-key': 'perSiteToggle', checked: current.perSiteToggle }), ` ${STRINGS.perSiteToggleLabel}`),
+  );
+  // II-area engine keys per §8: the recheck pair. They disable with the seat —
+  // no engine, no effect (sync re-derives this like the #eng-controls fieldset).
+  for (const c of ENGINE_CONTROLS.filter((k) => k.host === ENGINE_BEHAVIOR_HOST)) {
+    const row = engineControl(c);
+    row.querySelector('input').disabled = !seatCheckboxState(current.themeId);
+    behavior.append(row);
+  }
+  behavior.addEventListener('change', (e) => {
+    if (onEngineControlChange(e)) return;
+    if (e.target.getAttribute('data-key')) save({ [e.target.getAttribute('data-key')]: e.target.checked });
+  });
+
+  const mount = el('fieldset', {},
+    el('label', {}, el('input', { type: 'checkbox', 'data-m3key': 'documentRoot', checked: current.documentRoot }), ` ${STRINGS.documentRootLabel}`),
+    el('label', {}, el('input', { type: 'checkbox', 'data-m3key': 'reattachStyles', checked: current.reattachStyles }), ` ${STRINGS.reattachStylesLabel}`),
+    renderFontSizeControl());
+  // data-m3key 委托在此补上：原 renderBehavior 的监听挂在行为 fieldset 上，而挂载
+  // fieldset 是其兄弟——documentRoot/reattachStyles 的改动此前落不了盘。
+  mount.addEventListener('change', (e) => {
+    if (e.target.getAttribute('data-m3key')) save({ [e.target.getAttribute('data-m3key')]: e.target.checked });
+  });
+
+  section('adv-misc', STRINGS.advMiscLabel, behavior, mount, siteThemesBox());
+  renderListSection('adv-misc', STRINGS.sectionExclusionLabel, 'exclusionList', STRINGS.exclusionListLabel);
+  renderListSection('adv-misc', STRINGS.sectionInclusionLabel, 'inclusionList', STRINGS.inclusionListLabel);
+}
+
+// ---- hostname 列表（M3 原样，容器改挂 #adv-misc；Task 4 重排）----
 function renderListSection(id, summary, key, labelText) {
   const ta = el('textarea', { 'data-list': key }, (current[key] ?? []).join('\n'));
   const box = el('div', {}, el('p', { class: 'hint' }, labelText), ta, note(STRINGS.listEditHint));
@@ -445,20 +583,69 @@ function wireReset() {
 // ---- storage-driven sync (external changes while the page stays open) ----
 function syncFromSettings(s) {
   current = s;
-  // The seat checkbox and the palette radios share the themeId namespace, so
-  // every radio is re-derived from settings: a stale check clears when the
-  // other side takes the seat (no radio has value 'adaptive').
-  for (const i of document.querySelectorAll('#sec-themes input[name="themeId"]')) {
-    i.checked = i.value === s.themeId;
+  // ---- 首屏 ----
+  // 天际线开关勾选态 + 标题/副标文案互换。
+  const nvState = document.getElementById('nv-state');
+  if (nvState) nvState.checked = s.state === 'dark';
+  const duskTitle = document.getElementById('nv-dusk-title');
+  if (duskTitle) {
+    const on = s.state === 'dark';
+    duskTitle.textContent = on ? STRINGS.duskTitleOn : STRINGS.duskTitleOff;
+    duskTitle.nextElementSibling.textContent = on ? STRINGS.duskSubOn : STRINGS.duskSubOff;
   }
+  // 三席 radio（name=themeId 现在只剩席位）按席位值域重派。
+  for (const i of document.querySelectorAll('#sec-theme input[name="themeId"]')) {
+    i.checked = i.value === seatRadioValue(s.themeId);
+  }
+  syncSeatPanel(s);
+  // 色温逐 id 重派（activeElement 守卫照旧）+ 圆点/--fill 联动。
+  const ctNode = document.getElementById('ct-enabled');
+  if (ctNode) {
+    const ct = s.colorTemperature ?? {};
+    ctNode.checked = Boolean(ct.enabled);
+    document.getElementById('ct-controls').disabled = !ct.enabled;
+    for (const [id, k] of [['ct-red', 'red'], ['ct-green', 'green'], ['ct-blue', 'blue'], ['ct-opacity', 'opacity']]) {
+      const node = document.getElementById(id);
+      if (node && document.activeElement !== node) {
+        node.value = ct[k];
+        fillSlider(node);
+        const out = document.querySelector(`output[for="${id}"]`);
+        if (out) out.textContent = String(ct[k]);
+      }
+    }
+    syncCtDot(ct);
+    const list = document.getElementById('ct-list');
+    if (list && document.activeElement !== list) list.value = (ct.excludedHosts ?? []).join('\n');
+  }
+  // 定时：勾选态 + 时间行 .dimmed 联动 + 时间值重派。
+  const schNode = document.getElementById('sch-enabled');
+  if (schNode) {
+    schNode.checked = Boolean(s.schedule?.enabled);
+    document.getElementById('sch-times')?.classList.toggle('dimmed', !s.schedule?.enabled);
+    const schOn = document.getElementById('sch-on');
+    if (schOn && document.activeElement !== schOn) schOn.value = s.schedule?.onTime ?? '';
+    const off = document.getElementById('sch-off');
+    if (off && document.activeElement !== off) off.value = s.schedule?.offTime ?? '';
+  }
+  // 站点：模式 radio + 当前模式对应列表重派。
+  for (const i of document.querySelectorAll('#sec-sites input[name="siteMode"]')) {
+    i.checked = (i.value === 'include') === Boolean(s.inclusionMode);
+  }
+  const siteList = document.getElementById('site-list');
+  if (siteList && document.activeElement !== siteList) {
+    siteList.value = ((s.inclusionMode ? s.inclusionList : s.exclusionList) ?? []).join('\n');
+  }
+  // ---- 高级（临时安置，Task 4 重排）----
+  // The eng-seat checkbox mirrors the first-screen adaptive seat; #eng-controls
+  // follows it (fieldset disabled covers the whole group).
   const seat = document.querySelector('#eng-seat');
   if (seat) seat.checked = seatCheckboxState(s.themeId);
   const controls = document.querySelector('#eng-controls');
   if (controls) controls.disabled = !seatCheckboxState(s.themeId);
-  for (const i of document.querySelectorAll('#sec-engine input[name="siteThemePolicy"]')) {
+  for (const i of document.querySelectorAll('#adv-engine input[name="siteThemePolicy"]')) {
     i.checked = i.value === s.engine.siteThemePolicy;
   }
-  // §8 controls re-derive from the merged engine group; the II-area pair also
+  // §8 controls re-derive from the merged engine group; the misc-area pair also
   // follows the seat (#eng-controls' fieldset disabled covers the rest).
   for (const c of ENGINE_CONTROLS) {
     const node = document.getElementById(c.id);
@@ -481,21 +668,19 @@ function syncFromSettings(s) {
   }
   const extra = document.getElementById(ENGINE_EXTRA_RULES_CONTROL.id);
   if (extra && document.activeElement !== extra) extra.value = s.engine.extraRules ?? EXTRA_RULES_DEFAULT;
-  for (const i of document.querySelectorAll('#sec-themes input[data-site]')) {
+  for (const i of document.querySelectorAll('#adv-misc input[data-site]')) {
     i.checked = !(s.disabledSiteThemes ?? []).includes(i.getAttribute('data-site'));
   }
-  const stateRadio = document.querySelector(`#sec-options input[name="state"][value="${s.state}"]`);
-  if (stateRadio) stateRadio.checked = true;
-  for (const i of document.querySelectorAll('#sec-options input[data-key]')) {
+  for (const i of document.querySelectorAll('#adv-misc input[data-key]')) {
     i.checked = !!s[i.getAttribute('data-key')];
   }
   const r = s.exclusionRules ?? {};
-  for (const i of document.querySelectorAll('#sec-options [data-rule]')) {
+  for (const i of document.querySelectorAll('#adv-rules [data-rule]')) {
     const key = i.getAttribute('data-rule');
     if (i.type === 'checkbox') i.checked = !!r[key];
     else if (document.activeElement !== i) i.value = r[key] ?? '';
   }
-  for (const ta of document.querySelectorAll('textarea[data-list]')) {
+  for (const ta of document.querySelectorAll('#adv-misc textarea[data-list]')) {
     if (document.activeElement !== ta) ta.value = (s[ta.getAttribute('data-list')] ?? []).join('\n');
   }
   // ---- M3 sync ----
@@ -509,57 +694,32 @@ function syncFromSettings(s) {
     if (document.activeElement?.id !== 'fg-delay') document.getElementById('fg-delay').value = fg.delayMs;
     if (document.activeElement?.id !== 'fg-threshold') document.getElementById('fg-threshold').value = fg.threshold;
   }
-  const ctNode = document.getElementById('ct-enabled');
-  if (ctNode) {
-    const ct = s.colorTemperature ?? {};
-    ctNode.checked = Boolean(ct.enabled);
-    document.getElementById('ct-controls').disabled = !ct.enabled;
-    for (const [id, k] of [['ct-red', 'red'], ['ct-green', 'green'], ['ct-blue', 'blue'], ['ct-opacity', 'opacity']]) {
-      const node = document.getElementById(id);
-      if (node && document.activeElement !== node) {
-        node.value = ct[k];
-        const out = document.querySelector(`output[for="${id}"]`);
-        if (out) out.textContent = String(ct[k]);
-      }
-    }
-    const list = document.getElementById('ct-list');
-    if (list && document.activeElement !== list) list.value = (ct.excludedHosts ?? []).join('\n');
-  }
-  const schOn = document.getElementById('sch-on');
-  if (schOn) {
-    document.getElementById('sch-enabled').checked = Boolean(s.schedule?.enabled);
-    if (document.activeElement !== schOn) schOn.value = s.schedule?.onTime ?? '';
-    const off = document.getElementById('sch-off');
-    if (off && document.activeElement !== off) off.value = s.schedule?.offTime ?? '';
-  }
-  const uc = document.getElementById('usercss');
-  if (uc && document.activeElement !== uc) uc.value = s.userCss ?? '';
-  for (const i of document.querySelectorAll('#sec-options input[data-m3key]')) {
+  for (const i of document.querySelectorAll('#adv-misc input[data-m3key]')) {
     i.checked = Boolean(s[i.getAttribute('data-m3key')]);
   }
   const fs = document.getElementById('ui-fontsize');
   if (fs && document.activeElement !== fs) fs.value = s.ui?.fontSize ?? 13;
-  for (const id of SECTION_ORDER) {
-    const d = document.getElementById(id);
-    if (d) d.open = Boolean(s.ui?.sectionOpen?.[sectionKeyOf(id)]);
-  }
+}
+
+function applyFontSize(v) {
+  document.documentElement.style.setProperty('--font-size', `${v}px`);
 }
 
 function renderAll() {
-  renderThemes();
-  renderBehavior();
-  renderListSection('sec-exclusion', STRINGS.sectionExclusionLabel, 'exclusionList', STRINGS.exclusionListLabel);
-  renderListSection('sec-inclusion', STRINGS.sectionInclusionLabel, 'inclusionList', STRINGS.inclusionListLabel);
-  renderEngine();
-  renderUserCssSection();
+  renderDusk();
+  renderThemeSeats();
+  renderColorTemp();
   renderScheduleSection();
-  applySectionState();
+  renderSites();
+  renderAdvancedShell();
+  renderEngine();
+  renderGuard();
+  renderRules();
+  renderMisc();
   applyFontSize(current.ui?.fontSize ?? 13);
 }
 
 function render() {
-  $('#heading').textContent = STRINGS.optionsHeading;
-  $('#note').textContent = STRINGS.optionsNote;
   wireReset();
   if (storageAvailable()) {
     writable = true;
@@ -570,7 +730,7 @@ function render() {
     current = { ...DEFAULT_SETTINGS };
     renderAll();
     document.querySelector('main').setAttribute('data-preview', '');
-    $('#note').textContent = STRINGS.optionsPreviewNote;
+    document.querySelector('main').prepend(note(STRINGS.optionsPreviewNote));
   }
 }
 

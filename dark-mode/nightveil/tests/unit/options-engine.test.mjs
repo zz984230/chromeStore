@@ -56,7 +56,7 @@ test('site policy tri-state: ids, values and labels; default lives in engineDefa
 });
 
 test('options main.js wires the skeleton from the shared module', () => {
-  assert.ok(mainSrc.includes("section('sec-engine'"), 'section IV must be rendered by main.js');
+  assert.ok(mainSrc.includes("section('adv-engine'"), 'section IV must be rendered by main.js');
   assert.ok(mainSrc.includes('seatCheckboxState('), 'seat state must come from the shared helper');
   assert.ok(mainSrc.includes('ENGINE_GROUPS'), 'group hosts must come from the shared data');
   assert.ok(mainSrc.includes('ENGINE_SITE_POLICIES'), 'policy radios must come from the shared data');
@@ -74,14 +74,16 @@ test('seat and section-I radios interoperate through the themeId namespace', () 
   assert.ok(/save\(\{ themeId: e\.target\.checked \? SEAT_THEME_ID : PALETTES\[0\]\.id \}\)/.test(mainSrc));
   // Every themeId radio is re-derived on each settings change, so a stale
   // palette check clears when the seat takes the namespace (and vice versa).
-  assert.ok(/querySelectorAll\('#sec-themes input\[name="themeId"\]'\)/.test(mainSrc));
-  assert.ok(/i\.checked = i\.value === s\.themeId/.test(mainSrc));
+  // M3+: the themeId namespace holds the three seat cards; the classic seat's
+  // radio value is the first palette id, so sync maps through seatRadioValue.
+  assert.ok(/querySelectorAll\('#sec-theme input\[name="themeId"\]'\)/.test(mainSrc));
+  assert.ok(/i\.checked = i\.value === seatRadioValue\(s\.themeId\)/.test(mainSrc));
   // Policy radios re-render from the settings subscription like the rest of
   // the page; the save advances `current` synchronously like the delegated path.
   assert.ok(/\{ \.\.\.current\.engine, siteThemePolicy: e\.target\.value \}/.test(mainSrc));
   assert.ok(/current = \{ \.\.\.current, engine: next \};\s*save\(\{ engine: next \}\)/.test(mainSrc),
     'the policy save advances the snapshot so rapid edits compose');
-  assert.ok(/querySelectorAll\('#sec-engine input\[name="siteThemePolicy"\]'\)/.test(mainSrc));
+  assert.ok(/querySelectorAll\('#adv-engine input\[name="siteThemePolicy"\]'\)/.test(mainSrc));
 });
 
 // ---- Task 5: §8 sub-option controls (table contract, autosave, exclusivity) ----
