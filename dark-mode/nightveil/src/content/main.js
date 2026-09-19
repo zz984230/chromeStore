@@ -12,6 +12,7 @@ import { evaluateRules, luminanceOf, metaSchemeIsDark } from '../shared/exclusio
 import { matchSiteTheme, compileSiteTheme } from '../shared/siteThemes.js';
 import { activateEngine, deactivateEngine, scheduleShadowScan, VARS_STYLE_ID } from './engine/engine.js';
 import { ENGINE_VARIABLES } from '../shared/engineTheme.js';
+import { COLORTEMP_STYLE_ID, COLORTEMP_ATTR, COLORTEMP_OVERLAY_CLASS, COLORTEMP_CSS, shouldRenderColorTemp } from '../shared/colorTemp.js';
 
 const CLASSIC_STYLE_ID = 'nv-classic';
 const GUARD_STYLE_ID = 'nv-guard';
@@ -161,6 +162,31 @@ function teardown() {
   clearVideoStages();
 }
 
+// 色温层（M3-BEHAVIOR §1）：仅顶层帧；幂等重建（清 overlay/属性/变量 → 判定 → 重挂）。
+function applyColorTemp(settings) {
+  if (window !== window.top) return;
+  const de = document.documentElement;
+  document.querySelector(`.${COLORTEMP_OVERLAY_CLASS}`)?.remove();
+  removeStyle(COLORTEMP_STYLE_ID);
+  if (de) {
+    de.removeAttribute(COLORTEMP_ATTR);
+    for (const v of ['--nv-ct-red', '--nv-ct-green', '--nv-ct-blue', '--nv-ct-opacity']) {
+      de.style.removeProperty(v);
+    }
+  }
+  if (!shouldRenderColorTemp(settings, location.hostname)) return;
+  const ct = settings.colorTemperature;
+  injectStyle(COLORTEMP_STYLE_ID, COLORTEMP_CSS);
+  de.setAttribute(COLORTEMP_ATTR, '');
+  de.style.setProperty('--nv-ct-red', String(ct.red));
+  de.style.setProperty('--nv-ct-green', String(ct.green));
+  de.style.setProperty('--nv-ct-blue', String(ct.blue));
+  de.style.setProperty('--nv-ct-opacity', String(ct.opacity / 100));
+  const overlay = document.createElement('div');
+  overlay.setAttribute('class', COLORTEMP_OVERLAY_CLASS);
+  de.insertBefore(overlay, de.firstChild);
+}
+
 function applyTheme(settings, opts) {
   const site = matchSiteTheme(location.hostname);
   const siteUsable = site && !(settings.disabledSiteThemes ?? []).includes(site.id);
@@ -245,6 +271,7 @@ function render(settings, opts = {}) {
     // Light branch leaves prior dark-pass inline styles in place (harmless);
     // a light reload starts clean — acceptable v1.
     teardown();
+    applyColorTemp(settings);
     return;
   }
   if (rules.darkBackground) {
@@ -257,8 +284,9 @@ function render(settings, opts = {}) {
     whenDomReady(() => {
       if (gen !== renderGeneration) return;
       teardown();
-      if (evaluateRules(rules, collectRuleSignals(true))) return; // page opts out — stays off
+      if (evaluateRules(rules, collectRuleSignals(true))) { applyColorTemp(settings); return; }
       applyTheme(settings, opts);
+      applyColorTemp(settings);
     });
     return;
   }
@@ -285,6 +313,7 @@ function render(settings, opts = {}) {
         Number(settings.engine.recheckDelay) || 0);
     }, { once: true });
   }
+  applyColorTemp(settings);
 }
 
 loadSettings().then(render);
