@@ -152,6 +152,7 @@ export const STRINGS = Object.freeze({
   reattachStylesLabel: '样式被页面删掉时重新挂回',
   fontSizeLabel: '本页字号（像素）',
   userCssAreaLabel: '你的样式——选中「自定义 CSS」席位后整体生效',
+  scheduleEnableLabel: '启用定时',
   scheduleOnLabel: '入夜拉上',
   scheduleOffLabel: '天亮收起',
   schedulePermissionAlert: '需要「定时通知（alarms）」权限才能设置定时。',

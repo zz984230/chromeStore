@@ -245,7 +245,7 @@ function renderScheduleSection() {
     el('label', { class: 'inline-switch' },
       el('input', { type: 'checkbox', id: 'sch-enabled', checked: sch.enabled }),
       el('span', { class: 'track' }), el('span', { class: 'knob' })),
-    el('span', { class: 'row-label' }, STRINGS.sectionScheduleLabel));
+    el('span', { class: 'row-label' }, STRINGS.scheduleEnableLabel));
   const box = el('div', {}, enableRow, timeRow, note(STRINGS.sectionScheduleNote));
   const saveSchedule = (patch) => {
     const next = { ...(current.schedule ?? {}), ...patch };
@@ -307,7 +307,7 @@ function renderAdvancedShell() {
     el('span', { class: 'count' }, STRINGS.advancedCountLabel));
   const details = $('#sec-advanced');
   details.open = Boolean(current.ui?.sectionOpen?.advanced);
-  // toggle 在程序性赋值时也会触发——与当前快照同值时是同步回声，不落盘。
+  // toggle 在程序性赋值时也会触发——与当前快照同值时是同步回声，不落盘（同值早退依赖订阅回调先推进 current：sync 开头 current = s，排队的 toggle 处理器运行时快照已是新值）。
   details.addEventListener('toggle', () => {
     if (Boolean(current.ui?.sectionOpen?.advanced) === details.open) return;
     const next = { ...current.ui, sectionOpen: { advanced: details.open } };
