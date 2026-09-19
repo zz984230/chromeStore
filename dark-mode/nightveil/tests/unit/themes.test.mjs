@@ -49,3 +49,29 @@ test('guardBackgroundFor uses palette bg for overlay and neutral dark for invert
   assert.equal(guardBackgroundFor(findPalette('nv-simple')), '#1e2229');
   assert.equal(guardBackgroundFor(findPalette('nv-inv-soft')), '#1e2229');
 });
+
+// ---- M3 custom seat (plan Task 4; M3-BEHAVIOR §4.1/§10-10) ----
+import { USER_CSS_THEME_ID, baseCssForTheme } from '../../src/shared/themes.js';
+
+test('custom seat on a non-site page injects ONLY the user CSS text (§4.1)', () => {
+  const css = baseCssForTheme('custom', 'html { background: #101010 !important; }', false);
+  assert.equal(css, 'html { background: #101010 !important; }');
+});
+
+test('custom seat yields to a matched site theme (§10-10): base becomes nv-simple', () => {
+  const css = baseCssForTheme('custom', 'html { background: #101010 !important; }', true);
+  assert.equal(css, compileThemeById('nv-simple'));
+});
+
+test('custom seat with empty userCss injects empty text (original injects empty too)', () => {
+  assert.equal(baseCssForTheme('custom', '', false), '');
+});
+
+test('classic themes keep their compiled base, siteUsable does not change it', () => {
+  assert.equal(baseCssForTheme('nv-coffee', 'ignored', true), compileThemeById('nv-coffee'));
+  assert.equal(baseCssForTheme('nv-coffee', 'ignored', false), compileThemeById('nv-coffee'));
+});
+
+test('USER_CSS_THEME_ID is the literal seat id', () => {
+  assert.equal(USER_CSS_THEME_ID, 'custom');
+});

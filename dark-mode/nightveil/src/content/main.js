@@ -4,7 +4,7 @@
 // classic theme, apply a flash guard while active, and re-render on changes.
 import { STRINGS } from '../shared/strings.js';
 import { loadSettings, subscribeSettings } from '../shared/settings.js';
-import { compileThemeById, guardBackgroundFor } from '../shared/themes.js';
+import { compileThemeById, baseCssForTheme, guardBackgroundFor } from '../shared/themes.js';
 import { guardCssFor, shouldArmGuard } from '../shared/flashGuard.js';
 import { findPalette } from '../shared/palettes.js';
 import { siteDarkActive, engineOwnsSite } from '../shared/scope.js';
@@ -229,7 +229,7 @@ function applyEngine(settings, site, siteUsable, opts) {
 function applyClassic(settings, site, siteUsable, opts) {
   deactivateEngine();
   armGuard(settings, undefined, opts);
-  injectStyle(CLASSIC_STYLE_ID, compileThemeById(settings.themeId));
+  injectStyle(CLASSIC_STYLE_ID, baseCssForTheme(settings.themeId, settings.userCss, Boolean(siteUsable)));
   if (siteUsable) {
     document.documentElement.setAttribute(SITE_ATTR, site.id);
     injectStyle(SITE_STYLE_ID, compileSiteTheme(site.id));
@@ -284,7 +284,7 @@ function render(settings, opts = {}) {
     whenDomReady(() => {
       if (gen !== renderGeneration) return;
       teardown();
-      if (evaluateRules(rules, collectRuleSignals(true))) { applyColorTemp(settings); return; }
+      if (evaluateRules(rules, collectRuleSignals(true))) { applyColorTemp(settings); return; } // page opts out — stays off
       applyTheme(settings, opts);
       applyColorTemp(settings);
     });

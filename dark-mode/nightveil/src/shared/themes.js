@@ -14,6 +14,17 @@ export function compileThemeById(id) {
   return compileTheme(findPalette(id));
 }
 
+// M3 custom 席位（M3-BEHAVIOR §4.1）：themeId 'custom' 时只注入用户 CSS 文本，
+// 无任何基础层；命中站点主题时 custom 让位（base 退回 nv-simple，站点层照常叠加）。
+export const USER_CSS_THEME_ID = 'custom';
+
+export function baseCssForTheme(themeId, userCss, siteUsable) {
+  if (themeId === USER_CSS_THEME_ID) {
+    return siteUsable ? compileThemeById('nv-simple') : (userCss ?? '');
+  }
+  return compileThemeById(themeId);
+}
+
 function overlayCss({ colors: c }) {
   return `
 html { color-scheme: dark; }
