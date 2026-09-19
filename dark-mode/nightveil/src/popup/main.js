@@ -11,8 +11,8 @@ import {
   DEFAULT_SETTINGS, defaultStorage, loadSettings, saveSettings, subscribeSettings,
 } from '../shared/settings.js';
 import { PALETTES } from '../shared/palettes.js';
-import { hostnameFromUrl } from '../shared/actions.js';
-import { hostnameInList, normalizeHostname } from '../shared/scope.js';
+import { hostnameFromUrl, removeHostFromList } from '../shared/actions.js';
+import { hostnameInList } from '../shared/scope.js';
 import { SEAT_CARDS, seatRadioValue } from '../shared/optionsM3.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -66,7 +66,8 @@ function syncDusk(s) {
 
 // ---- 站点行（#pp-site-row）：排除模式 on ⟺ host ∉ exclusionList；包含模式
 // on ⟺ host ∈ inclusionList。点击切换 host 在当前模式列表中的归属（读态按
-// hostnameInList 子域语义，写态按精确等值过滤——同 actions.js menuClickPatch 先例）。
+// hostnameInList 子域语义，写态删除按 D4 连带管辖父条目——actions.js
+// removeHostFromList，M1b toolbarClickPatch 先例）。
 function renderSiteRow() {
   const pill = el('button', { class: 'site-pill', type: 'button', id: 'pp-site-pill' });
   pill.addEventListener('click', () => {
@@ -74,7 +75,7 @@ function renderSiteRow() {
     const key = current.inclusionMode ? 'inclusionList' : 'exclusionList';
     const list = current[key] ?? [];
     const next = hostnameInList(host, list)
-      ? list.filter((h) => normalizeHostname(h) !== host) // 摘除精确命中，其余保留
+      ? removeHostFromList(list, host) // 连带管辖父条目，兄弟/子条目保留
       : [...list, host];
     current = { ...current, [key]: next };
     save({ [key]: next });

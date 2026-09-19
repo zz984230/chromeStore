@@ -26,7 +26,7 @@ function refreshToolbar(settings) {
 
 // 单个 tab 的图标/标题 = 该 tab 的生效状态（per-tab 覆盖优先于全局兜底）。
 function applyTabState(tabId, url, settings) {
-  if (!url) return; // 无 URL（导航间隙等）→ 保留全局兜底脸
+  if (!url) return; // 无 URL（内部页/权限不可见）→ 跳过本 tab；已设置过的 per-tab 覆盖会保留至下次可见 URL 导航（自愈）
   const siteDark = tabEffectiveDark(settings, hostnameFromUrl(url));
   chrome.action.setIcon({ tabId, path: iconPathsFor(siteDark ? 'dark' : 'light') });
   chrome.action.setTitle({ tabId, title: siteDark ? STRINGS.stateTitleSiteOn : STRINGS.stateTitleSiteOff });

@@ -87,3 +87,20 @@ test('tabEffectiveDark: hostname 为 null（内部页）→ 排除模式按生�
   assert.equal(tabEffectiveDark({ state: 'dark', inclusionMode: false, exclusionList: ['x.com'] }, null), true);
   assert.equal(tabEffectiveDark({ state: 'dark', inclusionMode: true, inclusionList: ['x.com'] }, null), false);
 });
+
+// ---- M3+2 final-review Fix 2：站点行删除按 D4 连带管辖父条目 ----
+import { removeHostFromList } from '../../src/shared/actions.js';
+
+test('removeHostFromList: 精确条目删除，其余保留', () => {
+  assert.deepEqual(removeHostFromList(['gist.github.com', 'keep.com'], 'gist.github.com'), ['keep.com']);
+});
+
+test('removeHostFromList: 管辖父条目连带删除（子域名点击不再 no-op）', () => {
+  assert.deepEqual(removeHostFromList(['github.com'], 'gist.github.com'), []);
+});
+
+test('removeHostFromList: 兄弟/子条目保留（a.github.com 非 gist.github.com 的管辖父条目）', () => {
+  assert.deepEqual(
+    removeHostFromList(['a.github.com', 'other.com'], 'gist.github.com'),
+    ['a.github.com', 'other.com']);
+});

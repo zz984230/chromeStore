@@ -1,7 +1,7 @@
 // src/shared/actions.js
 // Pure decision helpers for background-initiated settings changes.
 // Background wires chrome APIs around these; matching logic stays testable.
-import { normalizeHostname, hostnameInList } from './scope.js';
+import { normalizeHostname, hostnameInList, siteDarkActive } from './scope.js';
 
 export function hostnameFromUrl(url) {
   try { return normalizeHostname(new URL(url).hostname); } catch { return null; }
@@ -33,13 +33,17 @@ export function menuClickPatch(settings, url) {
   return { [key]: [...list, host] };
 }
 
-// Q4 真话化：当前标签页的生效状态——全局 dark 且该站点未被作用域排除。
-// hostname 为 null（内部页）：排除模式按生效、包含模式按不在表（与 popup 站点行的可作用域判定对齐，
-// 但注意 popup 用 http(s) 门控 hostname 为 null；这里 null 语义=不可作用域页）。
+// Q4 真话化：当前标签页的生效状态 = 站点暗色是否生效（scope.js siteDarkActive）。
+// 直接委托：final-review 裁决——工具栏图标必须与页面变暗行为按构造相等，不许两份判定漂移。
 export function tabEffectiveDark(settings, hostname) {
-  if (settings.state !== 'dark') return false;
-  if (!hostname) return !settings.inclusionMode;
-  return settings.inclusionMode
-    ? hostnameInList(hostname, settings.inclusionList ?? [])
-    : !hostnameInList(hostname, settings.exclusionList ?? []);
+  return siteDarkActive(settings, hostname);
+}
+
+// 站点行删除：摘除该 host 及管辖它的父条目，兄弟/子条目保留（D4，M1b
+// toolbarClickPatch 先例）——父条目管辖时按精确等值过滤会变成无操作死按钮。
+export function removeHostFromList(list, host) {
+  return list.filter((e) => {
+    const ne = normalizeHostname(e);
+    return !(host === ne || host.endsWith('.' + ne));
+  });
 }

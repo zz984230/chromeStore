@@ -8,7 +8,8 @@
   /* 设计系统移植自 docs/superpowers/designs/2026-09-19-popup-mockup.html（已认可稿）。
      稿件画布专属的不移植：body 深色底 #0c0e14、.panel 边框/阴影/360px 定宽、
      .variant-tag、演示 <script>——popup 即面板本身，故 body 背景取 var(--bg)、
-     宽度 360px 由 body 承担；两变体合一（结构以变体一为基底），内容由 Task 3 填充。 */
+     宽度 360px 由 body 承担；两变体合一（结构以变体一为基底），内容由 Task 3 填充。
+     另：mockup 面板级 role="group" aria-label="夜幕快捷面板" 未随 .panel 移植（文档 title 已命名）。 */
   :root {
     --bg: #12141c;
     --surface: #1a1e2a;

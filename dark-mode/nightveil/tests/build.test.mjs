@@ -12,6 +12,8 @@ test('build produces a complete loadable extension directory', () => {
     'extension/content.js',
     'extension/options.js',
     'extension/options.html',
+    'extension/popup.html',
+    'extension/popup.js',
     'extension/icons/toolbar/16.png',
     'extension/icons/dark/128.png',
   ];
