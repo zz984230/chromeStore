@@ -65,7 +65,7 @@ function renderDusk() {
   const title = el('h2', { id: 'nv-dusk-title' }, on ? STRINGS.duskTitleOn : STRINGS.duskTitleOff);
   const sub = el('p', {}, on ? STRINGS.duskSubOn : STRINGS.duskSubOff);
   const input = el('input', { type: 'checkbox', id: 'nv-state', checked: on });
-  const sw = el('label', { class: 'dusk-switch' }, input,
+  const sw = el('label', { class: 'dusk-switch', 'aria-labelledby': 'nv-dusk-title' }, input,
     el('span', { class: 'sky' }, el('span', { class: 'stars' }, ...[1, 2, 3, 4].map(() => el('i'))), el('span', { class: 'orb' })));
   host.append(el('div', { class: 'dusk-copy' }, title, sub), sw);
   input.addEventListener('change', () => save({ state: input.checked ? 'dark' : 'light' }));
