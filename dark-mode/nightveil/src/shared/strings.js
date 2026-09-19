@@ -116,7 +116,6 @@ export const STRINGS = Object.freeze({
   stateDarkLabel: '深色',
   inclusionModeLabel: '仅对列表内网站生效',
   inclusionModeNote: '切换后，站点列表的含义随之改变。',
-  perSiteToggleLabel: '工具栏按网站切换',
   rulesLabel: '页面规则',
   ruleMetaSchemeLabel: '网页自带深色声明时让位',
   ruleDarkBackgroundLabel: '网页底色已深时让位',

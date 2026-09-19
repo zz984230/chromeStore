@@ -533,11 +533,8 @@ function renderFontSizeControl() {
 // ---- 高级：杂项（行为残项 + 挂载开关/字号 + 站点主题 + 排除/包含完整列表；
 // #adv-misc 组，列表是首屏站点卡当前模式的完整版备份视图）----
 function renderMisc() {
-  // 行为残项：perSiteToggle + II-area engine 键（复查对，随引擎席位禁用）。
+  // 行为残项：II-area engine 键（复查对，随引擎席位禁用）。
   const behavior = el('fieldset', { id: ENGINE_BEHAVIOR_HOST }, el('legend', {}, STRINGS.behaviorLabel));
-  behavior.append(
-    el('label', {}, el('input', { type: 'checkbox', 'data-key': 'perSiteToggle', checked: current.perSiteToggle }), ` ${STRINGS.perSiteToggleLabel}`),
-  );
   // II-area engine keys per §8: the recheck pair. They disable with the seat —
   // no engine, no effect (sync re-derives this like the #eng-controls fieldset).
   for (const c of ENGINE_CONTROLS.filter((k) => k.host === ENGINE_BEHAVIOR_HOST)) {

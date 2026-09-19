@@ -14,7 +14,6 @@ export const DEFAULT_SETTINGS = Object.freeze({
   state: 'light',          // 'light' | 'dark'
   themeId: 'adaptive',     // engine seat — factory default (M2-BEHAVIOR §11 拍板 1)
   inclusionMode: false,    // false = exclusion semantics; true = only listed sites
-  perSiteToggle: false,    // inclusion mode + true → toolbar click edits inclusionList
   exclusionList: [],       // hostnames; an entry covers itself and its subdomains
   inclusionList: [],
   disabledSiteThemes: [],  // siteThemes.js ids with the refinement layer off

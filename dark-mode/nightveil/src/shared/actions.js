@@ -32,21 +32,3 @@ export function menuClickPatch(settings, url) {
   if (hostnameInList(host, list)) return null;
   return { [key]: [...list, host] };
 }
-
-// Toolbar click: global toggle; in inclusion mode + per-site toggle it flips
-// the current host in the inclusion list instead. Removal drops the host and
-// any parent entry governing it; sibling/child entries stay (D4).
-export function toolbarClickPatch(settings, url) {
-  if (!(settings.inclusionMode && settings.perSiteToggle)) {
-    return { state: settings.state === 'dark' ? 'light' : 'dark' };
-  }
-  const host = hostnameFromUrl(url);
-  if (!host) return { state: settings.state === 'dark' ? 'light' : 'dark' };
-  const list = settings.inclusionList ?? [];
-  if (!hostnameInList(host, list)) return { inclusionList: [...list, host] };
-  const kept = list.filter((e) => {
-    const ne = normalizeHostname(e);
-    return !(host === ne || host.endsWith(`.${ne}`));
-  });
-  return { inclusionList: kept };
-}
