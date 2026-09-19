@@ -56,3 +56,34 @@ test('menuClickPatch: light + CT on still routes site lists? no — color-temp w
   assert.deepEqual(patch.colorTemperature.excludedHosts, ['y.com']);
   assert.equal(patch.exclusionList, undefined, '不得误写暗色排除表');
 });
+
+// ---- M3+2 Task 4：Q4 真话化——tabEffectiveDark 六分支真值表 ----
+import { tabEffectiveDark } from '../../src/shared/actions.js';
+
+test('tabEffectiveDark: dark + 排除模式 + 未列入 → 生效（true）', () => {
+  assert.equal(tabEffectiveDark({ state: 'dark', inclusionMode: false, exclusionList: ['x.com'] }, 'y.com'), true);
+});
+
+test('tabEffectiveDark: dark + 排除模式 + 已列入 → 不生效（false，含子域名）', () => {
+  const s = { state: 'dark', inclusionMode: false, exclusionList: ['x.com'] };
+  assert.equal(tabEffectiveDark(s, 'x.com'), false);
+  assert.equal(tabEffectiveDark(s, 'sub.x.com'), false, '条目覆盖其子域名');
+});
+
+test('tabEffectiveDark: dark + 包含模式 + 未列入 → 不生效（false）', () => {
+  assert.equal(tabEffectiveDark({ state: 'dark', inclusionMode: true, inclusionList: ['x.com'] }, 'y.com'), false);
+});
+
+test('tabEffectiveDark: dark + 包含模式 + 已列入 → 生效（true）', () => {
+  assert.equal(tabEffectiveDark({ state: 'dark', inclusionMode: true, inclusionList: ['x.com'] }, 'x.com'), true);
+});
+
+test('tabEffectiveDark: 全局浅色 → 两模式均 false', () => {
+  assert.equal(tabEffectiveDark({ state: 'light', inclusionMode: false, exclusionList: [] }, 'y.com'), false);
+  assert.equal(tabEffectiveDark({ state: 'light', inclusionMode: true, inclusionList: ['y.com'] }, 'y.com'), false);
+});
+
+test('tabEffectiveDark: hostname 为 null（内部页）→ 排除模式按生效、包含模式按不在表', () => {
+  assert.equal(tabEffectiveDark({ state: 'dark', inclusionMode: false, exclusionList: ['x.com'] }, null), true);
+  assert.equal(tabEffectiveDark({ state: 'dark', inclusionMode: true, inclusionList: ['x.com'] }, null), false);
+});

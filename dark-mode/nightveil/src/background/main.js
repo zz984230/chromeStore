@@ -5,18 +5,45 @@
 import { STRINGS } from '../shared/strings.js';
 import { loadSettings, saveSettings, subscribeSettings } from '../shared/settings.js';
 import { iconPathsFor } from '../shared/icons.js';
-import { menuSpec, menuClickPatch } from '../shared/actions.js';
+import { menuSpec, menuClickPatch, hostnameFromUrl, tabEffectiveDark } from '../shared/actions.js';
 import { alarmStatePatch, syncAlarms } from '../shared/schedule.js';
 
 const MENU_ID = 'nv-site-list';
 
 console.debug(STRINGS.swStartedDebug);
 
+// Q4 真话化：图标/标题按「每个标签页的生效状态」显示。全局兜底（不带 tabId）先
+// 铺一次，覆盖无 URL 的 tab 与尚未追踪的新 tab；随后全量扫描，对每个有 URL 的
+// tab 叠加 per-tab 覆盖（M1 的全量刷新路径，存储变更时照旧全扫）。
 function refreshToolbar(settings) {
   const dark = settings.state === 'dark';
   chrome.action.setIcon({ path: iconPathsFor(settings.state) });
   chrome.action.setTitle({ title: dark ? STRINGS.stateTitleDark : STRINGS.stateTitleLight });
+  chrome.tabs.query({}, (tabs) => {
+    for (const tab of tabs) applyTabState(tab.id, tab.url, settings);
+  });
 }
+
+// 单个 tab 的图标/标题 = 该 tab 的生效状态（per-tab 覆盖优先于全局兜底）。
+function applyTabState(tabId, url, settings) {
+  if (!url) return; // 无 URL（导航间隙等）→ 保留全局兜底脸
+  const siteDark = tabEffectiveDark(settings, hostnameFromUrl(url));
+  chrome.action.setIcon({ tabId, path: iconPathsFor(siteDark ? 'dark' : 'light') });
+  chrome.action.setTitle({ tabId, title: siteDark ? STRINGS.stateTitleSiteOn : STRINGS.stateTitleSiteOff });
+}
+
+// 事件驱动的单 tab 刷新：只取该 tab、只读一次设置，绝不全量 query。
+async function refreshTabIcon(tabId) {
+  const [settings, tab] = await Promise.all([loadSettings(), chrome.tabs.get(tabId).catch(() => null)]);
+  if (tab) applyTabState(tab.id, tab.url, settings); // tab 已关闭 → 静默放弃
+}
+
+// 导航改变 tab 的 URL/加载状态 → 该 tab 的生效状态可能翻转。
+chrome.tabs.onUpdated.addListener((tabId, info) => {
+  if (info.url !== undefined || info.status !== undefined) refreshTabIcon(tabId);
+});
+// 切换标签页 → 把该 tab 的图标刷成它自己的生效状态。
+chrome.tabs.onActivated.addListener(({ tabId }) => { refreshTabIcon(tabId); });
 
 let menuTitle = '';
 let menuIsColorTemp = false;

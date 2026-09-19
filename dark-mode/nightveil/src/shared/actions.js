@@ -32,3 +32,14 @@ export function menuClickPatch(settings, url) {
   if (hostnameInList(host, list)) return null;
   return { [key]: [...list, host] };
 }
+
+// Q4 真话化：当前标签页的生效状态——全局 dark 且该站点未被作用域排除。
+// hostname 为 null（内部页）：排除模式按生效、包含模式按不在表（与 popup 站点行的可作用域判定对齐，
+// 但注意 popup 用 http(s) 门控 hostname 为 null；这里 null 语义=不可作用域页）。
+export function tabEffectiveDark(settings, hostname) {
+  if (settings.state !== 'dark') return false;
+  if (!hostname) return !settings.inclusionMode;
+  return settings.inclusionMode
+    ? hostnameInList(hostname, settings.inclusionList ?? [])
+    : !hostnameInList(hostname, settings.exclusionList ?? []);
+}
