@@ -18,6 +18,8 @@ import {
   controlValue, tuningFallback, engineValueAt,
 } from '../shared/optionsEngine.js';
 import { ENGINE_VARIABLES, EXTRA_RULES_DEFAULT } from '../shared/engineTheme.js';
+import { SECTION_ORDER, sectionKeyOf, FLASHGUARD_MODES, parseHostList, clampNumber } from '../shared/optionsM3.js';
+import { USER_CSS_THEME_ID } from '../shared/themes.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -64,6 +66,8 @@ function renderThemes() {
     }
     classic.append(el('p', { class: 'hint' }, label), group);
   }
+  classic.append(el('p', { class: 'hint' }, STRINGS.customThemeLabel), el('div', { class: 'cols' },
+    el('label', {}, el('input', { type: 'radio', name: 'themeId', value: USER_CSS_THEME_ID, checked: current.themeId === USER_CSS_THEME_ID }), ` ${STRINGS.customThemeLabel}`)));
   classic.addEventListener('change', (e) => {
     if (e.target.name === 'themeId') save({ themeId: e.target.value });
   });
@@ -87,10 +91,142 @@ function renderThemes() {
   section('sec-themes', STRINGS.sectionThemesLabel, classic, sites);
 }
 
-// ---- Placeholder sections (III / VII) ----
-function renderPlaceholders() {
-  section('sec-usercss', STRINGS.sectionUserCssLabel, note(STRINGS.sectionUserCssNote));
-  section('sec-schedule', STRINGS.sectionScheduleLabel, note(STRINGS.sectionScheduleNote));
+// ---- M3 sections/controls（M3-BEHAVIOR §1/§2/§3/§6）----
+function renderGuardControls() {
+  const fg = current.flashGuard ?? {};
+  const master = el('label', {}, el('input', { type: 'checkbox', id: 'fg-enabled', checked: fg.enabled }), ` ${STRINGS.guardGroupLabel}`);
+  const box = el('fieldset', { id: 'fg-controls', disabled: fg.enabled === false }, master,
+    ...FLASHGUARD_MODES.map((m) => el('label', {},
+      el('input', { type: 'radio', name: 'fgMode', id: `fg-mode-${m.value}`, value: m.value, checked: fg.mode === m.value }), ` ${m.label}`)),
+    el('label', {}, `${STRINGS.guardDelayLabel} `, el('input', { type: 'number', id: 'fg-delay', min: '0', max: '10000', value: fg.delayMs })),
+    el('label', {}, `${STRINGS.guardThresholdLabel} `, el('input', { type: 'number', id: 'fg-threshold', min: '1', max: '1000000', value: fg.threshold })));
+  box.addEventListener('change', (e) => {
+    const next = { ...(current.flashGuard ?? {}) };
+    if (e.target.id === 'fg-enabled') next.enabled = e.target.checked;
+    else if (e.target.name === 'fgMode') next.mode = e.target.value;
+    else if (e.target.id === 'fg-delay') next.delayMs = clampNumber(e.target.value, 0, 10000, current.flashGuard.delayMs);
+    else if (e.target.id === 'fg-threshold') next.threshold = clampNumber(e.target.value, 1, 1000000, current.flashGuard.threshold);
+    else return;
+    if ((e.target.id === 'fg-delay' || e.target.id === 'fg-threshold') && e.target.value === '') return; // 空数字不落盘
+    current = { ...current, flashGuard: next };
+    save({ flashGuard: next });
+    document.getElementById('fg-controls').disabled = next.enabled === false;
+  });
+  return box;
+}
+
+function renderColorTempControls() {
+  const ct = current.colorTemperature ?? {};
+  const slider = (id, label, max, value) => el('label', {}, `${label} `,
+    el('input', { type: 'range', id, min: '0', max: String(max), step: '1', value }), ' ',
+    el('output', { for: id }, String(value)));
+  const master = el('label', {}, el('input', { type: 'checkbox', id: 'ct-enabled', checked: ct.enabled }), ` ${STRINGS.colorTempGroupLabel}`);
+  const box = el('fieldset', { id: 'ct-controls', disabled: ct.enabled === false }, master,
+    slider('ct-red', STRINGS.ctRedLabel, 255, ct.red),
+    slider('ct-green', STRINGS.ctGreenLabel, 255, ct.green),
+    slider('ct-blue', STRINGS.ctBlueLabel, 255, ct.blue),
+    slider('ct-opacity', STRINGS.ctOpacityLabel, 100, ct.opacity),
+    el('p', { class: 'hint' }, STRINGS.ctListLabel),
+    el('textarea', { id: 'ct-list', 'data-ct-list': '' }, (ct.excludedHosts ?? []).join('\n')),
+    note(STRINGS.ctListHint));
+  // 原版滑杆 input 实时存（§6.4）；列表 textarea change 存（nightveil 列表约定）。
+  box.addEventListener('input', (e) => {
+    if (e.target.type !== 'range') return;
+    const next = { ...(current.colorTemperature ?? {}) };
+    const k = { 'ct-red': 'red', 'ct-green': 'green', 'ct-blue': 'blue', 'ct-opacity': 'opacity' }[e.target.id];
+    if (!k) return;
+    next[k] = Number(e.target.value);
+    const out = box.querySelector(`output[for="${e.target.id}"]`);
+    if (out) out.textContent = e.target.value;
+    current = { ...current, colorTemperature: next };
+    save({ colorTemperature: next });
+  });
+  box.addEventListener('change', (e) => {
+    if (e.target.id === 'ct-enabled') {
+      const next = { ...(current.colorTemperature ?? {}), enabled: e.target.checked };
+      current = { ...current, colorTemperature: next };
+      save({ colorTemperature: next });
+      document.getElementById('ct-controls').disabled = next.enabled === false;
+    } else if (e.target.id === 'ct-list') {
+      const next = { ...(current.colorTemperature ?? {}), excludedHosts: parseHostList(e.target.value) };
+      current = { ...current, colorTemperature: next };
+      save({ colorTemperature: next });
+    }
+  });
+  return box;
+}
+
+function renderUserCssSection() {
+  const ta = el('textarea', { id: 'usercss', rows: '12' }, current.userCss ?? '');
+  const box = el('div', {}, el('p', { class: 'hint' }, STRINGS.userCssAreaLabel), ta, note(STRINGS.sectionUserCssNote));
+  // 原版 keyup 逐键保存（M3-BEHAVIOR §4.1）。
+  ta.addEventListener('keyup', () => save({ userCss: ta.value }));
+  section('sec-usercss', STRINGS.sectionUserCssLabel, box);
+}
+
+function renderScheduleSection() {
+  const sch = current.schedule ?? {};
+  const box = el('fieldset', {},
+    el('label', {}, el('input', { type: 'checkbox', id: 'sch-enabled', checked: sch.enabled }), ` ${STRINGS.sectionScheduleLabel}`),
+    el('label', {}, `${STRINGS.scheduleOnLabel} `, el('input', { type: 'time', id: 'sch-on', value: sch.onTime })),
+    el('label', {}, `${STRINGS.scheduleOffLabel} `, el('input', { type: 'time', id: 'sch-off', value: sch.offTime })),
+    note(STRINGS.sectionScheduleNote));
+  const saveSchedule = (patch) => {
+    const next = { ...(current.schedule ?? {}), ...patch };
+    current = { ...current, schedule: next };
+    save({ schedule: next });
+  };
+  box.addEventListener('change', (e) => {
+    if (e.target.id === 'sch-on') saveSchedule({ onTime: e.target.value });
+    else if (e.target.id === 'sch-off') saveSchedule({ offTime: e.target.value });
+    else if (e.target.id === 'sch-enabled') {
+      if (e.target.checked && writable) {
+        // 原版：勾选定时开关即请求 alarms 权限，拒绝则回退（M3-BEHAVIOR §3.1）。
+        chrome.permissions.request({ permissions: ['alarms'] }, (granted) => {
+          if (granted) { saveSchedule({ enabled: true }); }
+          else {
+            e.target.checked = false;
+            window.alert(STRINGS.schedulePermissionAlert);
+          }
+        });
+      } else {
+        saveSchedule({ enabled: e.target.checked });
+      }
+    }
+  });
+  section('sec-schedule', STRINGS.sectionScheduleLabel, box);
+}
+
+// §6.1 字号：number 10-22，change 存，--font-size 变量即时应用。
+function renderFontSizeControl() {
+  const input = el('input', { type: 'number', id: 'ui-fontsize', min: '10', max: '22', step: '1', value: current.ui?.fontSize ?? 13 });
+  const row = el('label', {}, `${STRINGS.fontSizeLabel} `, input);
+  input.addEventListener('change', () => {
+    if (input.value === '') return; // 空数字不落盘
+    const v = clampNumber(input.value, 10, 22, current.ui.fontSize);
+    const next = { ...current.ui, fontSize: v };
+    current = { ...current, ui: next };
+    save({ ui: next });
+  });
+  return row;
+}
+
+// §6.2 分区折叠持久化：details toggle → ui.sectionOpen 补丁。
+function applySectionState() {
+  for (const id of SECTION_ORDER) {
+    const d = document.getElementById(id);
+    if (!d) continue;
+    d.open = Boolean(current.ui?.sectionOpen?.[sectionKeyOf(id)]);
+    d.addEventListener('toggle', () => {
+      if (!writable) return;
+      const next = { ...current.ui, sectionOpen: { ...(current.ui?.sectionOpen ?? {}), [sectionKeyOf(id)]: d.open } };
+      current = { ...current, ui: next };
+      save({ ui: next });
+    });
+  }
+}
+function applyFontSize(v) {
+  document.documentElement.style.setProperty('--font-size', `${v}px`);
 }
 
 // ---- Section IV: adaptive engine (the §8 sub-option controls render from
@@ -246,6 +382,7 @@ function renderBehavior() {
     if (onEngineControlChange(e)) return;
     if (e.target.name === 'state') save({ state: e.target.value });
     else if (e.target.getAttribute('data-key')) save({ [e.target.getAttribute('data-key')]: e.target.checked });
+    else if (e.target.getAttribute('data-m3key')) save({ [e.target.getAttribute('data-m3key')]: e.target.checked });
   });
 
   const r = current.exclusionRules ?? {};
@@ -267,7 +404,14 @@ function renderBehavior() {
     save({ exclusionRules: { ...(current.exclusionRules ?? {}), [key]: val } });
   });
 
-  section('sec-options', STRINGS.sectionOptionsLabel, box, rules);
+  section('sec-options', STRINGS.sectionOptionsLabel,
+    box, rules,
+    renderGuardControls(),
+    renderColorTempControls(),
+    el('fieldset', {},
+      el('label', {}, el('input', { type: 'checkbox', 'data-m3key': 'documentRoot', checked: current.documentRoot }), ` ${STRINGS.documentRootLabel}`),
+      el('label', {}, el('input', { type: 'checkbox', 'data-m3key': 'reattachStyles', checked: current.reattachStyles }), ` ${STRINGS.reattachStylesLabel}`),
+      renderFontSizeControl()));
 }
 
 // ---- Sections V / VI: hostname lists ----
@@ -344,6 +488,51 @@ function syncFromSettings(s) {
   for (const ta of document.querySelectorAll('textarea[data-list]')) {
     if (document.activeElement !== ta) ta.value = (s[ta.getAttribute('data-list')] ?? []).join('\n');
   }
+  // ---- M3 sync ----
+  applyFontSize(s.ui?.fontSize ?? 13);
+  const fgNode = document.getElementById('fg-enabled');
+  if (fgNode) {
+    const fg = s.flashGuard ?? {};
+    fgNode.checked = fg.enabled !== false;
+    document.getElementById('fg-controls').disabled = fg.enabled === false;
+    for (const i of document.querySelectorAll('input[name="fgMode"]')) i.checked = i.value === fg.mode;
+    if (document.activeElement?.id !== 'fg-delay') document.getElementById('fg-delay').value = fg.delayMs;
+    if (document.activeElement?.id !== 'fg-threshold') document.getElementById('fg-threshold').value = fg.threshold;
+  }
+  const ctNode = document.getElementById('ct-enabled');
+  if (ctNode) {
+    const ct = s.colorTemperature ?? {};
+    ctNode.checked = Boolean(ct.enabled);
+    document.getElementById('ct-controls').disabled = !ct.enabled;
+    for (const [id, k] of [['ct-red', 'red'], ['ct-green', 'green'], ['ct-blue', 'blue'], ['ct-opacity', 'opacity']]) {
+      const node = document.getElementById(id);
+      if (node && document.activeElement !== node) {
+        node.value = ct[k];
+        const out = document.querySelector(`output[for="${id}"]`);
+        if (out) out.textContent = String(ct[k]);
+      }
+    }
+    const list = document.getElementById('ct-list');
+    if (list && document.activeElement !== list) list.value = (ct.excludedHosts ?? []).join('\n');
+  }
+  const schOn = document.getElementById('sch-on');
+  if (schOn) {
+    document.getElementById('sch-enabled').checked = Boolean(s.schedule?.enabled);
+    if (document.activeElement !== schOn) schOn.value = s.schedule?.onTime ?? '';
+    const off = document.getElementById('sch-off');
+    if (off && document.activeElement !== off) off.value = s.schedule?.offTime ?? '';
+  }
+  const uc = document.getElementById('usercss');
+  if (uc && document.activeElement !== uc) uc.value = s.userCss ?? '';
+  for (const i of document.querySelectorAll('#sec-options input[data-m3key]')) {
+    i.checked = Boolean(s[i.getAttribute('data-m3key')]);
+  }
+  const fs = document.getElementById('ui-fontsize');
+  if (fs && document.activeElement !== fs) fs.value = s.ui?.fontSize ?? 13;
+  for (const id of SECTION_ORDER) {
+    const d = document.getElementById(id);
+    if (d) d.open = Boolean(s.ui?.sectionOpen?.[sectionKeyOf(id)]);
+  }
 }
 
 function renderAll() {
@@ -352,7 +541,10 @@ function renderAll() {
   renderListSection('sec-exclusion', STRINGS.sectionExclusionLabel, 'exclusionList', STRINGS.exclusionListLabel);
   renderListSection('sec-inclusion', STRINGS.sectionInclusionLabel, 'inclusionList', STRINGS.inclusionListLabel);
   renderEngine();
-  renderPlaceholders();
+  renderUserCssSection();
+  renderScheduleSection();
+  applySectionState();
+  applyFontSize(current.ui?.fontSize ?? 13);
 }
 
 function render() {
