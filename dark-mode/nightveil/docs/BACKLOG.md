@@ -58,6 +58,12 @@
 - [ ] 命名债：clearVideoStages 实际清理全部媒体舞台标记，下次触碰时改名 clearMediaStages
 - [ ] 舞台子树内的图截文字双重渲染角落情况：舞台豁免使 sprite 背景幸存，而 text-indent 召回让真实文字也显示（2026-09-12 wave-7 审查发现；真例出现时给召回规则加舞台排除或拆分规则）
 
+## M3 终审递延（2026-09-19，fable 全分支终审 triage）
+
+- [ ] lateCheck 迟到排除路径补 applyColorTemp 调用（三重交集才触发：dark + 色温开 + 迟到 meta 排除；含未命中分支行为已与原版一致——下次触碰 content/main.js 时顺手补一行）
+- [ ] ui.sectionOpen 部分合并补一条存量子场景单测（现仅默认回填路径有测试）
+- [ ] （验收覆盖点）guard/CT master-outside-fieldset 布局无结构钉子测试——/tabbit 真机验收覆盖开关往返
+
 ## 已知局限（Adaptive Engine 颜色改写，2026-09-13 M2 设计确立）
 
 - [ ] 现代 CSS 颜色语法（oklch() / lab() / color-mix() 等）不改写，检测到即跳过所在规则——与原版 tinycolor 时代能力面对等（M2 grilling D4 决策）；复刻期后作为独立迭代补齐
