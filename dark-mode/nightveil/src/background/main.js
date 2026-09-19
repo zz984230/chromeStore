@@ -5,7 +5,7 @@
 import { STRINGS } from '../shared/strings.js';
 import { loadSettings, saveSettings, subscribeSettings } from '../shared/settings.js';
 import { iconPathsFor } from '../shared/icons.js';
-import { hostnameFromUrl, menuClickPatch, toolbarClickPatch } from '../shared/actions.js';
+import { hostnameFromUrl, menuSpec, menuClickPatch, toolbarClickPatch } from '../shared/actions.js';
 import { hostnameInList } from '../shared/scope.js';
 import { ALARM_ON, ALARM_OFF, alarmStatePatch, syncAlarms } from '../shared/schedule.js';
 
@@ -20,10 +20,14 @@ function refreshToolbar(settings) {
 }
 
 let menuTitle = '';
+let menuIsColorTemp = false;
 function refreshMenu(settings) {
-  const title = settings.inclusionMode ? STRINGS.menuIncludeSite : STRINGS.menuExcludeSite;
-  if (title === menuTitle) return;
-  menuTitle = title;
+  const spec = menuSpec(settings);
+  const isCt = spec.mode === 'color-temp';
+  const title = isCt ? STRINGS.menuExcludeColorTemp
+    : settings.inclusionMode ? STRINGS.menuIncludeSite : STRINGS.menuExcludeSite;
+  if (title === menuTitle && isCt === menuIsColorTemp) return;
+  menuTitle = title; menuIsColorTemp = isCt;
   // recreate (not update) so the menu also exists on a fresh service worker
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({ id: MENU_ID, title, contexts: ['page'] });

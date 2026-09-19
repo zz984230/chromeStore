@@ -154,4 +154,5 @@ export const STRINGS = Object.freeze({
   scheduleOnLabel: 'Dark at',
   scheduleOffLabel: 'Light at',
   schedulePermissionAlert: "The 'alarms' permission is required to be able to set schedules.",
+  menuExcludeColorTemp: 'Exclude from color temperature',
 });
