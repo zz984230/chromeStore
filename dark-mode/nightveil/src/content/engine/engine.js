@@ -368,7 +368,13 @@ function rewriteKeyframes(rule, conditions = []) {
   let index;
   try { index = sheet.insertRule(copyKeyframesBlock(rule, conditions), 0); } catch { return; }
   state.writtenKeyframes.add(kfKey);
-  const copy = sheet.cssRules[index];
+  let node = sheet.cssRules[index];
+  // 条件包裹时 insertRule 回的是 @media/@supports 包裹层——下钻到 keyframes 规则本体
+  //（CSSKeyframesRule 有 .name；grouping 规则没有。链上每层恰有一个子规则）。
+  while (node && node.cssRules && node.cssRules.length && node.name === undefined) {
+    node = node.cssRules[0];
+  }
+  const copy = node;
   if (!copy?.cssRules) return;
   for (const kf of copy.cssRules) {
     if (!kf.style) continue;
