@@ -7,6 +7,7 @@ import { loadSettings, saveSettings, subscribeSettings } from '../shared/setting
 import { iconPathsFor } from '../shared/icons.js';
 import { hostnameFromUrl, menuClickPatch, toolbarClickPatch } from '../shared/actions.js';
 import { hostnameInList } from '../shared/scope.js';
+import { ALARM_ON, ALARM_OFF, alarmStatePatch, syncAlarms } from '../shared/schedule.js';
 
 const MENU_ID = 'nv-site-list';
 
@@ -53,7 +54,7 @@ loadSettings().then((s) => { refreshToolbar(s); refreshMenu(s); });
 chrome.runtime.onStartup.addListener(() => {
   loadSettings().then(refreshToolbar);
 });
-subscribeSettings((s) => { refreshToolbar(s); refreshMenu(s); });
+subscribeSettings((s) => { refreshToolbar(s); refreshMenu(s); syncAlarms(s); });
 
 // Cross-origin stylesheet proxy for the adaptive engine (M2a): content
 // scripts are page-CORS-bound; the SW holds host_permissions so it can read
@@ -66,3 +67,16 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     .catch(() => sendResponse({ ok: false }));
   return true; // async sendResponse
 });
+
+// ---- M3 Schedule（M3-BEHAVIOR §3）：一次性 alarm，触发即走 saveSettings 全链 ----
+
+// state 写入会经 subscribeSettings 再次 syncAlarms —— 触发后自动重排次日。
+if (chrome.alarms) {
+  chrome.alarms.onAlarm.addListener((alarm) => {
+    const patch = alarmStatePatch(alarm.name);
+    if (patch) saveSettings(patch);
+  });
+  chrome.runtime.onStartup.addListener(() => { loadSettings().then(syncAlarms); });
+  chrome.runtime.onInstalled.addListener(() => { loadSettings().then(syncAlarms); });
+}
+loadSettings().then(syncAlarms);
