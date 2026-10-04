@@ -67,23 +67,26 @@ function sdRoundRect(px, py, half, r) {
   return Math.min(Math.max(qx, qy), 0) + Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - r;
 }
 
-// 章鱼标记覆盖率:圆顶头 + 四条弧腿。p 为标记坐标,s 为腿位相(0..3)。
+// 章鱼标记覆盖率:圆顶头(下延焊接腿根)+ 四腿(顶收拢、底张开、外短内长)。
 function octopusMark(px, py) {
-  // 头:上侧圆
-  const headR = 0.42;
-  const inHead = py <= 0.05 && px * px + (py - 0.05) * (py - 0.05) <= headR * headR;
+  const headR = 0.42, headCy = 0.05;
+  const inHead = py <= 0.12 && px * px + (py - headCy) * (py - headCy) <= headR * headR;
   if (inHead) return true;
-  // 四腿:从头部下缘向外的弧带
-  const legY0 = 0.05, legY1 = 0.92;
+  const legY0 = 0.02, legY1 = 0.92;
   if (py < legY0 || py > legY1) return false;
-  const t = (py - legY0) / (legY1 - legY0); // 0..1 沿腿
   const centers = [-0.66, -0.22, 0.22, 0.66];
-  for (const cx of centers) {
-    const sway = 0.10 * Math.sin(t * Math.PI * 1.5 + cx * 2); // 波浪裙边
-    const dx = px - (cx + sway);
-    const dy = (py - legY0);
-    const halfW = 0.085 + 0.045 * (1 - t); // 腿根粗、梢细
-    if (Math.abs(dx) <= halfW && dy <= legY1 - legY0) return true;
+  for (let i = 0; i < centers.length; i++) {
+    const cx = centers[i];
+    const outer = Math.abs(cx) > 0.4;
+    const y1 = outer ? 0.80 : legY1;
+    if (py > y1) continue;
+    const t = (py - legY0) / (legY1 - legY0);
+    const spread = cx * (0.5 + 0.5 * t);
+    const sway = 0.10 * Math.sin(t * Math.PI * 1.5 + cx * 2) * (0.3 + 0.7 * t);
+    const dx = px - (spread + sway);
+    const tt = (py - legY0) / (y1 - legY0);
+    const halfW = 0.085 + 0.045 * (1 - tt);
+    if (Math.abs(dx) <= halfW) return true;
   }
   return false;
 }
