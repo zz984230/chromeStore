@@ -188,7 +188,7 @@ git commit -m "feat(m0): pace 移植 — 整树落位 tools/pace,content.css 随
 - Test: `tests/shell/registry.test.mjs`
 
 **Interfaces:**
-- Produces: `TOOLS: Array<ToolContract>`、`toolById(id)`。ToolContract 形状:`{ id: string, manifest: { permissions: string[], optionalPermissions: string[], contentScripts: object[], webAccessibleResources: object[], commands: object } }`。Task 5 的 `assembleManifest(tools, { version })` 与 Task 6 的 build 都消费 `TOOLS`;Task 9 的 popup 壳消费 `toolById`。
+- Produces: `TOOLS: Array<ToolContract>`、`toolById(id)`。ToolContract 形状:`{ id: string, manifest: { permissions: string[], optionalPermissions: string[], hostPermissions: string[], contentScripts: object[], webAccessibleResources: object[], commands: object } }`。Task 5 的 `assembleManifest(tools, { version })` 与 Task 6 的 build 都消费 `TOOLS`;Task 9 的 popup 壳消费 `toolById`。
 
 - [ ] **Step 1: 写失败测试**
 
@@ -226,6 +226,7 @@ export const tool = {
   id: 'veil',
   manifest: {
     permissions: ['contextMenus'],
+    hostPermissions: ['<all_urls>'], // SW 跨域样式代取(引擎命脉)需要;pace 经实证不需要
     optionalPermissions: ['alarms'],
     contentScripts: [{
       matches: ['<all_urls>'],
@@ -251,6 +252,7 @@ export const tool = {
   manifest: {
     permissions: [],
     optionalPermissions: [],
+    hostPermissions: [], // 注入走 manifest matches,无需宿主权限;tabs.sendMessage 对自家脚本放行
     contentScripts: [{
       matches: ['<all_urls>'],
       js: ['tools/pace/content.js'],
@@ -344,6 +346,7 @@ test('基座字段:名称/描述来自壳文案,版本透传', () => {
 test('权限并集去重且精确:storage+contextMenus,可选 alarms,无 activeTab', () => {
   assert.deepEqual(m.permissions, ['storage', 'contextMenus']);
   assert.deepEqual(m.optional_permissions, ['alarms']);
+  assert.deepEqual(m.host_permissions, ['<all_urls>']); // 仅 veil 申报(SW 跨域代取)
 });
 
 test('content_scripts 两条 entry 按注册顺序,逐字段保真', () => {
@@ -381,6 +384,7 @@ import { SHELL_STRINGS } from '../src/shell/strings.js';
 export function assembleManifest(tools, { version }) {
   const permissions = new Set(['storage']); // 壳自身与两工具共用
   const optional = new Set();
+  const hosts = new Set();
   const contentScripts = [];
   const war = [];
   const commands = {};
@@ -388,6 +392,7 @@ export function assembleManifest(tools, { version }) {
     const m = t.manifest ?? {};
     for (const p of m.permissions ?? []) permissions.add(p);
     for (const p of m.optionalPermissions ?? []) optional.add(p);
+    for (const h of m.hostPermissions ?? []) hosts.add(h);
     contentScripts.push(...(m.contentScripts ?? []));
     war.push(...(m.webAccessibleResources ?? []));
     Object.assign(commands, m.commands ?? {});
@@ -409,6 +414,7 @@ export function assembleManifest(tools, { version }) {
     options_ui: { open_in_tab: true, page: 'options.html' },
     permissions: [...permissions],
     optional_permissions: [...optional],
+    host_permissions: [...hosts],
     content_scripts: contentScripts,
     web_accessible_resources: war,
     commands,
