@@ -42,7 +42,7 @@
 **Interfaces:**
 - Produces: npm 工程,后续任务在此目录内工作(`cd octopus`)。
 
-- [ ] **Step 1: 写 package.json**
+- [x] **Step 1: 写 package.json**
 
 ```json
 {
@@ -63,19 +63,19 @@
 }
 ```
 
-- [ ] **Step 2: 写 .gitignore**
+- [x] **Step 2: 写 .gitignore**
 
 ```
 node_modules/
 extension/
 ```
 
-- [ ] **Step 3: 安装并验证**
+- [x] **Step 3: 安装并验证**
 
 Run: `cd octopus && npm install && npm test`
 Expected: `node --test` 报 "no test files found" 类退出码——此时无测试属正常,记录实际输出;`ls node_modules/.bin/esbuild` 存在。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add octopus/package.json octopus/.gitignore octopus/package-lock.json
@@ -94,7 +94,7 @@ git commit -m "chore(m0): octopus 脚手架 — npm 工程 esbuild 单依赖"
 - Produces: `src/tools/veil/{background,content,options,popup,shared}/` 内部相对导入不变;测试从 `tests/veil/*.test.mjs` 以 `../../src/tools/veil/...` 导入。
 - 本任务**不拷**:`build.test.mjs`(在 tests/ 顶层而非 unit/,unit 循环天然不含;Task 6)、`server.test.mjs`(Task 11)、`strings-source.test.mjs`(Task 10 重写为壳版)、`icons.test.mjs`(NV 侧生成器测试,与 VA `gen-icons.test.mjs` 同类;Task 7 以壳版重写)。
 
-- [ ] **Step 1: 拷源码树**
+- [x] **Step 1: 拷源码树**
 
 ```bash
 cd octopus
@@ -103,7 +103,7 @@ cp -R ../dark-mode/nightveil/src/background ../dark-mode/nightveil/src/content .
 cp ../dark-mode/nightveil/public/nv-shadow-hook.js public/tools/veil/
 ```
 
-- [ ] **Step 2: 拷测试(排除 3 文件)并改写导入路径**
+- [x] **Step 2: 拷测试(排除 3 文件)并改写导入路径**
 
 ```bash
 for f in ../dark-mode/nightveil/tests/unit/*.test.mjs; do
@@ -116,7 +116,7 @@ done
 sed -i '' -e "s#src/shared/#src/tools/veil/shared/#g" -e "s#src/content/#src/tools/veil/content/#g" -e "s#src/background/#src/tools/veil/background/#g" -e "s#src/popup/#src/tools/veil/popup/#g" -e "s#src/options/#src/tools/veil/options/#g" tests/veil/*.test.mjs
 ```
 
-- [ ] **Step 3: 改 shadow-hook 资源路径(唯一运行时路径改动)**
+- [x] **Step 3: 改 shadow-hook 资源路径(唯一运行时路径改动)**
 
 编辑 `src/tools/veil/content/engine/engine.js:653`:
 
@@ -124,12 +124,12 @@ sed -i '' -e "s#src/shared/#src/tools/veil/shared/#g" -e "s#src/content/#src/too
   script.src = chrome.runtime.getURL('tools/veil/nv-shadow-hook.js');
 ```
 
-- [ ] **Step 4: 跑移植测试并记录基线**
+- [x] **Step 4: 跑移植测试并记录基线**
 
 Run: `node --test --test-isolation=none "tests/veil/*.test.mjs"`(Node 25 下目录传参报 ERR_UNSUPPORTED_DIR_IMPORT,须用引号 glob)
 Expected: 全绿。记录测试数(nightveil 实测全量 224 = unit 223 + 顶层 build 1;移植基线 = 224 − build 1 − server 1 − strings-source 3 − icons 2 = 217)。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add octopus/src/tools/veil octopus/tests/veil octopus/public/tools/veil
@@ -148,7 +148,7 @@ git commit -m "feat(m0): veil 移植 — 整树落位 tools/veil,导入零改写
 - Produces: `src/tools/pace/{background,content,popup,shared}/`。
 - 本任务**不拷**:`gen-icons.test.mjs`(Task 7 以壳版重写)。
 
-- [ ] **Step 1: 拷源码树与资产**
+- [x] **Step 1: 拷源码树与资产**
 
 ```bash
 cd octopus
@@ -157,7 +157,7 @@ mkdir -p public/tools/pace tests/pace
 cp ../video-acc/public/content.css public/tools/pace/
 ```
 
-- [ ] **Step 2: 拷测试(排除 gen-icons)并改写导入路径**
+- [x] **Step 2: 拷测试(排除 gen-icons)并改写导入路径**
 
 ```bash
 for f in ../video-acc/tests/unit/*.test.mjs; do
@@ -167,12 +167,12 @@ done
 sed -i '' -e "s#src/shared/#src/tools/pace/shared/#g" -e "s#src/content/#src/tools/pace/content/#g" -e "s#src/background/#src/tools/pace/background/#g" -e "s#src/popup/#src/tools/pace/popup/#g" tests/pace/*.test.mjs
 ```
 
-- [ ] **Step 3: 跑移植测试并记录基线**
+- [x] **Step 3: 跑移植测试并记录基线**
 
 Run: `node --test --test-isolation=none "tests/pace/*.test.mjs"`
 Expected: 全绿(73 − gen-icons 2 = 71;gen-icons.test.mjs 含 2 条测试)。记录实际数。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add octopus/src/tools/pace octopus/tests/pace octopus/public/tools/pace
@@ -190,7 +190,7 @@ git commit -m "feat(m0): pace 移植 — 整树落位 tools/pace,content.css 随
 **Interfaces:**
 - Produces: `TOOLS: Array<ToolContract>`、`toolById(id)`。ToolContract 形状:`{ id: string, manifest: { permissions: string[], optionalPermissions: string[], hostPermissions: string[], contentScripts: object[], webAccessibleResources: object[], commands: object } }`。Task 5 的 `assembleManifest(tools, { version })` 与 Task 6 的 build 都消费 `TOOLS`;Task 9 的 popup 壳消费 `toolById`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```js
 // tests/shell/registry.test.mjs
@@ -213,12 +213,12 @@ test('注册表含 veil 与 pace,id 唯一且契约字段齐全', () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 Run: `node --test tests/shell/registry.test.mjs`
 Expected: FAIL — Cannot find module '../../src/tools/registry.js'
 
-- [ ] **Step 3: 写契约与注册表**
+- [x] **Step 3: 写契约与注册表**
 
 ```js
 // src/tools/veil/tool.js — veil 工具契约(ADR-0002:manifest 构建期装配的输入)
@@ -283,12 +283,12 @@ export const TOOLS = [veilTool, paceTool];
 export const toolById = (id) => TOOLS.find((t) => t.id === id) ?? null;
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [x] **Step 4: 跑测试确认通过**
 
 Run: `node --test tests/shell/registry.test.mjs`
 Expected: PASS 1
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add octopus/src/tools/veil/tool.js octopus/src/tools/pace/tool.js octopus/src/tools/registry.js octopus/tests/shell/registry.test.mjs
@@ -307,7 +307,7 @@ git commit -m "feat(m0): 工具契约与注册表 — 声明式 manifest 增量,
 - Consumes: `TOOLS`(Task 4)。
 - Produces: `assembleManifest(tools, { version }) -> object`;`SHELL_STRINGS = { extensionName, extensionDescription, popupTabVeil, popupTabPace, optionsHeading, generalNavLabel }`。
 
-- [ ] **Step 1: 写壳文案模块**
+- [x] **Step 1: 写壳文案模块**
 
 ```js
 // src/shell/strings.js — 壳文案单源(工具文案在各工具 strings 内)
@@ -321,7 +321,7 @@ export const SHELL_STRINGS = Object.freeze({
 });
 ```
 
-- [ ] **Step 2: 写失败测试**
+- [x] **Step 2: 写失败测试**
 
 ```js
 // tests/shell/manifest.test.mjs
@@ -370,12 +370,12 @@ test('commands 7 条合并,WAR 仅 veil 一项', () => {
 });
 ```
 
-- [ ] **Step 3: 跑测试确认失败**
+- [x] **Step 3: 跑测试确认失败**
 
 Run: `node --test tests/shell/manifest.test.mjs`
 Expected: FAIL — Cannot find module '../../scripts/manifest.mjs'
 
-- [ ] **Step 4: 写装配器**
+- [x] **Step 4: 写装配器**
 
 ```js
 // scripts/manifest.mjs — 纯装配:壳基座 + 工具增量 → manifest 对象(ADR-0002)
@@ -422,12 +422,12 @@ export function assembleManifest(tools, { version }) {
 }
 ```
 
-- [ ] **Step 5: 跑测试确认通过**
+- [x] **Step 5: 跑测试确认通过**
 
 Run: `node --test tests/shell/manifest.test.mjs`
 Expected: PASS 4
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add octopus/src/shell/strings.js octopus/scripts/manifest.mjs octopus/tests/shell/manifest.test.mjs
@@ -445,12 +445,12 @@ git commit -m "feat(m0): manifest 装配器 — 壳基座+工具增量纯函数,
 - Consumes: `TOOLS`、`assembleManifest`。
 - Produces: `npm run build` → `extension/`(background.js、popup.js、options.js、tools/veil/content.js、tools/pace/content.js、manifest.json、public/ 全拷)。
 
-- [ ] **Step 1: activeTag 冗余实证**
+- [x] **Step 1: activeTag 冗余实证**
 
 Run: `grep -rn "activeTab\|chrome.permissions" video-acc/src video-acc/tests | grep -v "host_permissions"`
 Expected: 零命中(或仅注释)。若出现真实调用,停下升级到控制器裁决——pace 契约补 `'activeTab'` 并更新 Task 5 测试期望。
 
-- [ ] **Step 2: 写 build.mjs**
+- [x] **Step 2: 写 build.mjs**
 
 ```js
 // scripts/build.mjs
@@ -513,7 +513,7 @@ if (!WATCH) {
 
 占位内容一律一行注释 `// 占位 — Task N 替换`。
 
-- [ ] **Step 3: 改造 build.test.mjs**
+- [x] **Step 3: 改造 build.test.mjs**
 
 从 `dark-mode/nightveil/tests/build.test.mjs` 拷贝到 `tests/shell/build.test.mjs`,做如下改造(保留其余断言结构):
 1. 导入路径里的 `../../src/...` 按工具落位改写(同 Task 2 sed 规则);
@@ -521,12 +521,12 @@ if (!WATCH) {
 3. manifest 断言改为:读 `extension/manifest.json`,断言 `name === 'Octopus'`、`content_scripts.length === 2`、`permissions` 不含 `activeTab`、7 条 commands 在场(命令名集与 pace 契约一致);
 4. 删除任何对 `public/manifest.json` 的读取(装配后不存在该文件)。
 
-- [ ] **Step 4: 跑构建与测试**
+- [x] **Step 4: 跑构建与测试**
 
 Run: `npm run build && node --test tests/shell/build.test.mjs`
 Expected: 构建输出 5 个 entry;测试 PASS;`ls extension/` 见 manifest.json、background.js、popup.js、options.js、tools/、public 资产。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add octopus/scripts/build.mjs octopus/src/shell/background.js octopus/src/shell/popup.js octopus/src/shell/options.js octopus/tests/shell/build.test.mjs
@@ -543,7 +543,7 @@ git commit -m "feat(m0): 构建集成 — registry 驱动入口与 manifest 装�
 **Interfaces:**
 - Produces: `public/icons/{toolbar,dark,light}/{16,32,48,64,128}.png`(15 文件)。目录名与 NV 一致 → `iconPathsFor` 零改动。
 
-- [ ] **Step 1: 写失败测试(壳版,替代 VA 旧测)**
+- [x] **Step 1: 写失败测试(壳版,替代 VA 旧测)**
 
 ```js
 // tests/shell/gen-icons.test.mjs — 三盘 × 五尺寸合法 PNG;深浅盘双色采样
@@ -586,12 +586,12 @@ test('深浅盘确实异色(同形换色机制的最小活体证明)', () => {
 });
 ```
 
-- [ ] **Step 2: 确认失败**
+- [x] **Step 2: 确认失败**
 
 Run: `node --test tests/shell/gen-icons.test.mjs`
 Expected: FAIL — 找不到 `scripts/gen-icons.mjs` 或图标文件缺失。
 
-- [ ] **Step 3: 改造生成器**
+- [x] **Step 3: 改造生成器**
 
 ```bash
 cp ../dark-mode/nightveil/scripts/gen-icons.mjs scripts/gen-icons.mjs
@@ -628,17 +628,17 @@ function octopusMark(px, py) {
 
 3. VA 旧图标与 `public/icons/*.png` 平铺四张**不拷贝**(章鱼三盘取代)。
 
-- [ ] **Step 4: 生成并验证**
+- [x] **Step 4: 生成并验证**
 
 Run: `node scripts/gen-icons.mjs && node --test tests/shell/gen-icons.test.mjs`
 Expected: 15 文件生成;测试 PASS 2。
 
-- [ ] **Step 5: 视觉过目(控制器)**
+- [x] **Step 5: 视觉过目(控制器)**
 
 Run: `open public/icons/toolbar/128.png public/icons/dark/128.png public/icons/light/128.png`(或用 Read 工具查看图片)
 Expected: 三盘可辨认「圆头+裙边」章鱼印象,深浅互反。不追求精修——M1 设计迭代负责。辨认度不足时只调 `octopusMark` 常量重生成,不动骨架。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add octopus/scripts/gen-icons.mjs octopus/tests/shell/gen-icons.test.mjs octopus/public/icons
@@ -656,7 +656,7 @@ git commit -m "feat(m0): 章鱼图标首切版 — 三盘同形异色,月牙/双
 **Interfaces:**
 - Produces: `loadShell(storage?) -> Promise<ShellState>`、`saveShellPatch(patch, storage?) -> Promise<ShellState>`,ShellState = `{ activeTool: 'veil' | 'pace' }`;键 `oct.shell`;DI 风格 storage 适配器(仿 VA store.js 的 MemoryStorage 测试模式)。Task 9 popup 壳消费。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```js
 // tests/shell/store.test.mjs
@@ -688,12 +688,12 @@ test('无 storage 时给出可捕获错误(popup 预览模式由调用方兜底)
 });
 ```
 
-- [ ] **Step 2: 确认失败**
+- [x] **Step 2: 确认失败**
 
 Run: `node --test tests/shell/store.test.mjs`
 Expected: FAIL — Cannot find module
 
-- [ ] **Step 3: 实现**
+- [x] **Step 3: 实现**
 
 ```js
 // src/shell/store.js — 壳存储:oct. 命名空间(Q4 当前工具持久化)。工具命名空间不经此。
@@ -728,12 +728,12 @@ export function saveShellPatch(patch, storage = globalThis.chrome?.storage?.loca
 }
 ```
 
-- [ ] **Step 4: 确认通过**
+- [x] **Step 4: 确认通过**
 
 Run: `node --test tests/shell/store.test.mjs`
 Expected: PASS 3
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add octopus/src/shell/store.js octopus/tests/shell/store.test.mjs
@@ -752,7 +752,7 @@ git commit -m "feat(m0): 壳存储 — oct.shell 命名空间与当前工具持�
 - Consumes: `loadShell/saveShellPatch`(Task 8)、两工具 popup main(副作用模块,已在 tools 树)。
 - Produces: `extension/popup.js` 壳入口;DOM 约定 `#oct-tabs button[data-tool]`、`#oct-panel-veil`、`#oct-panel-pace`、`.is-hidden`。
 
-- [ ] **Step 1: 合并 popup.html**
+- [x] **Step 1: 合并 popup.html**
 
 以 NV `public/popup.html` 为基底:
 1. `<title>` 改 `Octopus`;`<html lang>` 保持;
@@ -794,7 +794,7 @@ Expected: 输出 NV 与 VA 的 CSS 变量名并集。若同名不同值(重点�
 sed -i '' 's/var(--X)/var(--vpa-X)/g; s/--X:/--vpa-X:/g' public/popup.html  # X 为冲突变量名,逐个执行
 ```
 
-- [ ] **Step 2: 写壳 popup.js(替换占位)**
+- [x] **Step 2: 写壳 popup.js(替换占位)**
 
 ```js
 // src/shell/popup.js — 壳:tab 条 + 当前工具记忆(Q4);面板 DOM 由各工具 popup main 自挂
@@ -820,12 +820,12 @@ for (const b of buttons) {
 loadShell().then((s) => show(s.activeTool)).catch(() => show('veil'));
 ```
 
-- [ ] **Step 3: 构建 + 冒烟**
+- [x] **Step 3: 构建 + 冒烟**
 
 Run: `npm run build && ls extension/ && node --test tests/shell`
 Expected: 构建干净;壳测试全绿;`extension/popup.html` 含 `#oct-tabs` 与两个 panel section。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add octopus/public/popup.html octopus/src/shell/popup.js
@@ -845,7 +845,7 @@ git commit -m "feat(m0): popup 壳 — tab 条双面板合页,当前工具持久
 - Consumes: 两工具 SW/options 片件(副作用模块)。
 - Produces: `extension/background.js`(挂载 veil+pace SW 片件)、`extension/options.html/options.js`。
 
-- [ ] **Step 1: SW 壳(替换占位)**
+- [x] **Step 1: SW 壳(替换占位)**
 
 ```js
 // src/shell/background.js — 壳 bootstrap:import 即挂载全部工具 SW 片件(ADR-0002)
@@ -853,7 +853,7 @@ import '../tools/veil/background/main.js';
 import '../tools/pace/background/main.js';
 ```
 
-- [ ] **Step 2: options 壳**
+- [x] **Step 2: options 壳**
 
 ```js
 // src/shell/options.js — M0:整页即 veil 设置;M1 侧边栏 IA 重设计接管
@@ -868,7 +868,7 @@ cp ../dark-mode/nightveil/public/options.html public/options.html
 1. `<title>夜幕</title>` → `<title>Octopus</title>`;
 2. `<div class="wordmark" id="nv-wordmark">夜幕<small>NIGHTVEIL</small></div>` → `<div class="wordmark" id="nv-wordmark">Octopus<small>暗色模式</small></div>`。
 
-- [ ] **Step 3: veil 文案去品牌(Q3:只动身份层文案)**
+- [x] **Step 3: veil 文案去品牌(Q3:只动身份层文案)**
 
 编辑 `src/tools/veil/shared/strings.js`:
 1. 删除 `extensionName` 与 `extensionDescription` 两键(运行时零引用,grep 复核):
@@ -882,7 +882,7 @@ Expected: 仅 strings.js 自身与 strings-zh.test.mjs 的钉子。
 
 同步修 `tests/veil/strings-zh.test.mjs` 中钉住上述被改键的期望值(只改这几个,其他钉子不动)。
 
-- [ ] **Step 4: 壳版单源钉子测试**
+- [x] **Step 4: 壳版单源钉子测试**
 
 ```js
 // tests/shell/strings-source.test.mjs — 装配 manifest ↔ 壳文案 ↔ 静态页 三方一致
@@ -906,12 +906,12 @@ test('装配 manifest 与壳文案一致;静态页 title 跟随', () => {
 });
 ```
 
-- [ ] **Step 5: 全量验证**
+- [x] **Step 5: 全量验证**
 
 Run: `npm run build && node --test --test-isolation=none "tests/shell/"*.test.mjs "tests/veil/"*.test.mjs "tests/pace/"*.test.mjs`
 Expected: 构建干净(5 entry + manifest + public);全部测试绿(含改造后的 strings-zh 与新 strings-source)。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add octopus/src/shell/background.js octopus/src/shell/options.js octopus/public/options.html octopus/src/tools/veil/shared/strings.js octopus/tests/veil/strings-zh.test.mjs octopus/tests/shell/strings-source.test.mjs
@@ -926,7 +926,7 @@ git commit -m "feat(m0): SW/options 壳与文案去品牌 — 身份层归 Octop
 - Create: `scripts/serve-fixtures.mjs`、`tests/fixtures/`(整目录)、`tests/veil/server.test.mjs`
 - 来源: `dark-mode/nightveil/scripts/serve-fixtures.mjs`、`dark-mode/nightveil/tests/fixtures/`、`dark-mode/nightveil/tests/unit/server.test.mjs`
 
-- [ ] **Step 1: 拷贝**
+- [x] **Step 1: 拷贝**
 
 ```bash
 cp ../dark-mode/nightveil/scripts/serve-fixtures.mjs scripts/
@@ -934,16 +934,16 @@ cp -R ../dark-mode/nightveil/tests/fixtures tests/
 cp ../dark-mode/nightveil/tests/unit/server.test.mjs tests/veil/
 ```
 
-- [ ] **Step 2: 改 server.test 导入路径**
+- [x] **Step 2: 改 server.test 导入路径**
 
 先查其导入形状:`head -20 tests/veil/server.test.mjs`。按 Task 2 的 sed 规则改写 `src/` 引用;若它 import `../../scripts/serve-fixtures.mjs`,从 `tests/veil/` 出发该相对路径仍解析到 `octopus/scripts/serve-fixtures.mjs`,无需改。路径遍历安全断言(`/..%2fpackage.json` → 403)必须保留且仍然通过——它在守护新根。
 
-- [ ] **Step 3: 验证**
+- [x] **Step 3: 验证**
 
 Run: `node --test tests/veil/server.test.mjs`
 Expected: PASS,含 403 安全断言。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add octopus/scripts/serve-fixtures.mjs octopus/tests/fixtures octopus/tests/veil/server.test.mjs
@@ -957,7 +957,7 @@ git commit -m "test(m0): fixtures 与安全守卫迁移 — 路径遍历 403 钉
 **Files:**
 - Modify: `package.json`(仅当需要分包)、无源码改动
 
-- [ ] **Step 1: 统一跑全量**
+- [x] **Step 1: 统一跑全量**
 
 Run: `npm test`
 Expected: 全绿。若跨树互踩(NV 与 VA 的 mock 在同进程冲突):
@@ -970,13 +970,13 @@ Expected: 全绿。若跨树互踩(NV 与 VA 的 mock 在同进程冲突):
 
 再跑 `npm test`,分包后必须全绿。**禁止**为统一而修任何工具测试的断言。
 
-- [ ] **Step 2: 对账总账**
+- [x] **Step 2: 对账总账**
 
 统计并写下:veil 移植数(Task 2 基线)+ pace 移植数(Task 3 基线)+ server(Step 1 前的 Task 11 数)+ 壳新增数(registry 1 + manifest 4 + build N + gen-icons 2 + store 3 + strings-source 1)。
 逐项列出废弃清单:`build.test.mjs` 原断言中被替换的数目、`strings-source.test.mjs` 原 3 条的去向(1 条并入壳版,2 条随 manifest 静态源消失)、`gen-icons.test.mjs` 原 2 条(壳版 2 条取代)。
 总原则:**nightveil 224(unit 223 + build 1) + video-acc 73 = 297 为起点,每一条增减都要有出处**。把对账表写进本任务的 commit message。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add octopus/package.json octopus/package-lock.json 2>/dev/null || git add octopus/package.json
@@ -991,18 +991,18 @@ git commit -m "test(m0): 测试合流对账 — <统一/分包>，总数 X(297�
 - Create: `octopus/自主迭代.md`、`dark-mode/nightveil/ARCHIVED.md`、`video-acc/ARCHIVED.md`
 - Modify: `octopus/docs/MILESTONES.md`(M0 勾账)、`octopus/docs/BACKLOG.md`(继承项落位)
 
-- [ ] **Step 1: 自主迭代.md 建档**
+- [x] **Step 1: 自主迭代.md 建档**
 
 通读 `dark-mode/nightveil/自主迭代.md` 与 `video-acc/自主迭代.md`,产出 octopus 版:
 - 「工具级验收」两节:两个旧文件的全部验收标准**原文照搬**,各冠以「暗色模式(veil)」「视频倍速(pace)」;
 - 「平台级验收」新增节,内容:manifest 装配正确性(装配测试)、注册表完整性、壳存储隔离(oct.shell 不与工具键互扰)、零工具互引(grep 断言:`grep -rn "tools/veil" src/tools/pace src/shell | grep -v registry` 零命中,反向同)。
 
-- [ ] **Step 2: 零互引断言(平台级验收的活体检查)**
+- [x] **Step 2: 零互引断言(平台级验收的活体检查)**
 
 Run: `grep -rn "tools/veil" src/tools/pace | wc -l && grep -rn "tools/pace" src/tools/veil | wc -l && grep -rn "tools/veil/\|tools/pace/" src/shell | grep -v "src/shell/popup.js\|src/shell/background.js\|src/shell/options.js" | wc -l`
 Expected: `0`、`0`、`0`(前两条=工具互引为零;第三条=壳除三个装配入口外不触工具内部)。
 
-- [ ] **Step 3: 旧项目归档标注**
+- [x] **Step 3: 旧项目归档标注**
 
 `dark-mode/nightveil/ARCHIVED.md`:
 
@@ -1019,7 +1019,7 @@ git add dark-mode/nightveil/ARCHIVED.md && git commit -m "docs(m0): nightveil �
 git add video-acc/ARCHIVED.md && git commit -m "docs(m0): video-acc 归档 — 冻结指向 octopus"
 ```
 
-- [ ] **Step 4: MILESTONES/BACKLOG 勾账与继承**
+- [x] **Step 4: MILESTONES/BACKLOG 勾账与继承**
 
 - `octopus/docs/MILESTONES.md`:M0 各项打勾,追加一段验收记录(测试对账总数、构建产物清单);
 - `octopus/docs/BACKLOG.md`:通读两个旧项目的 BACKLOG/遗留记录,逐条并入「继承清扫」条目之下(保留原始措辞与出处文件名);
@@ -1030,7 +1030,7 @@ git add octopus/自主迭代.md octopus/docs/MILESTONES.md octopus/docs/BACKLOG.
 git commit -m "docs(m0): 自主迭代建档与关账勾选 — 验收对账入档"
 ```
 
-- [ ] **Step 5: 真机过目清单(交付用户,M0 的最终门)**
+- [x] **Step 5: 真机过目清单(交付用户,M0 的最终门)**
 
 给用户的清单(含 1 次人工加载扩展,项目惯例):
 1. `chrome://extensions` 加载 `octopus/extension/`,卡片零错误;

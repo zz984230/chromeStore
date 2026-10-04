@@ -4,4 +4,77 @@
 
 - [ ] **工具级硬禁用**:用 `scripting.registerContentScripts` 动态注册实现「禁用某工具 = 停止注入」。触发条件:出现真实的性能/隐私抱怨(ADR-0003 回退路径)。
 - [ ] **pace 工具栏信号**:badge text 通道(保持态、熔断态等);不动画盘根本,与换盘机制并行。
-- [ ] **继承清扫**:nightveil BACKLOG(SPA 晚挂载、adoptedStyleSheets、lateCheck-CT、a11y 两项、死键清扫等)与 video-acc backlog(outroSkip ≥ duration 告警、prev 子串误杀、popup ⚠ 路径 UX 等)在 M0 移植时逐条并入。
+- [ ] **继承清扫**(2026-10-04 M0 关账已逐条并入;原始措辞与分组保留,出处见各分组标注;消化时逐条勾账,完成后移入「已完成」并注明出处):
+  - **出自 `dark-mode/nightveil/docs/BACKLOG.md`**(51 条,原分组标题照搬):
+    - 站点主题补齐（M1 仅交付 10/32）——待补 22(建议按需求热度排序,可追加):
+      - [ ] youtube（精简自写选择器，不逐行对等原版 2482 行混淆类名）
+      - [ ] gmail
+      - [ ] duckduckgo
+      - [ ] yahoo
+      - [ ] yandex
+      - [ ] twitch
+      - [ ] tumblr
+      - [ ] telegram (web)
+      - [ ] whatsapp (web)
+      - [ ] dropbox
+      - [ ] ebay
+      - [ ] w3schools
+      - [ ] play（Google Play）
+      - [ ] docs（Google Docs）
+      - [ ] drive（Google Drive）
+      - [ ] sites（Google Sites）
+      - [ ] maps（Google Maps）
+      - [ ] support（Google Support）
+      - [ ] calendar（Google Calendar）
+      - [ ] translate（Google Translate）
+      - [ ] accounts（Google Accounts）
+      - [ ] myaccount（Google MyAccount）
+    - 已知差评问题（来自 tabbit_插件负面评论整理为问题列表.md）:
+      - [ ] 右键"Exclude from dark mode"后缺少"取消排除"入口，只能进设置页手删（原版设计缺陷，复刻期忠实保留）
+      - [ ] 开关状态偶发错乱（开变关/关变开）——重写后若复现则按 bug 处理，若不复现则关闭
+      - [ ] YouTube 等视频站不生效（依赖 youtube 站点主题补齐）
+      - [ ] 视频网站进度条消失（反色式主题的滤镜副作用，需加保护规则）
+      - [ ] 影响论坛验证码弹窗（iframe/弹层场景的排除规则）
+      - [ ] 52pojie.cn 等站快捷登录失效（同上，脚本注入冲突类）
+    - 已知局限（忠实原版的 filter 模式固有）:
+      - [ ] invert 家族不保护非媒体元素上的 background-image
+      - [ ] html 级 filter 会使 position:fixed 后代随滚动（含 svg image 保护行为简化）
+    - 已知局限（overlay 压平 + 媒体舞台标记，2026-09-10/11 B 站调试引入）:
+      - [ ] 实心品牌色按钮（如 B 站蓝色"关注"、粉色药丸）被压平抹掉填充，按钮退化为浮动文字——class-a 家族固有行为（原版完全相同：`html *` 统一背景色）；根治需 M2 自适应引擎做"品牌色降暗映射"而非抹除（2026-09-12 用户报告边界消失时确认）
+      - [ ] 语义色同质化：涨跌红绿（新浪行情实证 10 红 + 30 绿被压平为统一浅色）、链接色丢失——信息语义随颜色一起被抹掉；根治同样属 M2 按色映射（2026-09-12 新浪调试确认）
+      - [ ] 品牌色描边（如充电按钮粉色 outline）被强制统一为调色板 border 色——同上属 class-a 固有；border 对比度已通过调色板提亮修复（ΔL≥14），但品牌色相仍会丢失
+      - [ ] 舞台恢复规则只豁免 background-color，不豁免 background-image——站点若用背景图画控制栏/封面且恰在舞台层上会丢图（M1b 若遇真例再扩规则）
+      - [ ] window load 之后 SPA 新插入的 video/img 要等下一次 render（切换/改设置）才标记；需持续追踪时上 MutationObserver（与 M2 引擎的变更追踪合并考虑）
+      - [ ] 标记启发式（video 宽 1.5× 不限高；img 封面宽 1.5× 且高 1.1×、≥80px 已加载、深度 ≤8）为 DOM 经验值，未经单测锁定（DOM 逻辑随 tabbit 验收覆盖；如复杂化可抽 shouldMark 纯函数）
+      - [ ] 极端布局：与图片同尺寸且含文字的包裹层（hero 图+标题同盒）会被误标为封面——文字色仍被强制为浅色，仅背景回原样，影响温和；未见真例
+      - [ ] 命名债：clearVideoStages 实际清理全部媒体舞台标记，下次触碰时改名 clearMediaStages
+      - [ ] 舞台子树内的图截文字双重渲染角落情况：舞台豁免使 sprite 背景幸存，而 text-indent 召回让真实文字也显示（2026-09-12 wave-7 审查发现；真例出现时给召回规则加舞台排除或拆分规则）
+    - M3+ 终审递延（2026-09-19，fable 选项页重设计终审 triage）:
+      - [ ] 色板键盘可达性：swatch 仅点击（span），键盘用户只能选到首个配色——补 tabindex/role 或视觉隐藏 radio（相对 M3 每配色 radio 是可达性回归）
+      - [ ] 行标签关联：CT 滑杆/定时时间框/启用开关的 row-label 是 span 非 label——AT 用户得到无名输入（设计稿同款，择机统一补 label 关联）
+      - [ ] 死键清扫：strings.js ~14 个零引用键 + optionsM3 SECTION_ORDER/sectionKeyOf 死导出（部分被测试钉住）——下轮文案/结构变动时一并清
+    - M3 终审递延（2026-09-19，fable 全分支终审 triage）:
+      - [ ] lateCheck 迟到排除路径补 applyColorTemp 调用（三重交集才触发：dark + 色温开 + 迟到 meta 排除；含未命中分支行为已与原版一致——下次触碰 content/main.js 时顺手补一行）
+      - [ ] ui.sectionOpen 部分合并补一条存量子场景单测（现仅默认回填路径有测试）
+      - [ ] （验收覆盖点）guard/CT master-outside-fieldset 布局无结构钉子测试——/tabbit 真机验收覆盖开关往返
+    - 已知局限（Adaptive Engine 颜色改写，2026-09-13 M2 设计确立）:
+      - [ ] 现代 CSS 颜色语法（oklch() / lab() / color-mix() 等）不改写，检测到即跳过所在规则——与原版 tinycolor 时代能力面对等（M2 grilling D4 决策）；复刻期后作为独立迭代补齐
+      - [ ] `document.adoptedStyleSheets`（文档级构造式样式表）追不到——不触发 DOM mutation、不产生 resource entry；shadow root 内的样式表（含其 adoptedStyleSheets）原版经选项 g 可处理（任务 0 勘正 2026-09-13），文档级仍无解，能力面对等
+    - 未来增强（可选）:
+      - [ ] 图标小尺寸优化：16/32px 下月牙偏"厚实"、辨识度一般，可为小尺寸用加粗几何变体（M0 视觉抽查结论 2026-09-09）。已知成因：边缘像素未做颜色混合——`aMoon > 0` 即取纯月牙色而 alpha 取 `max(aPlate, aMoon)`，1/16 月牙覆盖的边缘像素渲染为纯月牙色而非混合色（T2 审查 Minor #1）（清扫注记:octopus 已换章鱼三盘,月牙生成器不在场,清扫时裁定去留）
+      - [ ] 中文语言包（文案已集中管理，补 locales 文件即可）
+      - [ ] Firefox / Edge 兼容
+      - [ ] 主题导入导出
+  - **出自 `video-acc/docs/MILESTONES.md` 遗留记录**(6 条;M1/M3 的过程性注记——AliPlayer 主文档发现、证据沉淀实践、换集 live 借用户确认收尾、证据污染教训——已随后续里程碑消化,不作为待办继承):
+    - M2 遗留记录:
+      - [ ] suggested_key 对已装扩展新增 commands 不生效（商店新装不受影响）
+      - [ ] CDP 键盘不触发扩展命令
+      - [ ] M3 义务：并发写判别性测试（不相交字段）
+    - M4 遗留 backlog:
+      - [ ] outroSkip ≥ duration 语义性即刻收尾（病态配置告警）
+      - [ ] prev 子串误杀向量
+      - [ ] popup ⚠ 路径 UX
+
+## 已完成
+
+（octopus 本表暂无已完成项;两个前置项目的已完成记录保留于各自已归档文件,不随迁。）
