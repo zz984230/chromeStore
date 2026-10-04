@@ -1,0 +1,85 @@
+// src/shared/themes.js
+// Compiles a palette into injectable CSS. Two families (ADR-0002):
+//  - overlay: original selector set overriding text/background/link colors
+//  - invert: whole-page filter inversion with a media protection list
+import { findPalette } from './palettes.js';
+
+export function compileTheme(palette) {
+  if (palette.family === 'overlay') return overlayCss(palette);
+  if (palette.family === 'invert') return invertCss(palette);
+  throw new Error(`unknown family: ${palette.family}`);
+}
+
+export function compileThemeById(id) {
+  return compileTheme(findPalette(id));
+}
+
+// M3 custom 席位（M3-BEHAVIOR §4.1）：themeId 'custom' 时只注入用户 CSS 文本，
+// 无任何基础层；命中站点主题时 custom 让位（base 退回 nv-simple，站点层照常叠加）。
+export const USER_CSS_THEME_ID = 'custom';
+
+export function baseCssForTheme(themeId, userCss, siteUsable) {
+  if (themeId === USER_CSS_THEME_ID) {
+    return siteUsable ? compileThemeById('nv-simple') : (userCss ?? '');
+  }
+  return compileThemeById(themeId);
+}
+
+function overlayCss({ colors: c }) {
+  return `
+html { color-scheme: dark; }
+html, body {
+  background-color: ${c.bg} !important;
+  background-image: none !important;
+}
+body * {
+  background-color: ${c.bg} !important;
+}
+body :is(#nv-sheet, *):not([data-nv-stage]):not([data-nv-stage] *) { background-image: none !important; }
+/* :is(#nv-sheet, *) 匹配所有元素——纯特异性提升器（ID 级 (1,0,1)），不是内容过滤器，勿清理 */
+body :is(#nv-sheet, *) {
+  color: ${c.fg} !important;
+  border-color: ${c.border} !important;
+  text-indent: 0 !important;
+}
+body :is(a:link, a:link *):is(#nv-sheet, *) { color: ${c.link} !important; }
+body :is(a:visited, a:visited *):is(#nv-sheet, *) { color: ${c.visited} !important; }
+body :is(cite, q, blockquote):is(#nv-sheet, *) { color: ${c.cite} !important; }
+body :is(#nv-sheet, *)::placeholder { color: ${c.muted} !important; opacity: 1 !important; }
+/* input/button 的 color 当前与提升后的平铺同值（冗余无害）；将来分化时需同步 :is 提升 */
+body input, body textarea, body select {
+  background-color: ${c.inputBg} !important;
+  color: ${c.fg} !important;
+}
+body button {
+  background-color: ${c.surface} !important;
+  color: ${c.fg} !important;
+}
+::selection { background-color: ${c.link} !important; color: ${c.bg} !important; }
+body img, body video, body canvas, body iframe, body embed, body object, body picture, body svg {
+  background-color: transparent !important;
+}
+body [data-nv-stage], body [data-nv-stage] * { background-color: transparent !important; }
+`.trim();
+}
+
+function invertCss({ params: p }) {
+  const filter = `invert(100%) hue-rotate(180deg) brightness(${p.brightness}%) contrast(${p.contrast}%) grayscale(${p.grayscale}%)`;
+  return `
+html { color-scheme: dark; }
+html {
+  background-color: #ffffff !important;
+  filter: ${filter};
+}
+body { background-color: #ffffff !important; }
+img, video, canvas, iframe, embed, object, svg image {
+  filter: invert(100%) hue-rotate(180deg);
+}
+`.trim();
+}
+
+// Flash-guard backdrop per family (D9): overlay themes guard with their own
+// bg; invert themes end up dark via filter, so keep a neutral dark guard.
+export function guardBackgroundFor(palette) {
+  return palette.family === 'invert' ? '#1e2229' : palette.colors.bg;
+}
