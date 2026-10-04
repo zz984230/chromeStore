@@ -359,8 +359,8 @@ test('content_scripts 两条 entry 按注册顺序,逐字段保真', () => {
   assert.equal(pace.match_about_blank, undefined);
 });
 
-test('commands 8 条合并,WAR 仅 veil 一项', () => {
-  assert.equal(Object.keys(m.commands).length, 8);
+test('commands 7 条合并,WAR 仅 veil 一项', () => {
+  assert.equal(Object.keys(m.commands).length, 7);
   assert.equal(m.commands['hold-toggle'].suggested_key.default, 'Alt+L');
   assert.equal(m.web_accessible_resources.length, 1);
   assert.deepEqual(m.web_accessible_resources[0].resources, ['tools/veil/nv-shadow-hook.js']);
@@ -512,7 +512,7 @@ if (!WATCH) {
 从 `dark-mode/nightveil/tests/build.test.mjs` 拷贝到 `tests/shell/build.test.mjs`,做如下改造(保留其余断言结构):
 1. 导入路径里的 `../../src/...` 按工具落位改写(同 Task 2 sed 规则);
 2. 产物路径断言:`extension/content.js` → `extension/tools/veil/content.js` 与 `extension/tools/pace/content.js`;popup/options/background 断言保持;
-3. manifest 断言改为:读 `extension/manifest.json`,断言 `name === 'Octopus'`、`content_scripts.length === 2`、`permissions` 不含 `activeTab`、8 条 commands 在场;
+3. manifest 断言改为:读 `extension/manifest.json`,断言 `name === 'Octopus'`、`content_scripts.length === 2`、`permissions` 不含 `activeTab`、7 条 commands 在场(命令名集与 pace 契约一致);
 4. 删除任何对 `public/manifest.json` 的读取(装配后不存在该文件)。
 
 - [ ] **Step 4: 跑构建与测试**
