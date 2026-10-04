@@ -5,6 +5,7 @@ export const tool = {
   manifest: {
     permissions: [],
     optionalPermissions: [],
+    hostPermissions: [], // 注入走 manifest matches,无需宿主权限;tabs.sendMessage 对自家脚本放行
     contentScripts: [{
       matches: ['<all_urls>'],
       js: ['tools/pace/content.js'],

@@ -20,6 +20,7 @@ test('基座字段:名称/描述来自壳文案,版本透传', () => {
 test('权限并集去重且精确:storage+contextMenus,可选 alarms,无 activeTab', () => {
   assert.deepEqual(m.permissions, ['storage', 'contextMenus']);
   assert.deepEqual(m.optional_permissions, ['alarms']);
+  assert.deepEqual(m.host_permissions, ['<all_urls>']); // 仅 veil 申报(SW 跨域代取)
 });
 
 test('content_scripts 两条 entry 按注册顺序,逐字段保真', () => {

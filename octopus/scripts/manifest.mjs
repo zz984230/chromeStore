@@ -4,6 +4,7 @@ import { SHELL_STRINGS } from '../src/shell/strings.js';
 export function assembleManifest(tools, { version }) {
   const permissions = new Set(['storage']); // 壳自身与两工具共用
   const optional = new Set();
+  const hosts = new Set();
   const contentScripts = [];
   const war = [];
   const commands = {};
@@ -11,6 +12,7 @@ export function assembleManifest(tools, { version }) {
     const m = t.manifest ?? {};
     for (const p of m.permissions ?? []) permissions.add(p);
     for (const p of m.optionalPermissions ?? []) optional.add(p);
+    for (const h of m.hostPermissions ?? []) hosts.add(h);
     contentScripts.push(...(m.contentScripts ?? []));
     war.push(...(m.webAccessibleResources ?? []));
     Object.assign(commands, m.commands ?? {});
@@ -32,6 +34,7 @@ export function assembleManifest(tools, { version }) {
     options_ui: { open_in_tab: true, page: 'options.html' },
     permissions: [...permissions],
     optional_permissions: [...optional],
+    host_permissions: [...hosts],
     content_scripts: contentScripts,
     web_accessible_resources: war,
     commands,

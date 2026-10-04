@@ -3,6 +3,7 @@ export const tool = {
   id: 'veil',
   manifest: {
     permissions: ['contextMenus'],
+    hostPermissions: ['<all_urls>'], // SW 跨域样式代取(引擎命脉)需要;pace 经实证不需要
     optionalPermissions: ['alarms'],
     contentScripts: [{
       matches: ['<all_urls>'],
