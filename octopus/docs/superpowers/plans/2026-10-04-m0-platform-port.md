@@ -92,7 +92,7 @@ git commit -m "chore(m0): octopus 脚手架 — npm 工程 esbuild 单依赖"
 
 **Interfaces:**
 - Produces: `src/tools/veil/{background,content,options,popup,shared}/` 内部相对导入不变;测试从 `tests/veil/*.test.mjs` 以 `../../src/tools/veil/...` 导入。
-- 本任务**不拷**:`build.test.mjs`(Task 6)、`server.test.mjs`(Task 11)、`strings-source.test.mjs`(Task 10 重写为壳版)。
+- 本任务**不拷**:`build.test.mjs`(在 tests/ 顶层而非 unit/,unit 循环天然不含;Task 6)、`server.test.mjs`(Task 11)、`strings-source.test.mjs`(Task 10 重写为壳版)、`icons.test.mjs`(NV 侧生成器测试,与 VA `gen-icons.test.mjs` 同类;Task 7 以壳版重写)。
 
 - [ ] **Step 1: 拷源码树**
 
@@ -126,8 +126,8 @@ sed -i '' -e "s#src/shared/#src/tools/veil/shared/#g" -e "s#src/content/#src/too
 
 - [ ] **Step 4: 跑移植测试并记录基线**
 
-Run: `node --test --test-isolation=none tests/veil`
-Expected: 全绿。记录测试数(应 ≈ 224 减去被排除文件的测试数;把实际数与排除清单写进 commit message)。
+Run: `node --test --test-isolation=none "tests/veil/*.test.mjs"`(Node 25 下目录传参报 ERR_UNSUPPORTED_DIR_IMPORT,须用引号 glob)
+Expected: 全绿。记录测试数(nightveil 实测全量 224 = unit 223 + 顶层 build 1;移植基线 = 224 − build 1 − server 1 − strings-source 3 − icons 2 = 217)。
 
 - [ ] **Step 5: Commit**
 
@@ -169,8 +169,8 @@ sed -i '' -e "s#src/shared/#src/tools/pace/shared/#g" -e "s#src/content/#src/too
 
 - [ ] **Step 3: 跑移植测试并记录基线**
 
-Run: `node --test --test-isolation=none tests/pace`
-Expected: 全绿(≈73 减 gen-icons 的 1)。记录实际数。
+Run: `node --test --test-isolation=none "tests/pace/*.test.mjs"`
+Expected: 全绿(73 − gen-icons 1 = 72)。记录实际数。
 
 - [ ] **Step 4: Commit**
 
@@ -902,7 +902,7 @@ test('装配 manifest 与壳文案一致;静态页 title 跟随', () => {
 
 - [ ] **Step 5: 全量验证**
 
-Run: `npm run build && node --test --test-isolation=none tests/shell tests/veil tests/pace`
+Run: `npm run build && node --test --test-isolation=none "tests/shell/"*.test.mjs "tests/veil/"*.test.mjs "tests/pace/"*.test.mjs`
 Expected: 构建干净(5 entry + manifest + public);全部测试绿(含改造后的 strings-zh 与新 strings-source)。
 
 - [ ] **Step 6: Commit**
@@ -959,7 +959,7 @@ Expected: 全绿。若跨树互踩(NV 与 VA 的 mock 在同进程冲突):
 改 package.json:
 
 ```json
-"test": "node --test tests/shell && node --test tests/veil && node --test tests/pace"
+"test": "node --test \"tests/shell/\"*.test.mjs && node --test \"tests/veil/\"*.test.mjs && node --test \"tests/pace/\"*.test.mjs"
 ```
 
 再跑 `npm test`,分包后必须全绿。**禁止**为统一而修任何工具测试的断言。
@@ -968,7 +968,7 @@ Expected: 全绿。若跨树互踩(NV 与 VA 的 mock 在同进程冲突):
 
 统计并写下:veil 移植数(Task 2 基线)+ pace 移植数(Task 3 基线)+ server(Step 1 前的 Task 11 数)+ 壳新增数(registry 1 + manifest 4 + build N + gen-icons 2 + store 3 + strings-source 1)。
 逐项列出废弃清单:`build.test.mjs` 原断言中被替换的数目、`strings-source.test.mjs` 原 3 条的去向(1 条并入壳版,2 条随 manifest 静态源消失)、`gen-icons.test.mjs` 原 1 条(壳版 2 条取代)。
-总原则:**nightveil 224 + video-acc 73 = 297 为起点,每一条增减都要有出处**。把对账表写进本任务的 commit message。
+总原则:**nightveil 224(unit 223 + build 1) + video-acc 73 = 297 为起点,每一条增减都要有出处**。把对账表写进本任务的 commit message。
 
 - [ ] **Step 3: Commit**
 
