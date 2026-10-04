@@ -26,9 +26,16 @@ test('build produces a complete loadable extension directory', () => {
   assert.deepEqual(manifest.optional_permissions, ['alarms']);
   assert.equal(manifest.content_scripts.length, 2);
   assert.ok(!manifest.permissions.includes('activeTab'), 'activeTab 必须剪除(静态注入 + host_permissions 已覆盖,见 pace/tool.js 实证注释)');
+  assert.deepEqual(manifest.host_permissions, ['<all_urls>']);
   assert.deepEqual(
     Object.keys(manifest.commands).sort(),
     Object.keys(toolById('pace').manifest.commands).sort(),
     'commands 命令名集必须与 pace 契约一致'
   );
+});
+
+test('engine.js WAR 引用与契约资源路径一致(防漂移)', () => {
+  const engineSrc = readFileSync(new URL('../../src/tools/veil/content/engine/engine.js', import.meta.url), 'utf8');
+  assert.ok(engineSrc.includes("getURL('tools/veil/nv-shadow-hook.js')"),
+    'engine.js 的 getURL 字符串必须与 veil 契约的 WAR 资源路径一致');
 });
