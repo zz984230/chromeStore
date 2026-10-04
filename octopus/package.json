@@ -1,0 +1,16 @@
+{
+  "name": "octopus",
+  "private": true,
+  "version": "0.1.0",
+  "description": "工具的瑞士军刀:一个扩展容纳多个工具。",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "icons": "node scripts/gen-icons.mjs",
+    "fixtures": "node scripts/serve-fixtures.mjs",
+    "test": "node --test --test-isolation=none"
+  },
+  "devDependencies": { "esbuild": "^0.25.0" }
+}
