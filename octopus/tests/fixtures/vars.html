@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>NightVeil CSS variables fixture</title>
+    <style>
+      :root {
+        --page-bg: #ffffff;
+        --page-fg: #1a1a1a;
+        --card-bg: #f4f6f8;
+        --card-border: #d0d7de;
+        --accent: #0969da;
+      }
+      body { font-family: sans-serif; background: var(--page-bg); color: var(--page-fg); }
+      .card { background: var(--card-bg); border: 1px solid var(--card-border); padding: 12px; margin: 8px; }
+      .card a { color: var(--accent); }
+      .deep .inner .leaf { background: var(--card-bg); color: var(--page-fg); padding: 8px; }
+    </style>
+  </head>
+  <body>
+    <h1>CSS variables fixture</h1>
+    <div class="card">Card painted via <code>--card-bg</code>. <a href="#">Accent link</a>.</div>
+    <div class="deep"><div class="inner"><div class="leaf">Leaf using the same vars through nesting.</div></div></div>
+  </body>
+</html>
