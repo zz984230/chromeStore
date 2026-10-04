@@ -1,15 +1,12 @@
 // src/shared/strings.js
 // All runtime user-visible copy lives here (i18n-ready per ADR-0003).
 // UI language is Chinese per the M3+ Q5 ruling; dev-log keys stay English.
-// Static files (manifest.json, options.html) duplicate two values; the
-// strings-source test keeps them locked to this module.
+// 身份层文案(manifest name/description、options 页标题)已归壳:见 src/shell/strings.js。
 export const STRINGS = Object.freeze({
-  extensionName: '夜幕',
-  extensionDescription: '为整个浏览器拉上一层温和的夜幕。',
   swStartedDebug: 'NightVeil service worker started',
   contentActiveLog: 'NightVeil content script active',
-  optionsHeading: '夜幕',
-  optionsNote: '拉上夜幕，让整个浏览器安静下来。',
+  optionsHeading: '暗色模式',
+  optionsNote: '暗色模式工具的完整设置。',
   optionsPreviewNote: '预览模式——当前页面无法访问设置存储，展示的是默认值。',
   optionsSaveError: 'NightVeil failed to save settings:',
   resetButton: '恢复默认',
