@@ -170,7 +170,7 @@ sed -i '' -e "s#src/shared/#src/tools/pace/shared/#g" -e "s#src/content/#src/too
 - [ ] **Step 3: 跑移植测试并记录基线**
 
 Run: `node --test --test-isolation=none "tests/pace/*.test.mjs"`
-Expected: 全绿(73 − gen-icons 1 = 72)。记录实际数。
+Expected: 全绿(73 − gen-icons 2 = 71;gen-icons.test.mjs 含 2 条测试)。记录实际数。
 
 - [ ] **Step 4: Commit**
 
@@ -967,7 +967,7 @@ Expected: 全绿。若跨树互踩(NV 与 VA 的 mock 在同进程冲突):
 - [ ] **Step 2: 对账总账**
 
 统计并写下:veil 移植数(Task 2 基线)+ pace 移植数(Task 3 基线)+ server(Step 1 前的 Task 11 数)+ 壳新增数(registry 1 + manifest 4 + build N + gen-icons 2 + store 3 + strings-source 1)。
-逐项列出废弃清单:`build.test.mjs` 原断言中被替换的数目、`strings-source.test.mjs` 原 3 条的去向(1 条并入壳版,2 条随 manifest 静态源消失)、`gen-icons.test.mjs` 原 1 条(壳版 2 条取代)。
+逐项列出废弃清单:`build.test.mjs` 原断言中被替换的数目、`strings-source.test.mjs` 原 3 条的去向(1 条并入壳版,2 条随 manifest 静态源消失)、`gen-icons.test.mjs` 原 2 条(壳版 2 条取代)。
 总原则:**nightveil 224(unit 223 + build 1) + video-acc 73 = 297 为起点,每一条增减都要有出处**。把对账表写进本任务的 commit message。
 
 - [ ] **Step 3: Commit**
