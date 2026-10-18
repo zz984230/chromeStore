@@ -10,7 +10,7 @@ export const PACE_STRINGS = Object.freeze({
   holdTitle: '保持',
   holdNote: '记住当前档,新视频自动套用',
   holdLabel: '保持档位',
-  holdOnLine: '保持 {pace}× — 新视频自动套用',
+  holdOnLine: '保持 {pace} — 新视频自动套用', // {pace}=formatPace 产物已带 ×
   holdOffLine: '保持:关',
   skipTitle: '片头片尾',
   skipNote: '到点自动跳过,秒数大于 0 即参与',

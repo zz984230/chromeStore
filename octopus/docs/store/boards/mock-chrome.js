@@ -4,7 +4,7 @@
 (() => {
   const MANIFEST = {
     version: '1.0.0', name: 'Octopus',
-    description: '工具的瑞士军刀:暗色模式与视频倍速,更多工具持续加入。',
+    description: '工具的瑞士军刀：暗色模式与视频倍速，更多工具持续加入。',
     commands: { // 从 extension/manifest.json 的 commands 原样拷贝(npm run build 产物)
       'pace-up': { description: '加档（步进 0.25×）', suggested_key: { default: 'Alt+Period' } },
       'pace-down': { description: '减档（步进 0.25×）', suggested_key: { default: 'Alt+Comma' } },
