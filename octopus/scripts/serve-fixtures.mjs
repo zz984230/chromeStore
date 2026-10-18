@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const ROOT = path.resolve('tests/fixtures');
+const ROOT = path.resolve(process.argv[2] ?? 'tests/fixtures'); // 默认不变;可传 extension/ 服务构建产物
 const PORT = Number(process.env.FIXTURES_PORT ?? 8123);
 const TYPES = {
   '.html': 'text/html; charset=utf-8',

@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- 夜幕前后对比板:两帧真机截图并排(素材由用户提供,文件名 raw/veil-off.png / raw/veil-on.png) -->
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 1280px; height: 800px; overflow: hidden; background: #12141c; }
+  body { display: flex; gap: 2px; font-family: 'Noto Serif SC', 'Songti SC', serif; }
+  figure { margin: 0; flex: 1; position: relative; }
+  img { width: 100%; height: 800px; object-fit: cover; object-position: top; display: block; }
+  figcaption {
+    position: absolute; left: 24px; bottom: 24px; background: rgba(18,20,28,.82);
+    color: #e8ebf4; font-size: 22px; padding: 8px 18px; border-radius: 8px;
+    border: 1px solid #2a3040;
+  }
+  figure.on figcaption { color: #e3c987; }
+</style>
+<body>
+  <figure><img src="../assets/raw/veil-off.png" alt=""><figcaption>关</figcaption></figure>
+  <figure class="on"><img src="../assets/raw/veil-on.png" alt=""><figcaption>开 · Octopus 夜幕</figcaption></figure>
+</body>
