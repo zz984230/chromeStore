@@ -54,9 +54,15 @@ function refreshMenu(settings) {
     : settings.inclusionMode ? STRINGS.menuIncludeSite : STRINGS.menuExcludeSite;
   if (title === menuTitle && isCt === menuIsColorTemp) return;
   menuTitle = title; menuIsColorTemp = isCt;
-  // recreate (not update) so the menu also exists on a fresh service worker
+  // recreate (not update) so the menu also exists on a fresh service worker.
+  // 撞 id 自愈:浏览器启动期菜单持久状态异步恢复,removeAll→create 可能与恢复
+  // 交错而报 duplicate id。读掉 lastError 消噪,失败时再清一次重建(仅重试一回)。
   chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({ id: MENU_ID, title, contexts: ['page'] });
+    const add = (retried) =>
+      chrome.contextMenus.create({ id: MENU_ID, title, contexts: ['page'] }, () => {
+        if (chrome.runtime.lastError && !retried) chrome.contextMenus.removeAll(() => add(true));
+      });
+    add(false);
   });
 }
 
