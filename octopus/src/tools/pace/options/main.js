@@ -45,17 +45,23 @@ function render(host, s) {
       },
     }, S.optionsReset)));
 
+  let hold = !!s.hold; // 会话内保持快照(弹窗同款):开关即时翻转,档位写入据此镜像 heldPace
+
   // 档位
   const dialSec = section(host, S.dialTitle, S.dialNote);
   const out = el('output', {}, fmt(s.pace));
   const dial = el('input', { type: 'range', min: '0.07', max: '16', step: '0.05', value: String(s.pace), 'aria-label': S.dialLabel });
   fillSlider(dial);
   dial.addEventListener('input', () => { out.textContent = fmt(dial.value); fillSlider(dial); });
-  dial.addEventListener('change', () => saveSettings({ pace: clampPace(Number(dial.value)) }));
+  dial.addEventListener('change', async () => {
+    const pace = clampPace(Number(dial.value));
+    await saveSettings(hold ? { pace, heldPace: pace } : { pace }); // 保持期调档同步记忆(弹窗 commit 同款)
+    if (hold) holdLine.textContent = S.holdOnLine.replace('{pace}', fmt(pace)); // 标签同步,不待重渲染
+  });
   dialSec.append(el('div', { class: 'row' }, el('span', { class: 'row-label' }, S.dialLabel), dial, out));
   const pills = PRESETS.map((p) => el('button', {
     class: 'pill' + (samePace(p, s.pace) ? ' on' : ''), type: 'button',
-    onclick: async () => { await saveSettings({ pace: p }); render(host, await loadSettings()); },
+    onclick: async () => { await saveSettings(hold ? { pace: p, heldPace: p } : { pace: p }); render(host, await loadSettings()); }, // 保持期同步记忆;重渲染重读 heldPace
   }, fmt(p)));
   dialSec.append(el('div', { class: 'presets' }, el('span', { class: 'pill-label', style: 'border:0;background:none;color:var(--ink-3);cursor:default;padding-left:0' }, S.presetsLabel), ...pills));
 
@@ -63,7 +69,8 @@ function render(host, s) {
   const holdSec = section(host, S.holdTitle, S.holdNote);
   const holdLine = el('span', { style: 'color:var(--ink-2)' }, s.hold ? S.holdOnLine.replace('{pace}', fmt(s.heldPace)) : S.holdOffLine);
   holdSec.append(switchRow(S.holdLabel, s.hold, async (on) => {
-    await saveSettings({ hold: on });
+    hold = on;
+    await saveSettings(on ? { hold: true, heldPace: clampPace(Number(dial.value)) } : { hold: false }); // 开保持记忆当前档(弹窗/快捷键同款)
     holdLine.textContent = on ? S.holdOnLine.replace('{pace}', fmt((await loadSettings()).heldPace)) : S.holdOffLine;
   }, holdLine));
 
