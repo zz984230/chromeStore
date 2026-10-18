@@ -28,5 +28,9 @@
 - [x] 实现与评审(**2026-10-18 关账,真机过目 5/5 通过**)——实现波 `966340b`(壳三翼+翼记忆)→`b734c4c`(倍速翼+pace 文案单源)→`6206f1d`(通用翼+veil §6.1 退役)→`f42d489`(popup 字标金线)→修复波 `eeec9a6`(heldPace 跨入口对齐)/`6be4e17`(save 门控背压)→终审顺手修 `df0b70b`(aria-hidden×5/hasOwn/pill 联动)。测试 302→**308**;计划外增补:两新翼 veil 同款 storageAvailable 预览降级(http 挂载验证惯例依赖)。终审裁定 Ready to merge(0 Critical/0 未闭合 Important);Minor 去向:M2 种子「导入数据卫生」(逐键校验/NaN/lastError/空导出/text() catch)与「导出隐私提示+翼首帧 FOUC」。
 
 ## M2 上架准备
-- [ ] 商店素材与截图、合并权限的隐私叙事、版本号决策(建议上架定 1.0.0)
-- 吸收取代 video-acc 的 store-prep 备忘
+- [x] 质量地板波(M1 种子清偿:导入逐键卫生/NaN 入界/lastError/空导出文案/导出隐私提示/翼首帧 FOUC;pace popup http 存活;顺手修 holdOnLine 叠印 ××)
+- [x] 版本 1.0.0 + `npm run zip` 打包链(包根 manifest/版本三处同步/钉子测试)
+- [x] 商店文案单源 listing.zh.md + 隐私政策页(仓内 docs/privacy.zh.md,GitHub 链接)
+- [x] 商店截图 ×5 + 小宣传图(mock-chrome 完整模式实拍,1280×800/440×280)
+- [ ] 验收:全量门 + 用户真机过目(zip 解包加载/导入卫生手测/FOUC 复验/商店图目检;通过后 push 关账)
+- 吸收取代 video-acc 的 store-prep 备忘(其 MILESTONES 末节三件事:版本号决策 1.0.0 ✓/商店素材 ✓/打磨→种子并入首波 ✓)
