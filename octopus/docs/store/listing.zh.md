@@ -44,6 +44,7 @@ https://github.com/zz984230/chromeStore/blob/develop/octopus/docs/privacy.zh.md
 | `docs/store/assets/s2-options-pace.png` | 1280×800 | 截图 2 · 设置页倍速翼 |
 | `docs/store/assets/s3-popup.png` | 1280×800 | 截图 3 · 工具栏弹窗 |
 | `docs/store/assets/s4-general.png` | 1280×800 | 截图 4 · 设置页通用翼 |
+| `docs/store/assets/s5-options-veil-sites.png` | 1280×800 | 截图 5 · 夜幕站点名单与定时 |
 | `docs/store/assets/promo-440x280.png` | 440×280 | 小宣传图 |
 | (manifest 自带 `icons/toolbar/128.png`) | 128×128 | 商店图标 |
 
@@ -57,7 +58,7 @@ https://github.com/zz984230/chromeStore/blob/develop/octopus/docs/privacy.zh.md
 | 类别 | 生产力工具 |
 | 语言 | 中文(简体) |
 | 图标 | manifest 自带,无需另传 |
-| 截图 ×4 | 资产清单 s1–s4 |
+| 截图 ×5 | 资产清单 s1–s5 |
 | 小宣传图 | promo-440x280.png |
 | 隐私政策 URL | 上「隐私政策 URL」 |
 | 数据使用披露 | 全部不勾 |
