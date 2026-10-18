@@ -27,3 +27,9 @@ export function formatPace(value) {
   const n = clampPace(value);
   return `${Number.isInteger(n) ? n : n.toFixed(2).replace(/0$/, '')}×`;
 }
+
+// 跳过秒数步进(±5,与 manifest 命令「片头跳过 ±5 秒」一致),夹在 0–3600
+// 注:先把 current 夹入界内再步进——负值脏数据 +5 落在首个步点(5),而非 2
+export function stepSkip(current, delta, min = 0, max = 3600) {
+  return Math.min(max, Math.max(min, Math.round(Math.max(min, current) + delta)));
+}

@@ -1,8 +1,8 @@
 // src/shell/options.js — M1:壳接管 options 骨架(三翼侧边栏);夜幕面板仍由 veil options main 挂
 import { loadShell, saveShellPatch } from './store.js';
 import '../tools/veil/options/main.js';
-// M1 Task2/3 落地时在此追加:
-// import { initPaceOptions } from '../tools/pace/options/main.js';
+import { initPaceOptions } from '../tools/pace/options/main.js';
+// M1 Task3 落地时在此追加:
 // import { initGeneralOptions } from './options-general.js';
 
 const buttons = [...document.querySelectorAll('#opt-nav button')];
@@ -20,4 +20,5 @@ for (const b of buttons) {
   });
 }
 
+initPaceOptions();
 loadShell().then((s) => show(s.activeWing)).catch(() => show('veil'));

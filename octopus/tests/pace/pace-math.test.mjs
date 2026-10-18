@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   PACE_MIN, PACE_MAX, BUMP, PRESETS,
-  clampPace, bumpPace, samePace, formatPace,
+  clampPace, bumpPace, samePace, formatPace, stepSkip,
 } from '../../src/tools/pace/shared/paceMath.js';
 
 test('档位常量与行为规格一致', () => {
@@ -41,4 +41,11 @@ test('formatPace 输出紧凑档位文本', () => {
   assert.equal(formatPace(0.07), '0.07×');
   assert.equal(formatPace(2.05), '2.05×');
   assert.equal(formatPace(0.75), '0.75×');
+});
+
+test('stepSkip:5 秒步进夹在 0–3600', () => {
+  assert.equal(stepSkip(0, 5), 5);
+  assert.equal(stepSkip(85, -5), 80);
+  assert.equal(stepSkip(-3, 5), 5);      // 负值入界
+  assert.equal(stepSkip(3598, 5), 3600); // 顶界夹持
 });
