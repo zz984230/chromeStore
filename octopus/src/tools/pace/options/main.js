@@ -1,5 +1,5 @@
 // src/tools/pace/options/main.js — 倍速翼:七字段完整态(弹窗为快调子集,同键互写)
-import { loadSettings, saveSettings } from '../shared/store.js';
+import { loadSettings, saveSettings, DEFAULT_SETTINGS } from '../shared/store.js';
 import { PRESETS, clampPace, samePace, stepSkip } from '../shared/paceMath.js';
 import { PACE_STRINGS as S } from '../shared/strings.js';
 
@@ -21,9 +21,17 @@ function fillSlider(input) {
   input.style.setProperty('--fill', `${p}%`);
 }
 
+// 预览降级对等(veil 翼同款):无 chrome.storage 的 http 挂载下以默认值渲染,
+// main 设 data-preview;读写走 load/save 门控,消除空白翼与 unhandled rejection。
+let writable = true;
+const load = () => (writable ? loadSettings() : Promise.resolve({ ...DEFAULT_SETTINGS }));
+const save = (patch) => { if (writable) saveSettings(patch).catch(() => {}); };
+
 export function initPaceOptions(host = document.getElementById('opt-pace')) {
   if (!host) return; // 预览/测试环境无宿主,静默
-  loadSettings().then((s) => render(host, s));
+  writable = Boolean(globalThis.chrome?.storage?.local);
+  if (!writable) document.querySelector('main')?.setAttribute('data-preview', '');
+  load().then((s) => render(host, s));
 }
 
 function section(parent, title, note) {
@@ -40,8 +48,8 @@ function render(host, s) {
     el('button', {
       class: 'reset', type: 'button',
       onclick: async () => {
-        await saveSettings({ pace: 1, hold: false, heldPace: 1, introSkip: 0, outroSkip: 0, skipOn: false, autoAdvance: false });
-        render(host, await loadSettings());
+        await save({ pace: 1, hold: false, heldPace: 1, introSkip: 0, outroSkip: 0, skipOn: false, autoAdvance: false });
+        render(host, await load());
       },
     }, S.optionsReset)));
 
@@ -55,13 +63,13 @@ function render(host, s) {
   dial.addEventListener('input', () => { out.textContent = fmt(dial.value); fillSlider(dial); });
   dial.addEventListener('change', async () => {
     const pace = clampPace(Number(dial.value));
-    await saveSettings(hold ? { pace, heldPace: pace } : { pace }); // 保持期调档同步记忆(弹窗 commit 同款)
+    await save(hold ? { pace, heldPace: pace } : { pace }); // 保持期调档同步记忆(弹窗 commit 同款)
     if (hold) holdLine.textContent = S.holdOnLine.replace('{pace}', fmt(pace)); // 标签同步,不待重渲染
   });
   dialSec.append(el('div', { class: 'row' }, el('span', { class: 'row-label' }, S.dialLabel), dial, out));
   const pills = PRESETS.map((p) => el('button', {
     class: 'pill' + (samePace(p, s.pace) ? ' on' : ''), type: 'button',
-    onclick: async () => { await saveSettings(hold ? { pace: p, heldPace: p } : { pace: p }); render(host, await loadSettings()); }, // 保持期同步记忆;重渲染重读 heldPace
+    onclick: async () => { await save(hold ? { pace: p, heldPace: p } : { pace: p }); render(host, await load()); }, // 保持期同步记忆;重渲染重读 heldPace
   }, fmt(p)));
   dialSec.append(el('div', { class: 'presets' }, el('span', { class: 'pill-label', style: 'border:0;background:none;color:var(--ink-3);cursor:default;padding-left:0' }, S.presetsLabel), ...pills));
 
@@ -70,22 +78,22 @@ function render(host, s) {
   const holdLine = el('span', { style: 'color:var(--ink-2)' }, s.hold ? S.holdOnLine.replace('{pace}', fmt(s.heldPace)) : S.holdOffLine);
   holdSec.append(switchRow(S.holdLabel, s.hold, async (on) => {
     hold = on;
-    await saveSettings(on ? { hold: true, heldPace: clampPace(Number(dial.value)) } : { hold: false }); // 开保持记忆当前档(弹窗/快捷键同款)
-    holdLine.textContent = on ? S.holdOnLine.replace('{pace}', fmt((await loadSettings()).heldPace)) : S.holdOffLine;
+    await save(on ? { hold: true, heldPace: clampPace(Number(dial.value)) } : { hold: false }); // 开保持记忆当前档(弹窗/快捷键同款)
+    holdLine.textContent = on ? S.holdOnLine.replace('{pace}', fmt((await load()).heldPace)) : S.holdOffLine;
   }, holdLine));
 
   // 片头片尾
   const skipSec = section(host, S.skipTitle, S.skipNote);
-  skipSec.append(switchRow(S.skipSwitchLabel, s.skipOn, (on) => saveSettings({ skipOn: on })));
+  skipSec.append(switchRow(S.skipSwitchLabel, s.skipOn, (on) => save({ skipOn: on })));
   skipSec.append(stepperRow([
-    [S.skipIntroLabel, s.introSkip, (v) => saveSettings({ introSkip: v })],
-    [S.skipOutroLabel, s.outroSkip, (v) => saveSettings({ outroSkip: v })],
+    [S.skipIntroLabel, s.introSkip, (v) => save({ introSkip: v })],
+    [S.skipOutroLabel, s.outroSkip, (v) => save({ outroSkip: v })],
   ]));
   skipSec.append(el('p', { class: 'hint' }, S.skipStepNote));
 
   // 续播
   const advSec = section(host, S.advanceTitle, S.advanceNote);
-  advSec.append(switchRow(S.advanceLabel, s.autoAdvance, (on) => saveSettings({ autoAdvance: on })));
+  advSec.append(switchRow(S.advanceLabel, s.autoAdvance, (on) => save({ autoAdvance: on })));
   advSec.append(el('p', { class: 'hint' }, S.advanceHint));
 
   host.append(el('div', { class: 'go-hint' }, S.shortcutHint));

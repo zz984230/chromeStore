@@ -511,22 +511,9 @@ function siteThemesBox() {
   return sites;
 }
 
-// §6.1 字号：number 10-22，change 存，--font-size 变量即时应用。
-function renderFontSizeControl() {
-  const input = el('input', { type: 'number', id: 'ui-fontsize', min: '10', max: '22', step: '1', value: current.ui?.fontSize ?? 13 });
-  const row = el('label', {}, `${STRINGS.fontSizeLabel} `, input);
-  input.addEventListener('change', () => {
-    if (input.value === '') return; // 空数字不落盘
-    const v = clampNumber(input.value, 10, 22, current.ui.fontSize);
-    const next = { ...current.ui, fontSize: v };
-    current = { ...current, ui: next };
-    save({ ui: next });
-  });
-  return row;
-}
-
-// ---- 高级：杂项（行为残项 + 挂载开关/字号 + 站点主题 + 排除/包含完整列表；
+// ---- 高级：杂项（行为残项 + 挂载开关 + 站点主题 + 排除/包含完整列表；
 // #adv-misc 组，列表是首屏站点卡当前模式的完整版备份视图）----
+// （§6.1 字号控件已迁壳通用翼 src/shell/options-general.js；--font-size 应用路径保留。）
 function renderMisc() {
   // 行为残项：II-area engine 键（复查对，随引擎席位禁用）。
   const behavior = el('fieldset', { id: ENGINE_BEHAVIOR_HOST }, el('legend', {}, STRINGS.behaviorLabel));
@@ -544,8 +531,7 @@ function renderMisc() {
 
   const mount = el('fieldset', {},
     el('label', {}, el('input', { type: 'checkbox', 'data-m3key': 'documentRoot', checked: current.documentRoot }), ` ${STRINGS.documentRootLabel}`),
-    el('label', {}, el('input', { type: 'checkbox', 'data-m3key': 'reattachStyles', checked: current.reattachStyles }), ` ${STRINGS.reattachStylesLabel}`),
-    renderFontSizeControl());
+    el('label', {}, el('input', { type: 'checkbox', 'data-m3key': 'reattachStyles', checked: current.reattachStyles }), ` ${STRINGS.reattachStylesLabel}`));
   // data-m3key 委托在此补上：原 renderBehavior 的监听挂在行为 fieldset 上，而挂载
   // fieldset 是其兄弟——documentRoot/reattachStyles 的改动此前落不了盘。
   mount.addEventListener('change', (e) => {
@@ -693,8 +679,6 @@ function syncFromSettings(s) {
   for (const i of document.querySelectorAll('#adv-misc input[data-m3key]')) {
     i.checked = Boolean(s[i.getAttribute('data-m3key')]);
   }
-  const fs = document.getElementById('ui-fontsize');
-  if (fs && document.activeElement !== fs) fs.value = s.ui?.fontSize ?? 13;
 }
 
 function applyFontSize(v) {

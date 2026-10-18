@@ -2,8 +2,7 @@
 import { loadShell, saveShellPatch } from './store.js';
 import '../tools/veil/options/main.js';
 import { initPaceOptions } from '../tools/pace/options/main.js';
-// M1 Task3 落地时在此追加:
-// import { initGeneralOptions } from './options-general.js';
+import { initGeneralOptions } from './options-general.js';
 
 const buttons = [...document.querySelectorAll('#opt-nav button')];
 const views = [...document.querySelectorAll('.view')];
@@ -21,4 +20,5 @@ for (const b of buttons) {
 }
 
 initPaceOptions();
+initGeneralOptions();
 loadShell().then((s) => show(s.activeWing)).catch(() => show('veil'));

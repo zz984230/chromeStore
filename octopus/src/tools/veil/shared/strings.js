@@ -146,7 +146,6 @@ export const STRINGS = Object.freeze({
   ctListHint: '一行一个域名，自动忽略 www.；精确匹配，不覆盖子域名。',
   documentRootLabel: '样式挂到 <html> 而不是 <head>',
   reattachStylesLabel: '样式被页面删掉时重新挂回',
-  fontSizeLabel: '本页字号（像素）',
   userCssAreaLabel: '你的样式——选中「自定义 CSS」席位后整体生效',
   scheduleEnableLabel: '启用定时',
   scheduleOnLabel: '入夜拉上',
