@@ -1,6 +1,6 @@
 // src/popup/main.js — 弹窗：滑块与预设调档；状态行显示活动页实际/存储档位
 import { PRESETS, clampPace, formatPace, samePace } from '../shared/paceMath.js';
-import { loadSettings, saveSettings } from '../shared/store.js';
+import { loadSettings, saveSettings, DEFAULT_SETTINGS } from '../shared/store.js';
 import { nudgeActiveTab, pushAdvanceNow } from '../shared/notify.js';
 import { clampSkip } from '../shared/skipPlan.js';
 import { PROBE_PACE } from '../shared/protocol.js';
@@ -10,7 +10,7 @@ const dial = document.getElementById('pace-dial');
 const chipsBox = document.getElementById('pace-chips');
 const note = document.getElementById('pace-note');
 const verEl = document.getElementById('app-version');
-if (verEl) verEl.textContent = chrome.runtime.getManifest().version;
+if (verEl) verEl.textContent = globalThis.chrome?.runtime?.getManifest()?.version ?? '';
 const holdSwitch = document.getElementById('hold-switch');
 const holdLabel = document.getElementById('hold-label');
 let hold = false; // 本弹窗会话的保持快照
@@ -124,7 +124,13 @@ async function toggleHold() {
 holdSwitch.addEventListener('click', () => toggleHold().catch(warnWrite));
 
 (async () => {
-  const settings = await loadSettings();
+  let settings;
+  try {
+    settings = await loadSettings();
+  } catch { // http 挂载(无 chrome.storage):预览降级 —— 默认值渲染 + data-preview 标记
+    settings = { ...DEFAULT_SETTINGS };
+    document.body.setAttribute('data-preview', '');
+  }
   const pace = settings.pace;
   paint(pace);
   hold = !!settings.hold;

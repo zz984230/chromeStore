@@ -1,8 +1,38 @@
 // src/shell/options-general.js — 通用翼:字号/快捷键/数据/关于(壳级,跨工具)
 import { SHELL_STRINGS as SS } from './strings.js';
 import { loadSettings as loadVeil, saveSettings as saveVeil } from '../tools/veil/shared/settings.js';
+import { clampPace } from '../tools/pace/shared/paceMath.js';
+import { IDS, WINGS } from './store.js';
 
 export const EXPORT_KEYS = ['nightveil.settings', 'vpa.settings', 'oct.shell'];
+
+// 逐键验形:结构层(键值非对象)整体拒;语义层(字段脏)丢键不丢包。
+// 返回 null=不是本扩展的设置文件;{}=合法包但无已知键内容(空导出)。
+// 依据:pace loadSettings 读侧不夹取({...DEFAULTS, ...stored} 直透),
+// 导入侧是脏数值(字符串数/null/负片秒)进入运行时的最后一道闸。
+const PACE_RANGE = { introSkip: [0, 3600], outroSkip: [0, 3600] };
+
+function sanitizePace(v) {
+  for (const f of ['pace', 'heldPace']) {
+    if (v[f] !== undefined && !Number.isFinite(v[f])) return null;
+  }
+  for (const [f, [lo, hi]] of Object.entries(PACE_RANGE)) {
+    if (v[f] !== undefined && !(Number.isFinite(v[f]) && v[f] >= lo && v[f] <= hi)) return null;
+  }
+  for (const f of ['hold', 'skipOn', 'autoAdvance']) {
+    if (v[f] !== undefined && typeof v[f] !== 'boolean') return null;
+  }
+  const out = { ...v };
+  if (out.pace !== undefined) out.pace = clampPace(out.pace);
+  if (out.heldPace !== undefined) out.heldPace = clampPace(out.heldPace);
+  return out;
+}
+
+function sanitizeShell(v) {
+  if (v.activeTool !== undefined && !IDS.has(v.activeTool)) return null;
+  if (v.activeWing !== undefined && !WINGS.has(v.activeWing)) return null;
+  return { ...v };
+}
 
 export function parseImportFile(text) {
   let parsed;
@@ -10,11 +40,15 @@ export function parseImportFile(text) {
   if (!parsed || parsed.app !== 'octopus' || !parsed.data || typeof parsed.data !== 'object' || Array.isArray(parsed.data)) return null;
   const out = {};
   for (const k of EXPORT_KEYS) {
-    if (parsed.data[k] === undefined) continue;
-    if (!parsed.data[k] || typeof parsed.data[k] !== 'object' || Array.isArray(parsed.data[k])) return null;
-    out[k] = parsed.data[k];
+    const v = parsed.data[k];
+    if (v === undefined) continue;
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+    let clean = v;
+    if (k === 'vpa.settings') { clean = sanitizePace(v); if (!clean) continue; }
+    else if (k === 'oct.shell') { clean = sanitizeShell(v); if (!clean) continue; }
+    out[k] = clean;
   }
-  return Object.keys(out).length ? out : null;
+  return out;
 }
 
 const el = (tag, attrs = {}, ...kids) => {
@@ -86,7 +120,8 @@ async function render(host) {
     el('button', { class: 'btn', type: 'button', onclick: exportData, ...btnAttrs }, SS.dataExport),
     el('button', { class: 'btn', type: 'button', onclick: importData, ...btnAttrs }, SS.dataImport),
     el('button', { class: 'btn ghost', type: 'button', onclick: resetAll, ...btnAttrs }, SS.dataResetAll)),
-    el('p', { class: 'hint' }, SS.dataHint));
+    el('p', { class: 'hint' }, SS.dataHint),
+    el('p', { class: 'hint' }, SS.dataPrivacyNote));
 
   // 关于(预览挂载无 manifest,try/catch 兜底为空文案)
   let m = null;
@@ -96,7 +131,8 @@ async function render(host) {
 
 function exportData() {
   chrome.storage.local.get(EXPORT_KEYS, (records) => {
-    const blob = new Blob([JSON.stringify({ app: 'octopus', exportedAt: new Date().toISOString(), data: records }, null, 2)], { type: 'application/json' });
+    if (chrome.runtime.lastError) { alert(SS.storageReadFail); return; }
+    const blob = new Blob([JSON.stringify({ app: 'octopus', exportedAt: new Date().toISOString(), data: records ?? {} }, null, 2)], { type: 'application/json' });
     const a = el('a', { href: URL.createObjectURL(blob), download: `octopus-settings-${new Date().toISOString().slice(0, 10)}.json` });
     a.click(); URL.revokeObjectURL(a.href);
   });
@@ -106,16 +142,25 @@ function importData() {
   const input = el('input', { type: 'file', accept: 'application/json,.json' });
   input.addEventListener('change', () => {
     const file = input.files?.[0]; if (!file) return;
-    file.text().then((text) => {
-      const parsed = parseImportFile(text);
-      if (!parsed) { alert('导入失败:不是 Octopus 设置文件'); return; }
-      chrome.storage.local.set(parsed, () => location.reload());
-    });
+    file.text()
+      .then((text) => {
+        const parsed = parseImportFile(text);
+        if (parsed === null) { alert(SS.importBadFile); return; }
+        if (!Object.keys(parsed).length) { alert(SS.importEmpty); return; }
+        chrome.storage.local.set(parsed, () => {
+          if (chrome.runtime.lastError) { alert(SS.storageWriteFail); return; }
+          location.reload();
+        });
+      })
+      .catch(() => alert(SS.importReadFail));
   });
   input.click();
 }
 
 function resetAll() {
-  if (!confirm('全部恢复默认?两个工具的设置与壳状态都会清空。')) return;
-  chrome.storage.local.remove(EXPORT_KEYS, () => location.reload());
+  if (!confirm(SS.resetConfirm)) return;
+  chrome.storage.local.remove(EXPORT_KEYS, () => {
+    if (chrome.runtime.lastError) { alert(SS.storageWriteFail); return; }
+    location.reload();
+  });
 }

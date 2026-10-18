@@ -49,3 +49,9 @@ test('stepSkip:5 秒步进夹在 0–3600', () => {
   assert.equal(stepSkip(-3, 5), 5);      // 负值入界
   assert.equal(stepSkip(3598, 5), 3600); // 顶界夹持
 });
+
+test('stepSkip:非有限入参按 min 起步,不再传播 NaN', () => {
+  assert.equal(stepSkip(NaN, 5), 5);
+  assert.equal(stepSkip(undefined, 5), 5);
+  assert.equal(stepSkip('x', -5), 0);
+});

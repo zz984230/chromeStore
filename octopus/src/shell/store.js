@@ -1,8 +1,8 @@
 // src/shell/store.js — 壳存储:oct. 命名空间(Q4 当前工具 / M1 当前翼)。工具命名空间不经此。
 const KEY = 'oct.shell';
 const DEFAULTS = Object.freeze({ activeTool: 'veil', activeWing: 'veil' });
-const IDS = new Set(['veil', 'pace']); // 与 registry 同步;M0 硬编码,第三个工具时改由 registry 注入
-const WINGS = new Set(['veil', 'pace', 'gen']); // options 三翼;gen=通用(非工具)
+export const IDS = new Set(['veil', 'pace']); // 与 registry 同步;M0 硬编码,第三个工具时改由 registry 注入
+export const WINGS = new Set(['veil', 'pace', 'gen']); // options 三翼;gen=通用(非工具)
 
 function merge(found) {
   const patch = found?.[KEY];
