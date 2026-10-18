@@ -21,10 +21,10 @@
 - 测试对账:统一 `node --test --test-isolation=none` 全量绿 **302/302**(终审修复波 `2fd4640` 后;修复波前 301/301),分包计数 veil 218 + pace 71 + shell 13 = 302。基线对账:nightveil 224(unit 223 + build 1)+ video-acc 73 = 297 为起点——−2(strings-source 3 条废弃、壳版 1 条重生)、−2(icons:NV 2 条 + VA gen-icons 2 条合并为壳版 gen-icons 2 条)、+8 净新增(registry 1 + manifest 4 + store 3)= **301**,终审修复波再 +1(engine WAR 防漂移钉子)= **302**;build 1→1 与 server 1→1 同额换手(server 随 Task 11 回归 veil 套件,路径遍历 403 安全钉子在场)。
 - 构建产物(`npm run build` → `extension/`):5 个 entry(background.js、popup.js、options.js、tools/veil/content.js、tools/pace/content.js)+ 装配 manifest.json + public 资产(popup.html、options.html、tools/{veil,pace}/ 静态含 nv-shadow-hook.js 与 content.css)+ 章鱼图标 15 张 PNG(三盘 toolbar/dark/light × 16/32/48/64/128)。
 - 两处显式偏移(计划 Self-Review 已披露):壳六件套中「消息路由」收敛为命名空间预留(两族消息不相交,ADR-0002 已载,不建空转代码);「文案聚合」服务与 pace 散落文案收纳推迟 M1(M0 无消费者)。勾选「壳六件套」「pace 移植」以此注记为准。
-- 真机过目:**待用户执行**——M0 最终门,7 项清单见计划 Task 13 Step 5;回执前 M0 保持「代码关账、里程碑待验」状态。
+- 真机过目:**通过(2026-10-18 回执)**——7 项清单(计划 Task 13 Step 5)全过;随回执的刺与修复波:面板配色统一 `355d4d3`,tab 名/页脚/pace 设置入口 `ef6128b`+`58c814a`+`17a8f7b`(2A–2D),章鱼标记 v5 重制 `578de76`(贝塞尔弧腿+外卷勾,椭圆大眼),启动菜单撞 id 自愈 `f3fac2b`,工具栏动态图标三盘入夜与金 `f80979e`(veil 关=金盘夜章鱼/开=夜盘金章鱼,setIcon 状态真话化保留)。**M0 关账。**
 
 ## M1 设计迭代(稿先行)
-- [ ] 设计稿:章鱼三盘精修、options 侧边栏 IA(暗色/视频倍速/通用)、popup 壳润色 → 用户过目
+- [ ] 设计稿:options 侧边栏 IA(夜幕/倍速/通用)、popup 壳润色 → 用户过目(章鱼三盘精修已随 M0 修复波提前交付:v5 弧腿卷梢 + 夜与金三盘,见 M0 验收记录)
 - [ ] 实现与评审
 
 ## M2 上架准备
