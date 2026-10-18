@@ -1,7 +1,9 @@
 // scripts/gen-icons.mjs
 // Generates all octopus icons as PNGs (zero dependencies).
 // Output: public/icons/{toolbar,dark,light}/{16,32,48,64,128}.png
-// Design: rounded-square plate + octopus mark (dome head + eyes + six slim legs),
+// Design: rounded-square plate + octopus mark v5 (dome head + wide low oval eyes
+//         + six legs drawn as tapered arc strokes ending in outward curls —
+//         the octopus signifier; leg tips land on one scalloped hem line),
 //         4x4 supersampled antialiasing. Ported from nightveil's generator:
 //         PNG encoder / supersampled rasterizer / three-plate SETS kept as-is.
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -13,7 +15,8 @@ const SIZES = [16, 32, 48, 64, 128];
 
 // set name -> [plate RGB, mark RGB]
 const SETS = {
-  toolbar: [[90, 95, 107], [242, 242, 242]],
+  // toolbar 盘换夜幕深蓝 + 月光金(veil --line 家族 / --gold),图标与扩展 UI 同源
+  toolbar: [[27, 34, 51], [227, 201, 135]],
   dark: [[30, 34, 48], [232, 226, 212]],
   light: [[233, 233, 236], [58, 63, 74]],
 };
@@ -67,41 +70,119 @@ function sdRoundRect(px, py, half, r) {
   return Math.min(Math.max(qx, qy), 0) + Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - r;
 }
 
-// 章鱼标记覆盖率 v4:圆顶头(低切缝,腿从下缘清晰长出)+ 双眼盘色镂空
-// (降至头中线,消歧水母)+ 六条加宽细腿(顶收拢焊接、外短内长、梢部收细)。
+// 章鱼标记覆盖率 v5:圆顶头(低平切)+ 宽而低的椭圆大眼(仍低于头中线,防读成水母)
+// + 六腿三对镜像,每腿 = 锥形扫摆段(二次贝塞尔)+ 梢部外卷小勾(精确圆弧,
+// 曲率中心在切线法向外侧)——卷曲是章鱼的决定性符号;腿长梯度使腿尖落在
+// 一条浅弧摆线上,底缘读成整体下摆而非参差发丝。
+
+function quadSample(p0, p1, p2, n) {
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, u = 1 - t;
+    pts.push([u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0],
+              u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1]]);
+  }
+  return pts;
+}
+
+// 在扫摆段终点沿切向外接一段精确圆弧卷勾(勾尖朝外上回卷)
+function appendCurl(pts, rho, theta, n) {
+  const K = pts[pts.length - 1], prev = pts[pts.length - 2];
+  let dx = K[0] - prev[0], dy = K[1] - prev[1];
+  const len = Math.hypot(dx, dy);
+  dx /= len; dy /= len;
+  const C = [K[0] + rho * dy, K[1] - rho * dx]; // 曲率中心在切线法向(外上)一侧
+  const phi0 = Math.atan2(K[1] - C[1], K[0] - C[0]);
+  // 选使弧起始切向与扫摆方向一致的绕向
+  const s = Math.sign(-Math.sin(phi0) * dx + Math.cos(phi0) * dy) || 1;
+  for (let i = 1; i <= n; i++) {
+    const phi = phi0 + s * theta * (i / n);
+    pts.push([C[0] + rho * Math.cos(phi), C[1] + rho * Math.sin(phi)]);
+  }
+}
+
+const HEAD = { cy: -0.08, r: 0.42, cut: 0.12 };
+const EYES = [[-0.155, -0.010], [0.155, -0.010]], EYE_RX = 0.082, EYE_RY = 0.104;
+
+// 右侧三腿:[P0, P1, P2, 卷勾半径, 卷勾角],左侧由镜像生成(镜像保形不保绕向)
+const LEG_DEFS = [
+  [[0.11, 0.06], [0.05, 0.30], [0.12, 0.52], 0.090, 2.6],
+  [[0.27, 0.04], [0.26, 0.26], [0.38, 0.45], 0.100, 2.8],
+  [[0.38, -0.02], [0.45, 0.16], [0.54, 0.34], 0.095, 2.9],
+];
+
+function buildLeg(def) {
+  const [p0, p1, p2, rho, theta] = def;
+  const pts = quadSample(p0, p1, p2, 36);
+  appendCurl(pts, rho, theta, 22);
+  let total = 0;
+  const arc = [0];
+  for (let i = 1; i < pts.length; i++) {
+    total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    arc.push(total);
+  }
+  const W0 = 0.085, W1 = 0.026;
+  const leg = pts.map((p, i) => {
+    const t = arc[i] / total;
+    return { x: p[0], y: p[1], w: W0 + (W1 - W0) * Math.pow(t, 0.85) };
+  });
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const p of leg) {
+    x0 = Math.min(x0, p.x - p.w); x1 = Math.max(x1, p.x + p.w);
+    y0 = Math.min(y0, p.y - p.w); y1 = Math.max(y1, p.y + p.w);
+  }
+  leg.bbox = { x0, x1, y0, y1 };
+  return leg;
+}
+
+const LEGS_R = LEG_DEFS.map(buildLeg);
+const LEGS = [...LEGS_R, ...LEGS_R.map(leg => leg.map(pt => ({ ...pt, x: -pt.x })))];
+for (const leg of LEGS.slice(3)) { // 镜像腿重算包围盒
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const p of leg) {
+    x0 = Math.min(x0, p.x - p.w); x1 = Math.max(x1, p.x + p.w);
+    y0 = Math.min(y0, p.y - p.w); y1 = Math.max(y1, p.y + p.w);
+  }
+  leg.bbox = { x0, x1, y0, y1 };
+}
+
 function octopusMark(px, py) {
-  const headR = 0.42, headCy = 0.04;
-  const inHead = py <= 0.06 && px * px + (py - headCy) * (py - headCy) <= headR * headR;
-  if (inHead) {
-    const eyes = [[-0.15, -0.04], [0.15, -0.04]], eyeR = 0.065;
-    for (const [ex, ey] of eyes) {
-      if ((px - ex) * (px - ex) + (py - ey) * (py - ey) <= eyeR * eyeR) return false;
+  const dy = py - HEAD.cy;
+  if (py <= HEAD.cut && px * px + dy * dy <= HEAD.r * HEAD.r) {
+    for (const [ex, ey] of EYES) {
+      const exx = (px - ex) / EYE_RX, eyy = (py - ey) / EYE_RY;
+      if (exx * exx + eyy * eyy <= 1) return false;
     }
     return true;
   }
-  const legY0 = 0.0;
-  const centers = [-0.62, -0.37, -0.12, 0.13, 0.38, 0.63];
-  for (let i = 0; i < centers.length; i++) {
-    const cx = centers[i];
-    const outer = Math.abs(cx) > 0.5;
-    const y1 = outer ? 0.78 : (Math.abs(cx) > 0.25 ? 0.90 : 0.86);
-    if (py < legY0 || py > y1) continue;
-    const t = (py - legY0) / 0.92;
-    const spread = cx * (0.55 + 0.45 * t);
-    const sway = 0.09 * Math.sin(t * Math.PI * 1.6 + cx * 2.2) * (0.25 + 0.75 * t);
-    const dx = px - (spread + sway);
-    const tt = (py - legY0) / (y1 - legY0);
-    const halfW = 0.078 + 0.030 * (1 - tt);
-    if (Math.abs(dx) <= halfW) return true;
+  for (const leg of LEGS) {
+    const b = leg.bbox;
+    if (px < b.x0 || px > b.x1 || py < b.y0 || py > b.y1) continue;
+    let hit = false;
+    for (let i = 0; i < leg.length - 1; i++) {
+      const a = leg[i], c = leg[i + 1];
+      const vx = c.x - a.x, vy = c.y - a.y;
+      const L2 = vx * vx + vy * vy;
+      let t = L2 ? ((px - a.x) * vx + (py - a.y) * vy) / L2 : 0;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const qx = px - (a.x + t * vx), qy = py - (a.y + t * vy);
+      const w = a.w + (c.w - a.w) * t;
+      if (qx * qx + qy * qy <= w * w) { hit = true; break; }
+    }
+    if (hit) return true;
+    const tip = leg[leg.length - 1];
+    const tx = px - tip.x, ty = py - tip.y;
+    if (tx * tx + ty * ty <= tip.w * tip.w) return true;
   }
   return false;
 }
 
-// 标记落位:octopusMark 的着墨范围是 x ∈ [-0.636, 0.618]、y ∈ [-0.38, 0.90]
-// (包围盒中心 y = 0.26,不在原点)。把包围盒中心对到盘面中心并整体缩放,
-// 否则标记会沉到底、腿尖贴盘缘。标记函数本体保持原样,落位只在这一处。
-const MARK_SCALE = 0.50; // 标记坐标 -> 盘面单位方格(着墨距盘缘最薄处 0.16,无裁切)
-const MARK_CY = 0.26;    // 着墨包围盒中心的标记 y
+// 标记落位:octopusMark v5 的着墨包围盒 x ∈ [-0.748, 0.747]、y ∈ [-0.498, 0.617]
+// (中心 y = 0.060)。把包围盒中心对到盘面中心并整体缩放(步长 0.0025 网格
+// 采样推导:宽度是约束维,留边 0.045 → SCALE 0.582)。标记函数本体保持原样,
+// 落位只在这一处。
+const MARK_SCALE = 0.582; // 标记坐标 -> 盘面单位方格
+const MARK_CY = 0.060;    // 着墨包围盒中心的标记 y
 
 function isMark(x, y) {
   return octopusMark((x - 0.5) / MARK_SCALE, (y - 0.5) / MARK_SCALE + MARK_CY);
