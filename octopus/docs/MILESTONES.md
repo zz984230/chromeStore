@@ -25,7 +25,7 @@
 
 ## M1 设计迭代(稿先行)
 - [x] 设计稿:options 侧边栏 IA(夜幕/倍速/通用)、popup 壳润色 → 用户过目(**2026-10-18 通过**,稿存 docs/design/m1-mockup.html;「数据管理」三钮保留;章鱼三盘精修已随 M0 修复波提前交付:v5 弧腿卷梢 + 夜与金三盘,见 M0 验收记录)
-- [x] 实现与评审(**2026-10-18 代码关账,待真机过目**)——实现波 `966340b`(壳三翼+翼记忆)→`b734c4c`(倍速翼+pace 文案单源)→`6206f1d`(通用翼+veil §6.1 退役)→`f42d489`(popup 字标金线)→修复波 `eeec9a6`(heldPace 跨入口对齐)/`6be4e17`(save 门控背压)→终审顺手修 `df0b70b`(aria-hidden×5/hasOwn/pill 联动)。测试 302→**308**;计划外增补:两新翼 veil 同款 storageAvailable 预览降级(http 挂载验证惯例依赖)。终审裁定 Ready to merge(0 Critical/0 未闭合 Important);Minor 去向:M2 种子「导入数据卫生」(逐键校验/NaN/lastError/空导出/text() catch)与「导出隐私提示+翼首帧 FOUC」。
+- [x] 实现与评审(**2026-10-18 关账,真机过目 5/5 通过**)——实现波 `966340b`(壳三翼+翼记忆)→`b734c4c`(倍速翼+pace 文案单源)→`6206f1d`(通用翼+veil §6.1 退役)→`f42d489`(popup 字标金线)→修复波 `eeec9a6`(heldPace 跨入口对齐)/`6be4e17`(save 门控背压)→终审顺手修 `df0b70b`(aria-hidden×5/hasOwn/pill 联动)。测试 302→**308**;计划外增补:两新翼 veil 同款 storageAvailable 预览降级(http 挂载验证惯例依赖)。终审裁定 Ready to merge(0 Critical/0 未闭合 Important);Minor 去向:M2 种子「导入数据卫生」(逐键校验/NaN/lastError/空导出/text() catch)与「导出隐私提示+翼首帧 FOUC」。
 
 ## M2 上架准备
 - [ ] 商店素材与截图、合并权限的隐私叙事、版本号决策(建议上架定 1.0.0)
