@@ -67,13 +67,13 @@ function sdRoundRect(px, py, half, r) {
   return Math.min(Math.max(qx, qy), 0) + Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - r;
 }
 
-// 章鱼标记覆盖率 v3:圆顶头 + 双眼(盘色镂空,辨识度关键)+ 六条细腿
-// (顶收拢焊入头下缘、外短内长、梢部收细;波浪裙边)。
+// 章鱼标记覆盖率 v4:圆顶头(低切缝,腿从下缘清晰长出)+ 双眼盘色镂空
+// (降至头中线,消歧水母)+ 六条加宽细腿(顶收拢焊接、外短内长、梢部收细)。
 function octopusMark(px, py) {
-  const headR = 0.44, headCy = 0.02;
-  const inHead = py <= 0.14 && px * px + (py - headCy) * (py - headCy) <= headR * headR;
+  const headR = 0.42, headCy = 0.04;
+  const inHead = py <= 0.06 && px * px + (py - headCy) * (py - headCy) <= headR * headR;
   if (inHead) {
-    const eyes = [[-0.155, -0.14], [0.155, -0.14]], eyeR = 0.062;
+    const eyes = [[-0.15, -0.04], [0.15, -0.04]], eyeR = 0.065;
     for (const [ex, ey] of eyes) {
       if ((px - ex) * (px - ex) + (py - ey) * (py - ey) <= eyeR * eyeR) return false;
     }
@@ -91,17 +91,17 @@ function octopusMark(px, py) {
     const sway = 0.09 * Math.sin(t * Math.PI * 1.6 + cx * 2.2) * (0.25 + 0.75 * t);
     const dx = px - (spread + sway);
     const tt = (py - legY0) / (y1 - legY0);
-    const halfW = 0.062 + 0.028 * (1 - tt);
+    const halfW = 0.078 + 0.030 * (1 - tt);
     if (Math.abs(dx) <= halfW) return true;
   }
   return false;
 }
 
-// 标记落位:octopusMark 的着墨范围是 x ∈ [-0.62, 0.60]、y ∈ [-0.42, 0.90]
-// (包围盒中心 y = 0.24,不在原点)。把包围盒中心对到盘面中心并整体缩放,
+// 标记落位:octopusMark 的着墨范围是 x ∈ [-0.636, 0.618]、y ∈ [-0.38, 0.90]
+// (包围盒中心 y = 0.26,不在原点)。把包围盒中心对到盘面中心并整体缩放,
 // 否则标记会沉到底、腿尖贴盘缘。标记函数本体保持原样,落位只在这一处。
-const MARK_SCALE = 0.50; // 标记坐标 -> 盘面单位方格
-const MARK_CY = 0.24;    // 着墨包围盒中心的标记 y
+const MARK_SCALE = 0.50; // 标记坐标 -> 盘面单位方格(着墨距盘缘最薄处 0.16,无裁切)
+const MARK_CY = 0.26;    // 着墨包围盒中心的标记 y
 
 function isMark(x, y) {
   return octopusMark((x - 0.5) / MARK_SCALE, (y - 0.5) / MARK_SCALE + MARK_CY);
