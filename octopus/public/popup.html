@@ -153,17 +153,22 @@
   .ct-dot { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line); }
   .dimmed { opacity: .55; pointer-events: none; }
 
+  /* ---- 动作钮（面板通用：veil 设置入口 / pace 立即续播） ---- */
+  .go {
+    margin-top: 8px; width: 100%; padding: 7px 12px;
+    border-radius: 10px; border: 1px solid var(--line);
+    background: transparent; color: var(--ink);
+    font-family: inherit; font-size: 13px; cursor: pointer;
+  }
+  .go:hover { border-color: var(--gold); }
+  .go:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
   /* ---- 底部 ---- */
   .foot {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; justify-content: flex-end;
     padding: 12px 18px; color: var(--ink-3); font-size: 12px;
   }
-  .foot .link {
-    background: none; border: none; color: var(--ink-2); font: 400 12px/1 var(--font-sans);
-    cursor: pointer; padding: 4px 2px;
-  }
-  .foot .link:hover { color: var(--gold); }
-  .foot .link:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+  .foot .go { width: auto; margin: 0; }
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -258,15 +263,6 @@
           font-family: inherit; font-size: 13px; text-align: right;
         }
         .unit { font-size: 12px; color: var(--ink-dim); }
-        .go {
-          margin-top: 8px; width: 100%; padding: 7px 12px;
-          border-radius: 10px; border: 1px solid var(--plate-edge);
-          background: transparent; color: var(--vpa-ink);
-          font-family: inherit; font-size: 13px; cursor: pointer;
-        }
-        .go:hover { border-color: var(--glow); }
-        .foot-row { display: flex; justify-content: flex-end; margin-top: 14px; }
-        .foot-row .go { width: auto; margin-top: 0; }
       </style>
       <div class="card">
         <header class="card-head">
@@ -300,7 +296,6 @@
           <button class="go" id="advance-now" type="button">▶ 立即续播</button>
         </section>
         <p class="note" id="pace-note">读取中…</p>
-        <div class="foot-row"><button class="go" type="button" id="pace-settings">设置</button></div>
       </div>
     </section>
   </main>

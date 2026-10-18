@@ -187,5 +187,5 @@ export const STRINGS = Object.freeze({
   popupSitePillOn: '生效', popupSitePillExclude: '排除', popupSitePillInclude: '加入',
   popupSiteInternal: '内部页面 · 不可按站点控制',
   popupThemeLabel: '主题', popupColorTempLabel: '色温', popupDensityLabel: '浓度',
-  popupAllSettings: '全部设置',
+  popupSettings: '设置',
 });

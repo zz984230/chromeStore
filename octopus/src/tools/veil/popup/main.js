@@ -198,9 +198,9 @@ function syncCt(ct) {
   }
 }
 
-// ---- 底部（#pp-foot）：右对齐「全部设置」跳选项页 ----
+// ---- 底部（#pp-foot）：右下「设置」动作钮跳选项页 ----
 function renderFoot() {
-  const btn = el('button', { class: 'link', type: 'button' }, STRINGS.popupAllSettings);
+  const btn = el('button', { class: 'go', type: 'button' }, STRINGS.popupSettings);
   btn.addEventListener('click', () => {
     if (writable) chrome.runtime.openOptionsPage();
   });

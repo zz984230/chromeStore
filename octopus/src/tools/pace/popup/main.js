@@ -149,8 +149,3 @@ holdSwitch.addEventListener('click', () => toggleHold().catch(warnWrite));
     note.textContent = noteFor(false, pace);
   }
 })();
-
-// 底部「设置」→ 完整设置页(镜像 veil 全部设置机制;http 预览下静默)
-document.getElementById('pace-settings')?.addEventListener('click', () => {
-  globalThis.chrome?.runtime?.openOptionsPage?.();
-});
