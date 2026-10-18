@@ -40,9 +40,18 @@
 
   /* ---- 壳：工具 tab 条 ---- */
   #oct-tabs { display: flex; gap: 4px; padding: 8px 10px 0; }
-  #oct-tabs button { flex: 1; padding: 7px 4px; border: 0; border-radius: 8px 8px 0 0;
+  /* 壳润色：tab 字标 SVG + 激活态金线刻痕（与 options 侧栏竖刻同语言，此处横刻置 tab 底缘）。
+     字标取 Task 1 的 path，13px；::after 依赖 button 的 position:relative。 */
+  #oct-tabs button { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 7px 4px; border: 0; border-radius: 8px 8px 0 0;
     background: transparent; color: var(--ink-2, #9aa0ae); font: inherit; font-size: 13px; cursor: pointer; }
+  #oct-tabs button svg { color: var(--ink-3); }
   #oct-tabs button.is-active { background: var(--bg); color: var(--ink, #f0f2f6); }
+  #oct-tabs button.is-active svg { color: var(--gold); }
+  #oct-tabs button.is-active::after {
+    content: ""; position: absolute; left: 22%; right: 22%; bottom: -1px; height: 2px;
+    background: var(--gold); border-radius: 1px;
+  }
   .oct-panel.is-hidden { display: none; }
 
   /* ---- popup 头：紧凑天际线开关 ---- */
@@ -175,8 +184,8 @@
 </head>
 <body>
   <nav id="oct-tabs">
-    <button type="button" data-tool="veil" class="is-active">夜幕</button>
-    <button type="button" data-tool="pace">倍速</button>
+    <button type="button" data-tool="veil" class="is-active"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.2 9.9A5.6 5.6 0 1 1 6.2 2.7a4.5 4.5 0 0 0 7 7.2z"/></svg>夜幕</button>
+    <button type="button" data-tool="pace"><svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 4.2 7 8l-4.5 3.8z"/><path d="M8.5 4.2 13 8l-4.5 3.8z"/></svg>倍速</button>
   </nav>
   <main class="oct-body">
     <section id="oct-panel-veil" class="oct-panel">
