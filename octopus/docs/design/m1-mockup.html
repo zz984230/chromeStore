@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M1 设计稿 — options 侧边栏 IA + popup 壳润色</title>
+<style>
+  /* M1 稿先行 mockup:静态高保真,控件均为代表值,不写存储。
+     设计系统继承 docs/superpowers/designs/2026-09-19 已认可稿(token 原样)。
+     2026-10-18 用户过目通过(「数据管理」三钮保留)。实现注意:字号真实界 10–22,
+     稿内「12–16」提示文案按真实界修正。 */
+  :root {
+    --bg: #12141c;
+    --surface: #1a1e2a;
+    --surface-2: #202634;
+    --line: #2a3040;
+    --line-soft: #232838;
+    --ink: #e8ebf4;
+    --ink-2: #9aa3b8;
+    --ink-3: #6b7488;
+    --gold: #e3c987;
+    --gold-soft: rgba(227, 201, 135, .14);
+    --dusk: #8fb3d9;
+    --radius: 10px;
+    --font-serif: "Noto Serif SC", "Songti SC", serif;
+    --font-sans: "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 13px/1.65 var(--font-sans); }
+  .draft-note {
+    max-width: 920px; margin: 0 auto; padding: 18px 24px 0; color: var(--ink-3); font-size: 12px;
+  }
+
+  /* ============ options 页骨架 ============ */
+  .opt-page { max-width: 920px; margin: 24px auto 80px; display: grid; grid-template-columns: 216px 1fr; gap: 0; }
+  aside {
+    position: sticky; top: 24px; align-self: start;
+    border-right: 1px solid var(--line-soft); padding: 26px 18px 18px 0;
+    display: flex; flex-direction: column; min-height: 560px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; padding: 0 10px 22px; }
+  .brand img { width: 40px; height: 40px; border-radius: 11px; }
+  .brand b { font: 600 17px/1.2 var(--font-serif); letter-spacing: .06em; display: block; }
+  .brand small { color: var(--ink-3); font-size: 11px; }
+  nav { display: grid; gap: 2px; }
+  nav button {
+    position: relative; display: flex; align-items: center; gap: 11px;
+    background: none; border: 0; color: var(--ink-2); font: 500 13px/1 var(--font-sans);
+    padding: 10px 12px; border-radius: 9px; cursor: pointer; text-align: left;
+    transition: color .2s, background .2s;
+  }
+  nav button svg { flex: none; color: var(--ink-3); transition: color .2s; }
+  nav button:hover { color: var(--ink); background: var(--surface); }
+  nav button.is-active { color: var(--gold); background: var(--gold-soft); }
+  nav button.is-active svg { color: var(--gold); }
+  nav button.is-active::before {
+    content: ""; position: absolute; left: -18px; top: 8px; bottom: 8px; width: 3px;
+    border-radius: 2px; background: var(--gold);
+  }
+  nav button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .side-foot { margin-top: auto; padding: 16px 12px 0; color: var(--ink-3); font-size: 11px; }
+
+  main { padding: 26px 0 0 40px; min-width: 0; }
+  .view { display: none; }
+  .view.is-on { display: block; }
+
+  .page-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 26px; }
+  .page-head h2 { margin: 0; font: 600 22px/1.3 var(--font-serif); letter-spacing: .05em; }
+  .page-head p { margin: 4px 0 0; color: var(--ink-2); font-size: 13px; }
+  .reset {
+    background: none; border: 1px solid var(--line); color: var(--ink-2);
+    font: 400 13px/1 var(--font-sans); padding: 7px 14px; border-radius: 999px; cursor: pointer; flex: none;
+  }
+  .reset:hover { border-color: var(--ink-3); color: var(--ink); }
+
+  /* ---- 天际线大开关(原样) ---- */
+  .dusk {
+    position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 14px;
+    padding: 26px 28px 22px; display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  }
+  .dusk::before {
+    content: ""; position: absolute; inset: auto 0 0 0; height: 92px; pointer-events: none;
+    background:
+      radial-gradient(58% 90px at 22% 100%, rgba(143,179,217,.16), transparent 70%),
+      radial-gradient(50% 70px at 78% 100%, rgba(227,201,135,.12), transparent 70%);
+  }
+  .dusk-copy h3 { margin: 0 0 4px; font: 600 20px/1.3 var(--font-serif); letter-spacing: .04em; }
+  .dusk-copy p { margin: 0; color: var(--ink-2); font-size: 13px; }
+  .dusk-switch { position: relative; flex: none; width: 128px; height: 56px; cursor: pointer; }
+  .dusk-switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .sky { position: absolute; inset: 0; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); overflow: hidden; }
+  .orb {
+    position: absolute; top: 50%; left: 88px; width: 26px; height: 26px; border-radius: 50%; translate: 0 -50%;
+    background: var(--gold); box-shadow: 0 0 16px rgba(227,201,135,.6);
+  }
+  .orb::after { content: ""; position: absolute; inset: 4px 0 0 4px; border-radius: 50%; background: #171b28; }
+  .stars { position: absolute; inset: 0; }
+  .stars i { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: var(--ink-2); }
+  .stars i:nth-child(1) { top: 12px; right: 34px; } .stars i:nth-child(2) { top: 30px; right: 58px; }
+  .stars i:nth-child(3) { top: 20px; right: 84px; } .stars i:nth-child(4) { top: 40px; right: 40px; }
+
+  /* ---- 分区骨架(原样) ---- */
+  section.opt-sec { margin-top: 34px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; border-bottom: 1px solid var(--line-soft); padding-bottom: 10px; margin-bottom: 18px; }
+  .sec-head h4 { margin: 0; font: 600 16px/1.3 var(--font-serif); letter-spacing: .08em; }
+  .sec-head .note { color: var(--ink-3); font-size: 12px; }
+
+  .seats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .seat {
+    border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+    padding: 14px 16px; cursor: pointer; position: relative;
+  }
+  .seat input { position: absolute; opacity: 0; pointer-events: none; }
+  .seat .seat-title { display: block; font-weight: 500; margin-bottom: 3px; }
+  .seat .seat-desc { display: block; color: var(--ink-3); font-size: 12px; line-height: 1.5; }
+  .seat:has(input:checked) { border-color: var(--gold); background: var(--gold-soft); }
+  .seat:has(input:checked) .seat-title { color: var(--gold); }
+
+  .row { display: flex; align-items: center; gap: 16px; padding: 7px 0; }
+  .row .row-label { flex: none; width: 4.5em; color: var(--ink-2); }
+  .row output { color: var(--ink-3); font-size: 12px; width: 3em; text-align: right; padding-right: 6px; flex: none; }
+  input[type="range"] {
+    flex: 1; appearance: none; height: 4px; border-radius: 2px;
+    background: linear-gradient(90deg, var(--gold) var(--fill, 50%), var(--surface-2) var(--fill, 50%)); cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--ink); border: 3px solid var(--bg); box-shadow: 0 0 0 1px var(--line);
+  }
+  .inline-switch { position: relative; display: inline-block; width: 40px; height: 22px; flex: none; }
+  .inline-switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .inline-switch .track { position: absolute; inset: 0; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
+  .inline-switch .knob { position: absolute; top: 3px; left: 21px; width: 14px; height: 14px; border-radius: 50%; background: var(--gold); }
+  .inline-switch input:checked ~ .track { background: var(--gold-soft); border-color: var(--gold); }
+  .dimmed { opacity: .58; pointer-events: none; }
+  input[type="time"] {
+    background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 8px; padding: 6px 10px; font: inherit; color-scheme: dark;
+  }
+
+  .site-mode { display: flex; gap: 10px; margin-bottom: 12px; }
+  .site-mode label {
+    display: flex; align-items: center; gap: 8px; cursor: pointer; border: 1px solid var(--line);
+    border-radius: 999px; padding: 6px 14px; font-size: 13px; color: var(--ink-2);
+  }
+  .site-mode input { position: absolute; opacity: 0; pointer-events: none; }
+  .site-mode label:has(input:checked) { border-color: var(--gold); color: var(--gold); background: var(--gold-soft); }
+  textarea {
+    width: 100%; min-height: 76px; resize: vertical; background: var(--surface);
+    border: 1px solid var(--line); border-radius: var(--radius); color: var(--ink); font: inherit; padding: 10px 12px;
+  }
+  .hint { color: var(--ink-3); font-size: 12px; margin-top: 8px; }
+
+  details.adv { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 20px; }
+  details.adv summary {
+    list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px;
+    font: 600 16px/1.3 var(--font-serif); letter-spacing: .08em; padding: 10px 12px; margin: 0 -12px; border-radius: 8px;
+  }
+  details.adv summary::-webkit-details-marker { display: none; }
+  details.adv summary .chev { color: var(--ink-3); font-size: 12px; }
+  details.adv summary .count { margin-left: auto; color: var(--ink-3); font: 400 12px/1 var(--font-sans); }
+  .adv-groups { margin-top: 18px; display: grid; gap: 20px; }
+  .adv-group h5 { margin: 0 0 8px; font: 500 13px/1.4 var(--font-sans); color: var(--ink-2); }
+  .radio-line { display: flex; flex-direction: column; gap: 6px; }
+  .radio-line label { display: flex; gap: 8px; align-items: center; color: var(--ink-2); cursor: pointer; }
+
+  /* ---- 倍速翼 ---- */
+  .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .pill {
+    border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--ink-2);
+    font: 500 12px/1 var(--font-sans); padding: 7px 14px; cursor: pointer;
+  }
+  .pill.on { border-color: var(--gold); color: var(--gold); background: var(--gold-soft); }
+  .stepper { display: inline-flex; align-items: center; gap: 0; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+  .stepper button { background: var(--surface); border: 0; color: var(--ink-2); width: 30px; height: 30px; cursor: pointer; font-size: 14px; }
+  .stepper button:hover { color: var(--gold); }
+  .stepper output { min-width: 64px; text-align: center; color: var(--ink); font-size: 13px; }
+  .field-note { color: var(--ink-3); font-size: 12px; margin: 4px 0 0 72px; }
+  .go-hint {
+    margin-top: 26px; border: 1px solid var(--line-soft); border-radius: var(--radius);
+    padding: 12px 16px; color: var(--ink-2); font-size: 12px; display: flex; gap: 8px; align-items: baseline;
+  }
+
+  /* ---- 通用翼 ---- */
+  .kbd-table { width: 100%; border-collapse: collapse; }
+  .kbd-table td { padding: 8px 4px; border-bottom: 1px solid var(--line-soft); }
+  .kbd-table td:first-child { color: var(--ink-2); }
+  kbd {
+    display: inline-block; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px;
+    background: var(--surface); padding: 2px 8px; font: 500 11px/1.4 var(--font-sans); color: var(--ink);
+    margin-left: 6px;
+  }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn {
+    border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+    color: var(--ink); font: 400 13px/1 var(--font-sans); padding: 9px 16px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--gold); }
+  .btn.ghost { background: none; }
+  .tag-new {
+    border: 1px solid var(--gold); color: var(--gold); border-radius: 999px;
+    font-size: 10px; padding: 2px 8px; margin-left: 8px; vertical-align: 2px;
+  }
+
+  /* ============ popup 壳润色 stage ============ */
+  .stage { max-width: 920px; margin: 20px auto 90px; padding: 0 24px; }
+  .stage-head { font: 600 18px/1.4 var(--font-serif); letter-spacing: .05em; color: var(--ink); border-top: 1px solid var(--line); padding-top: 28px; }
+  .stage-head small { display: block; font: 400 12px/1.6 var(--font-sans); color: var(--ink-3); letter-spacing: 0; margin-top: 6px; }
+  .stage-row { display: flex; gap: 40px; margin-top: 26px; flex-wrap: wrap; }
+  .stage-cell { flex: none; }
+  .stage-cell .cap { color: var(--ink-3); font-size: 12px; margin-top: 10px; text-align: center; }
+
+  .pop {
+    width: 360px; background: var(--bg); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0,0,0,.45);
+  }
+  .pop-tabs { display: flex; gap: 4px; padding: 8px 10px 0; border-bottom: 1px solid var(--line-soft); }
+  .pop-tabs button {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 8px 4px 9px; border: 0; border-radius: 8px 8px 0 0; background: var(--surface);
+    color: var(--ink-2); font: 500 13px/1 var(--font-sans); cursor: pointer; position: relative;
+  }
+  .pop-tabs button svg { color: var(--ink-3); }
+  .pop-tabs button.is-active { background: var(--bg); color: var(--ink); }
+  .pop-tabs button.is-active svg { color: var(--gold); }
+  .pop-tabs button.is-active::after {
+    content: ""; position: absolute; left: 22%; right: 22%; bottom: -1px; height: 2px; background: var(--gold); border-radius: 1px;
+  }
+  .pop-panel { padding: 0 0 6px; }
+  .mini-dusk {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 18px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .mini-dusk .t { font: 600 14px/1.3 var(--font-serif); }
+  .mini-dusk .d { color: var(--ink-3); font-size: 11px; }
+  .mini-switch { position: relative; flex: none; width: 84px; height: 38px; cursor: pointer; }
+  .mini-switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .mini-sky { position: absolute; inset: 0; border-radius: 999px; border: 1px solid #39415a; background: #171b28; overflow: hidden; }
+  .mini-orb { position: absolute; top: 50%; left: 56px; width: 18px; height: 18px; border-radius: 50%; translate: 0 -50%; background: var(--gold); box-shadow: 0 0 10px rgba(227,201,135,.6); }
+  .mini-orb::after { content: ""; position: absolute; inset: 3px 0 0 3px; border-radius: 50%; background: #171b28; }
+  .grp { padding: 12px 18px 14px; border-bottom: 1px solid var(--line-soft); }
+  .grp-label { color: var(--ink-3); font-size: 11px; margin-bottom: 9px; }
+  .seats-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .seat-mini { border: 1px solid var(--line); border-radius: 9px; background: var(--surface); padding: 9px 10px; position: relative; }
+  .seat-mini input { position: absolute; opacity: 0; pointer-events: none; }
+  .seat-mini .t { display: block; font-size: 12px; font-weight: 500; }
+  .seat-mini:has(input:checked) { border-color: var(--gold); background: var(--gold-soft); }
+  .seat-mini:has(input:checked) .t { color: var(--gold); }
+  .pop .row { gap: 12px; }
+  .pop .row output { font-size: 11px; min-width: 2.2em; }
+  .pop input[type="range"] { flex: 1; appearance: none; height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--gold) var(--fill, 50%), var(--surface-2) var(--fill, 50%)); }
+  .pop input[type="range"]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--ink); border: 3px solid var(--bg); box-shadow: 0 0 0 1px var(--line); }
+  .status { display: flex; gap: 14px; flex-wrap: wrap; color: var(--ink-2); font-size: 12px; padding: 10px 18px 2px; }
+  .status b { color: var(--ink); font-weight: 500; }
+  .go {
+    margin: 8px 18px 12px; display: block; padding: 7px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: transparent; color: var(--ink); font-family: inherit; font-size: 13px; cursor: pointer;
+  }
+  .foot { display: flex; justify-content: flex-end; padding: 12px 18px; color: var(--ink-3); font-size: 12px; }
+  .foot .go { margin: 0; width: auto; }
+
+  @media (max-width: 760px) {
+    .opt-page { grid-template-columns: 1fr; }
+    aside { position: static; border-right: 0; border-bottom: 1px solid var(--line-soft); padding: 18px 24px 14px; min-height: 0; }
+    nav { grid-auto-flow: column; grid-template-columns: repeat(3, 1fr); }
+    nav button.is-active::before { display: none; }
+    .side-foot { display: none; }
+    main { padding-left: 24px; padding-right: 24px; }
+    .seats { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<p class="draft-note">M1 设计稿(静态高保真)——options 侧边栏 IA 三翼 + popup 壳润色。控件均为代表值不写存储;夜幕翼内容为现有页原样迁入,倍速/通用翼为新增设计。<b>过目后实现。</b></p>
+
+<div class="opt-page">
+
+  <aside>
+    <div class="brand">
+      <img src="../../public/icons/toolbar/128.png" alt="Octopus">
+      <div><b>Octopus</b><small>工具的瑞士军刀</small></div>
+    </div>
+    <nav id="m1-nav">
+      <button type="button" data-view="veil" class="is-active">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.2 9.9A5.6 5.6 0 1 1 6.2 2.7a4.5 4.5 0 0 0 7 7.2z"/></svg>
+        夜幕
+      </button>
+      <button type="button" data-view="pace">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 4.2 7 8l-4.5 3.8z"/><path d="M8.5 4.2 13 8l-4.5 3.8z"/></svg>
+        倍速
+      </button>
+      <button type="button" data-view="gen">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4.5h12M2 8h12M2 11.5h12"/><circle cx="6" cy="4.5" r="1.6" fill="var(--bg)"/><circle cx="10.5" cy="8" r="1.6" fill="var(--bg)"/><circle cx="5" cy="11.5" r="1.6" fill="var(--bg)"/></svg>
+        通用
+      </button>
+    </nav>
+    <div class="side-foot">Octopus 0.1.0</div>
+  </aside>
+
+  <main>
+
+    <!-- ============ 夜幕翼(现有内容原样迁入) ============ -->
+    <div class="view is-on" data-view="veil">
+      <div class="page-head">
+        <div>
+          <h2>夜幕</h2>
+          <p>暗色浏览——拉上夜幕,或按站点、按时段安放</p>
+        </div>
+        <button class="reset" type="button">恢复夜幕默认</button>
+      </div>
+
+      <div class="dusk">
+        <div class="dusk-copy">
+          <h3>夜幕已拉上</h3>
+          <p>整个浏览器处于暗色,点一下收起</p>
+        </div>
+        <label class="dusk-switch">
+          <input type="checkbox" checked>
+          <span class="sky"><span class="orb"></span><span class="stars"><i></i><i></i><i></i><i></i></span></span>
+        </label>
+      </div>
+
+      <section class="opt-sec">
+        <div class="sec-head"><h4>主题</h4><span class="note">网页以什么方式变暗</span></div>
+        <div class="seats">
+          <label class="seat"><input type="radio" name="seat" checked><span class="seat-title">自适应引擎</span><span class="seat-desc">逐条改写网页本色,保留品牌色</span></label>
+          <label class="seat"><input type="radio" name="seat"><span class="seat-title">经典主题</span><span class="seat-desc">从固定配色里挑一套整体罩上</span></label>
+          <label class="seat"><input type="radio" name="seat"><span class="seat-title">自定义 CSS</span><span class="seat-desc">只应用你写的样式</span></label>
+        </div>
+      </section>
+
+      <section class="opt-sec">
+        <div class="sec-head"><h4>色温</h4><span class="note">入夜后滤去冷光</span></div>
+        <div class="row"><span class="row-label">强度</span><input type="range" style="--fill:40%"><output>40%</output></div>
+        <div class="row"><span class="row-label">色温点</span><span class="ct-dot" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:#c98d5a"></span><input type="range" style="--fill:62%"><output>3600K</output></div>
+        <p class="hint">例外网站见「站点」分区的色温例外名单。</p>
+      </section>
+
+      <section class="opt-sec">
+        <div class="sec-head"><h4>定时</h4><span class="note">到点自动拉上/收起</span></div>
+        <div class="row"><span class="row-label">启用定时</span><span class="inline-switch"><input type="checkbox" checked><span class="track"></span><span class="knob"></span></span></div>
+        <div class="row"><span class="row-label">日落时刻</span><input type="time" value="19:30"></div>
+        <div class="row"><span class="row-label">日出时刻</span><input type="time" value="06:30"></div>
+      </section>
+
+      <section class="opt-sec">
+        <div class="sec-head"><h4>站点</h4><span class="note">名单内的站点按模式处理</span></div>
+        <div class="site-mode">
+          <label><input type="radio" name="sm" checked>排除名单(默认暗)</label>
+          <label><input type="radio" name="sm">仅名单内变暗</label>
+        </div>
+        <textarea>www.example.com
+docs.example.org</textarea>
+        <p class="hint">切换后,站点列表的含义随之改变。</p>
+      </section>
+
+      <details class="adv">
+        <summary><span class="chev">▸</span>高级<span class="count">引擎 · 守卫 · 规则 · 杂项</span></summary>
+        <div class="adv-groups">
+          <div class="adv-group">
+            <h5>站点策略</h5>
+            <div class="radio-line">
+              <label><input type="radio" name="ep" checked>尊重站点主题</label>
+              <label><input type="radio" name="ep">忽略站点主题</label>
+              <label><input type="radio" name="ep">跳过兼容款站点</label>
+            </div>
+            <p class="hint">站点自带暗色方案时引擎如何让位。</p>
+          </div>
+          <div class="adv-group">
+            <h5>站点主题精修层</h5>
+            <p class="hint">十个站点的精修层,默认全部启用。(实现时沿用现有控件组)</p>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <!-- ============ 倍速翼 ============ -->
+    <div class="view" data-view="pace">
+      <div class="page-head">
+        <div>
+          <h2>倍速</h2>
+          <p>视频节奏——档位、保持、片头片尾与续播</p>
+        </div>
+        <button class="reset" type="button">恢复倍速默认</button>
+      </div>
+
+      <section class="opt-sec">
+        <div class="sec-head"><h4>档位</h4><span class="note">0.25× – 4.00×,步进 0.25×</span></div>
+        <div class="row"><span class="row-label">当前档</span><input type="range" style="--fill:33%"><output>1.25×</output></div>
+        <div class="presets">
+          <button class="pill" type="button">0.5×</button>
+          <button class="pill on" type="button">1.25×</button>
+          <button class="pill" type="button">1.5×</button>
+          <button class="pill" type="button">2×</button>
+          <button class="pill" type="button">3×</button>
+        </div>
+        <p class="hint">弹窗滑杆与预设同步此档;快捷键步进 0.25×。</p>
+      </section>
+
+      <section class="opt-sec">
+        <div class="sec-head"><h4>保持</h4><span class="note">记住当前档,新视频自动套用</span></div>
+        <div class="row">
+          <span class="row-label">保持档位</span>
+          <span class="inline-switch"><input type="checkbox" checked><span class="track"></span><span class="knob"></span></span>
+          <span style="color:var(--ink-2)">保持 1.25× — 新视频自动套用</span>
+        </div>
+      </section>
+
+      <section class="opt-sec">
+        <div class="sec-head"><h4>片头片尾</h4><span class="note">到点自动跳过,大于 0 即启用</span></div>
+        <div class="row">
+          <span class="row-label">跳过开关</span>
+          <span class="inline-switch"><input type="checkbox" checked><span class="track"></span><span class="knob"></span></span>
+        </div>
+        <div class="row">
+          <span class="row-label">片头跳过</span>
+          <span class="stepper"><button type="button">−</button><output>85 秒</output><button type="button">＋</button></span>
+          <span class="row-label" style="width:auto">片尾跳过</span>
+          <span class="stepper"><button type="button">−</button><output>20 秒</output><button type="button">＋</button></span>
+        </div>
+        <p class="field-note">步进 5 秒,与快捷键「片头跳过 ±5 秒」一致。</p>
+      </section>
+
+      <section class="opt-sec">
+        <div class="sec-head"><h4>续播</h4><span class="note">看完自动切下一集</span></div>
+        <div class="row">
+          <span class="row-label">自动续播</span>
+          <span class="inline-switch"><input type="checkbox" checked><span class="track"></span><span class="knob"></span></span>
+        </div>
+        <p class="hint">「立即续播」不受任何开关限制,随时手动切下一个视频。</p>
+      </section>
+
+      <div class="go-hint">快捷键(加档/减档/回正/保持切换/立即续播)统一在「通用」分区查看与修改。</div>
+    </div>
+
+    <!-- ============ 通用翼 ============ -->
+    <div class="view" data-view="gen">
+      <div class="page-head">
+        <div>
+          <h2>通用</h2>
+          <p>跨工具的界面、快捷键与数据</p>
+        </div>
+      </div>
+
+      <section class="opt-sec">
+        <div class="sec-head"><h4>界面</h4><span class="note">弹窗与设置页共用</span></div>
+        <div class="row"><span class="row-label">字号</span><input type="range" style="--fill:20%"><output>13px</output></div>
+        <p class="hint">12–16px,即时生效(现有 ui.fontSize 设置迁入此位)。</p>
+      </section>
+
+      <section class="opt-sec">
+        <div class="sec-head"><h4>快捷键</h4><span class="note">在 Chrome 扩展快捷键页修改</span></div>
+        <table class="kbd-table">
+          <tr><td>加档(步进 0.25×)</td><td><kbd>Alt</kbd><kbd>.</kbd></td></tr>
+          <tr><td>减档(步进 0.25×)</td><td><kbd>Alt</kbd><kbd>,</kbd></td></tr>
+          <tr><td>回正到 1×</td><td><kbd>Alt</kbd><kbd>0</kbd></td></tr>
+          <tr><td>切换保持</td><td><kbd>Alt</kbd><kbd>L</kbd></td></tr>
+          <tr><td>片头跳过 −5 秒 / +5 秒</td><td><span style="color:var(--ink-3)">未绑定 — 到快捷键页可绑定</span></td></tr>
+          <tr><td>立即续播</td><td><span style="color:var(--ink-3)">未绑定 — 到快捷键页可绑定</span></td></tr>
+        </table>
+        <p class="hint">打开 chrome://extensions/shortcuts,找到 Octopus 即可改键。(扩展页不能直链 chrome:// 地址,故指引而不放链接)</p>
+      </section>
+
+      <section class="opt-sec">
+        <div class="sec-head"><h4>数据</h4><span class="note">两个工具的全部设置<span class="tag-new">新增待定</span></span></div>
+        <div class="actions">
+          <button class="btn" type="button">导出设置(JSON)</button>
+          <button class="btn" type="button">导入设置</button>
+          <button class="btn ghost" type="button">全部恢复默认</button>
+        </div>
+        <p class="hint">为 M2 上架做准备:换机/备份一条 JSON 搞定。「新增待定」= 本稿新提案,过目定夺去留。</p>
+      </section>
+
+      <section class="opt-sec">
+        <div class="sec-head"><h4>关于</h4></div>
+        <p class="hint" style="margin:0">Octopus 0.1.0 · 工具的瑞士军刀:暗色模式与视频倍速,更多工具持续加入。</p>
+      </section>
+    </div>
+
+  </main>
+</div>
+
+<!-- ============ popup 壳润色 ============ -->
+<div class="stage">
+  <div class="stage-head">popup 壳润色
+    <small>改动只有一处:tab 加工具字标 + 活动页金线刻痕(与 options 侧边栏同语言)。面板内容、五组结构、底部按钮全部不动——香奈尔减法。</small>
+  </div>
+  <div class="stage-row">
+
+    <div class="stage-cell">
+      <div class="pop">
+        <div class="pop-tabs">
+          <button type="button" class="is-active">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.2 9.9A5.6 5.6 0 1 1 6.2 2.7a4.5 4.5 0 0 0 7 7.2z"/></svg>
+            夜幕
+          </button>
+          <button type="button">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 4.2 7 8l-4.5 3.8z"/><path d="M8.5 4.2 13 8l-4.5 3.8z"/></svg>
+            倍速
+          </button>
+        </div>
+        <div class="pop-panel">
+          <div class="mini-dusk">
+            <div><div class="t">夜幕已拉上</div><div class="d">整个浏览器处于暗色</div></div>
+            <label class="mini-switch"><input type="checkbox" checked><span class="mini-sky"><span class="mini-orb"></span></span></label>
+          </div>
+          <div class="grp">
+            <div class="grp-label">主题 · 网页以什么方式变暗</div>
+            <div class="seats-mini">
+              <label class="seat-mini"><input type="radio" name="pm-seat" checked><span class="t">自适应引擎</span></label>
+              <label class="seat-mini"><input type="radio" name="pm-seat"><span class="t">经典主题</span></label>
+              <label class="seat-mini"><input type="radio" name="pm-seat"><span class="t">自定义 CSS</span></label>
+            </div>
+          </div>
+          <div class="grp">
+            <div class="grp-label">色温</div>
+            <div class="row"><input type="range" style="--fill:40%"><output>40%</output></div>
+          </div>
+          <div class="grp" style="border-bottom:0">
+            <div class="grp-label">站点 · 排除名单</div>
+            <div class="row"><span style="color:var(--ink-2);font-size:12px;flex:1">www.example.com</span><button class="pill" type="button" style="padding:5px 12px">移除</button></div>
+          </div>
+          <div class="foot"><button class="go" type="button">设置</button></div>
+        </div>
+      </div>
+      <div class="cap">夜幕页(活动)· 现有结构示意</div>
+    </div>
+
+    <div class="stage-cell">
+      <div class="pop">
+        <div class="pop-tabs">
+          <button type="button">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.2 9.9A5.6 5.6 0 1 1 6.2 2.7a4.5 4.5 0 0 0 7 7.2z"/></svg>
+            夜幕
+          </button>
+          <button type="button" class="is-active">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 4.2 7 8l-4.5 3.8z"/><path d="M8.5 4.2 13 8l-4.5 3.8z"/></svg>
+            倍速
+          </button>
+        </div>
+        <div class="pop-panel">
+          <div class="grp" style="padding-top:16px">
+            <div class="grp-label">当前档</div>
+            <div class="row"><input type="range" style="--fill:33%"><output>1.25×</output></div>
+            <div class="presets" style="margin-top:10px">
+              <button class="pill" type="button">0.5×</button>
+              <button class="pill on" type="button">1.25×</button>
+              <button class="pill" type="button">1.5×</button>
+              <button class="pill" type="button">2×</button>
+              <button class="pill" type="button">3×</button>
+            </div>
+          </div>
+          <div class="status">
+            <span>活动 <b>1.25×</b></span><span>存储 <b>1.25×</b></span><span>保持 <b>开</b></span>
+          </div>
+          <div class="status" style="padding-bottom:8px">
+            <span>跳过 <b>开</b> 85s/20s</span><span>续播 <b>开</b></span>
+          </div>
+          <button class="go" type="button">▶ 立即续播</button>
+        </div>
+      </div>
+      <div class="cap">倍速页(活动)· 右下无设置钮,以动作收尾</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // 稿内导航:侧边栏三翼切换(仅演示,不写任何存储)
+  const nav = document.getElementById('m1-nav');
+  nav.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-view]');
+    if (!btn) return;
+    nav.querySelectorAll('button').forEach(b => b.classList.toggle('is-active', b === btn));
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('is-on', v.dataset.view === btn.dataset.view));
+  });
+</script>
+</body>
+</html>
