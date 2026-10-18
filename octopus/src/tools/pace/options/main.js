@@ -25,7 +25,7 @@ function fillSlider(input) {
 // main 设 data-preview;读写走 load/save 门控,消除空白翼与 unhandled rejection。
 let writable = true;
 const load = () => (writable ? loadSettings() : Promise.resolve({ ...DEFAULT_SETTINGS }));
-const save = (patch) => { if (writable) saveSettings(patch).catch(() => {}); };
+const save = (patch) => (writable ? saveSettings(patch).catch(() => {}) : Promise.resolve());
 
 export function initPaceOptions(host = document.getElementById('opt-pace')) {
   if (!host) return; // 预览/测试环境无宿主,静默
