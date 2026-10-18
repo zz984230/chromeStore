@@ -5,7 +5,7 @@
 //         + six legs drawn as tapered arc strokes ending in outward curls —
 //         the octopus signifier; leg tips land on one scalloped hem line),
 //         4x4 supersampled antialiasing. Ported from nightveil's generator:
-//         PNG encoder / supersampled rasterizer / three-plate SETS kept as-is.
+//         PNG encoder / supersampled rasterizer kept as-is;三盘配色改夜与金(见 SETS)。
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 import path from 'node:path';
@@ -15,10 +15,13 @@ const SIZES = [16, 32, 48, 64, 128];
 
 // set name -> [plate RGB, mark RGB]
 const SETS = {
-  // toolbar 盘换夜幕深蓝 + 月光金(veil --line 家族 / --gold),图标与扩展 UI 同源
+  // 三盘皆入夜与金(veil --line 家族 / --gold,与扩展 UI 同源):
+  // toolbar=manifest 静态盘(扩展卡片/安装气泡);dark=veil 开(夜幕落,夜盘金章鱼);
+  // light=veil 关(白昼,金盘夜章鱼)——昼夜互换、状态可辨,setIcon 真话化保留。
+  // dark/light 两盘仅被 background 的 setIcon 引用,别无他用。
   toolbar: [[27, 34, 51], [227, 201, 135]],
-  dark: [[30, 34, 48], [232, 226, 212]],
-  light: [[233, 233, 236], [58, 63, 74]],
+  dark: [[27, 34, 51], [227, 201, 135]],
+  light: [[227, 201, 135], [27, 34, 51]],
 };
 
 // ---------- PNG encoding ----------
