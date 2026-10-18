@@ -32,5 +32,11 @@
 - [x] 版本 1.0.0 + `npm run zip` 打包链(包根 manifest/版本三处同步/钉子测试)
 - [x] 商店文案单源 listing.zh.md + 隐私政策页(仓内 docs/privacy.zh.md,GitHub 链接)
 - [x] 商店截图 ×5 + 小宣传图(mock-chrome 完整模式实拍,1280×800/440×280)
-- [ ] 验收:全量门 + 用户真机过目(zip 解包加载/导入卫生手测/FOUC 复验/商店图目检;通过后 push 关账)
+- [x] 验收:全量门 + 用户真机过目(六项清单通过,**2026-10-18 关账**)
 - 吸收取代 video-acc 的 store-prep 备忘(其 MILESTONES 末节三件事:版本号决策 1.0.0 ✓/商店素材 ✓/打磨→种子并入首波 ✓)
+
+**M2 验收记录(2026-10-18 关账)**
+
+- 实现全程 `18e090f`(设计稿)..`b60705d`(终审修波)共 11 commit(含用户手提 `d30e1b9` plans 转 ignore);测试 308→**317**;终审(opus)两轮 Ready to merge,修波 `b60705d`(listing 简述全角对齐 manifest 原文/下载路径真话化/zip 报错一行与深度点文件排除)经原审人复审闭合;实拍中顺手修 M1 带病缺陷 holdOnLine 叠印 ××(`255ecfb`)。
+- 上架件:`dist/octopus-1.0.0.zip`(`npm run zip`,包根 manifest/版本三处同步)、`docs/store/listing.zh.md`(含填表对照单,截图×5)、`docs/privacy.zh.md`(仓内,GitHub 链接)、`docs/store/assets/` 六资产(mock-chrome 完整模式实拍,1280×800×5 + 440×280)。提交边界:开发者账号($5)/CWS 表单/送审为手工事项,照 listing 填表对照单执行。
+- M3 种子:veil.settings 导入逐字段校验;zip 测试链失败可诊性(可选)。
