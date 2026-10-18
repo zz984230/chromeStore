@@ -170,8 +170,8 @@
 </head>
 <body>
   <nav id="oct-tabs">
-    <button type="button" data-tool="veil" class="is-active">暗色模式</button>
-    <button type="button" data-tool="pace">视频倍速</button>
+    <button type="button" data-tool="veil" class="is-active">夜幕</button>
+    <button type="button" data-tool="pace">倍速</button>
   </nav>
   <main class="oct-body">
     <section id="oct-panel-veil" class="oct-panel">
@@ -265,6 +265,7 @@
           font-family: inherit; font-size: 13px; cursor: pointer;
         }
         .go:hover { border-color: var(--glow); }
+        .foot-row { display: flex; justify-content: flex-end; margin-top: 14px; }
       </style>
       <div class="card">
         <header class="card-head">
@@ -298,6 +299,7 @@
           <button class="go" id="advance-now" type="button">▶ 立即续播</button>
         </section>
         <p class="note" id="pace-note">读取中…</p>
+        <div class="foot-row"><button class="go" type="button" id="pace-settings">设置</button></div>
       </div>
     </section>
   </main>

@@ -198,13 +198,13 @@ function syncCt(ct) {
   }
 }
 
-// ---- 底部（#pp-foot）：品牌行静态，「全部设置」跳选项页 ----
+// ---- 底部（#pp-foot）：右对齐「全部设置」跳选项页 ----
 function renderFoot() {
   const btn = el('button', { class: 'link', type: 'button' }, STRINGS.popupAllSettings);
   btn.addEventListener('click', () => {
     if (writable) chrome.runtime.openOptionsPage();
   });
-  $('#pp-foot').append(el('span', {}, STRINGS.popupBrandLine), btn);
+  $('#pp-foot').append(btn);
 }
 
 function sync(s) {
