@@ -65,6 +65,7 @@ function render(host, s) {
     const pace = clampPace(Number(dial.value));
     await save(hold ? { pace, heldPace: pace } : { pace }); // 保持期调档同步记忆(弹窗 commit 同款)
     if (hold) holdLine.textContent = S.holdOnLine.replace('{pace}', fmt(pace)); // 标签同步,不待重渲染
+    pills.forEach((b, i) => b.classList.toggle('on', samePace(PRESETS[i], pace))); // 预设高亮联动,不整树重渲染
   });
   dialSec.append(el('div', { class: 'row' }, el('span', { class: 'row-label' }, S.dialLabel), dial, out));
   const pills = PRESETS.map((p) => el('button', {

@@ -25,7 +25,7 @@ export function saveShellPatch(patch, storage = globalThis.chrome?.storage?.loca
   return new Promise((resolve, reject) => {
     if (!storage) { reject(new Error('chrome.storage.local unavailable')); return; }
     for (const [k, v] of Object.entries(patch ?? {})) {
-      if (!PATCH_RULES[k] || !PATCH_RULES[k].has(v)) {
+      if (!(Object.hasOwn(PATCH_RULES, k) && PATCH_RULES[k].has(v))) { // hasOwn:原型链键(constructor 等)干净拒绝而非 TypeError
         reject(new Error(`invalid shell patch: ${k}`)); return;
       }
     }
