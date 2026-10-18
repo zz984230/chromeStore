@@ -20,6 +20,7 @@ if (version !== manifestVersion) {
 mkdirSync(path.join(root, 'dist'), { recursive: true });
 const zipPath = path.join(root, 'dist', `octopus-${version}.zip`);
 rmSync(zipPath, { force: true }); // zip 是增量更新语义,先清避免陈旧 entry
-const r = spawnSync('zip', ['-X', '-r', zipPath, '.', '-x', '.*', '*.DS_Store'], { cwd: extDir, stdio: 'inherit' });
+const r = spawnSync('zip', ['-X', '-r', zipPath, '.', '-x', '.*', '*.DS_Store', '*/.*'], { cwd: extDir, stdio: 'inherit' });
+if (r.error) { console.error('[zip] spawn failed:', r.error.message); process.exit(1); }
 if (r.status !== 0) process.exit(r.status ?? 1);
 console.log(`[zip] ${path.relative(root, zipPath)}`);

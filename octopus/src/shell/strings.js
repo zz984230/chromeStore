@@ -21,7 +21,7 @@ export const SHELL_STRINGS = Object.freeze({
   dataImport: '导入设置',
   dataResetAll: '全部恢复默认',
   dataHint: '换机/备份一条 JSON 搞定;导入仅收已知键,写入后整页重载。',
-  dataPrivacyNote: '导出文件包含站点名单与全部设置,只保存到你选择的下载路径。',
+  dataPrivacyNote: '导出文件包含站点名单与全部设置,只保存到浏览器默认的下载目录。',
   importBadFile: '导入失败:不是 Octopus 设置文件',
   importEmpty: '这个文件里没有可导入的数据',
   importReadFail: '读取文件失败,请重试',
