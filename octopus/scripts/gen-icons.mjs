@@ -1,7 +1,7 @@
 // scripts/gen-icons.mjs
 // Generates all octopus icons as PNGs (zero dependencies).
 // Output: public/icons/{toolbar,dark,light}/{16,32,48,64,128}.png
-// Design: rounded-square plate + octopus mark (round head + wavy skirt),
+// Design: rounded-square plate + octopus mark (dome head + eyes + six slim legs),
 //         4x4 supersampled antialiasing. Ported from nightveil's generator:
 //         PNG encoder / supersampled rasterizer / three-plate SETS kept as-is.
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -67,35 +67,41 @@ function sdRoundRect(px, py, half, r) {
   return Math.min(Math.max(qx, qy), 0) + Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - r;
 }
 
-// 章鱼标记覆盖率:圆顶头(下延焊接腿根)+ 四腿(顶收拢、底张开、外短内长)。
+// 章鱼标记覆盖率 v3:圆顶头 + 双眼(盘色镂空,辨识度关键)+ 六条细腿
+// (顶收拢焊入头下缘、外短内长、梢部收细;波浪裙边)。
 function octopusMark(px, py) {
-  const headR = 0.42, headCy = 0.05;
-  const inHead = py <= 0.12 && px * px + (py - headCy) * (py - headCy) <= headR * headR;
-  if (inHead) return true;
-  const legY0 = 0.02, legY1 = 0.92;
-  if (py < legY0 || py > legY1) return false;
-  const centers = [-0.66, -0.22, 0.22, 0.66];
+  const headR = 0.44, headCy = 0.02;
+  const inHead = py <= 0.14 && px * px + (py - headCy) * (py - headCy) <= headR * headR;
+  if (inHead) {
+    const eyes = [[-0.155, -0.14], [0.155, -0.14]], eyeR = 0.062;
+    for (const [ex, ey] of eyes) {
+      if ((px - ex) * (px - ex) + (py - ey) * (py - ey) <= eyeR * eyeR) return false;
+    }
+    return true;
+  }
+  const legY0 = 0.0;
+  const centers = [-0.62, -0.37, -0.12, 0.13, 0.38, 0.63];
   for (let i = 0; i < centers.length; i++) {
     const cx = centers[i];
-    const outer = Math.abs(cx) > 0.4;
-    const y1 = outer ? 0.80 : legY1;
-    if (py > y1) continue;
-    const t = (py - legY0) / (legY1 - legY0);
-    const spread = cx * (0.5 + 0.5 * t);
-    const sway = 0.10 * Math.sin(t * Math.PI * 1.5 + cx * 2) * (0.3 + 0.7 * t);
+    const outer = Math.abs(cx) > 0.5;
+    const y1 = outer ? 0.78 : (Math.abs(cx) > 0.25 ? 0.90 : 0.86);
+    if (py < legY0 || py > y1) continue;
+    const t = (py - legY0) / 0.92;
+    const spread = cx * (0.55 + 0.45 * t);
+    const sway = 0.09 * Math.sin(t * Math.PI * 1.6 + cx * 2.2) * (0.25 + 0.75 * t);
     const dx = px - (spread + sway);
     const tt = (py - legY0) / (y1 - legY0);
-    const halfW = 0.085 + 0.045 * (1 - tt);
+    const halfW = 0.062 + 0.028 * (1 - tt);
     if (Math.abs(dx) <= halfW) return true;
   }
   return false;
 }
 
-// 标记落位:octopusMark 的着墨范围是 x ∈ [-0.89, 0.89]、y ∈ [-0.37, 0.92]
-// (包围盒中心 (0, 0.275),不在原点)。把包围盒中心对到盘面中心并整体缩放,
+// 标记落位:octopusMark 的着墨范围是 x ∈ [-0.62, 0.60]、y ∈ [-0.42, 0.90]
+// (包围盒中心 y = 0.24,不在原点)。把包围盒中心对到盘面中心并整体缩放,
 // 否则标记会沉到底、腿尖贴盘缘。标记函数本体保持原样,落位只在这一处。
-const MARK_SCALE = 0.44; // 标记坐标 -> 盘面单位方格
-const MARK_CY = 0.275;   // 着墨包围盒中心的标记 y
+const MARK_SCALE = 0.50; // 标记坐标 -> 盘面单位方格
+const MARK_CY = 0.24;    // 着墨包围盒中心的标记 y
 
 function isMark(x, y) {
   return octopusMark((x - 0.5) / MARK_SCALE, (y - 0.5) / MARK_SCALE + MARK_CY);
