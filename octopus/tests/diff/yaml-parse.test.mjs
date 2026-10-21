@@ -1,4 +1,4 @@
-// tests/diff/yaml-parse.test.mjs — YAML 常用配置子集解析(wave-3 Task 1;标量细节与 flow 见后续任务)
+// tests/diff/yaml-parse.test.mjs — YAML 常用配置子集解析(wave-3 Task 1 块结构 + Task 2 标量细节/flow)
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseYaml } from '../../src/tools/diff/shared/yaml-parse.js';
@@ -87,4 +87,54 @@ test('parseYaml 语法错带行列', () => {
   assert.equal(r.ok, false);
   assert.equal(r.reason.kind, 'syntax');
   assert.equal(r.reason.line, 2);
+});
+
+test("parseYaml 引号标量:单引号 '' 转义、双引号反斜杠转义、与 plain 同值同构", () => {
+  const a = parseYaml("a: 'it''s'\nb: \"x\\ty\"\nc: plain\n");
+  assert.deepEqual(a.value.v.a, v('str', "it's"));
+  assert.deepEqual(a.value.v.b, v('str', 'x\ty'));
+  assert.deepEqual(a.value.v.c, v('str', 'plain'));
+  assert.deepEqual(parseYaml('a: "1"\n').value.v.a, v('str', '1')); // quoted 不推断
+});
+
+test('parseYaml 块标量 |:字面保留换行,三态 chomping', () => {
+  const clip = parseYaml('s: |\n  a\n  b\n');
+  assert.deepEqual(clip.value.v.s, v('str', 'a\nb\n')); // clip:单尾换行
+  const strip = parseYaml('s: |-\n  a\n  b\n');
+  assert.deepEqual(strip.value.v.s, v('str', 'a\nb'));
+  const keep = parseYaml('s: |+\n  a\n\n\n');
+  assert.deepEqual(keep.value.v.s, v('str', 'a\n\n\n'));
+});
+
+test('parseYaml 块标量 >:折叠空格,空行成换行', () => {
+  const r = parseYaml('s: >\n  a\n  b\n\n  c\n');
+  assert.deepEqual(r.value.v.s, v('str', 'a b\nc\n'));
+});
+
+test('parseYaml plain 多行折叠:行并以空格', () => {
+  const r = parseYaml('s: foo\n  bar\n');
+  assert.deepEqual(r.value.v.s, v('str', 'foo bar'));
+});
+
+test('parseYaml flow 单行:序列/映射/嵌套/quoted 项', () => {
+  const r = parseYaml('a: [1, two, "three"]\nb: {x: 1, y: [2, 3]}\nc: {k: v, "q k": 2}\n');
+  assert.deepEqual(r.value.v.a, arr([v('int', 1), v('str', 'two'), v('str', 'three')]));
+  assert.deepEqual(r.value.v.b, map({ x: v('int', 1), y: arr([v('int', 2), v('int', 3)]) }));
+  assert.deepEqual(r.value.v.c, map({ k: v('str', 'v'), 'q k': v('int', 2) }));
+  assert.equal(parseYaml('a: [1,\n 2]\n').ok, false); // 跨行 flow 拒
+});
+
+test('parseYaml 多行引号串拒(子集外)', () => {
+  const r = parseYaml('s: "a\n  b"\n');
+  assert.equal(r.ok, false);
+  assert.equal(r.reason.kind, 'unsupported');
+});
+
+test('parseYaml 引号键:去引号为字符串键并豁免非字符串形态门;__proto__ 守卫看最终键串(裁定)', () => {
+  // "on" 不再落字面引号键;"123" 收且为字符串键(plain 1 键仍拒);quoted __proto__ 仍拒
+  const r = parseYaml('"on": 1\n"123": x\n');
+  assert.deepEqual(r.value, map({ on: v('int', 1), '123': v('str', 'x') }));
+  const bad = parseYaml('"__proto__": x\n');
+  assert.equal(bad.ok, false);
+  assert.equal(bad.reason.kind, 'unsupported');
 });
