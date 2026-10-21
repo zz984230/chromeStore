@@ -73,3 +73,16 @@ test('二次护栏:归一化展开超限拒绝并区分(ADR-0007)', () => {
   const res = runCompare('a', 'a', { normalizer: boom });
   assert.deepEqual(res, { ok: false, rejected: { side: 'left', kind: 'expanded-lines' } });
 });
+
+test('runCompare 成功形带规范形文本(回写数据面)', () => {
+  const res = runCompare('{"b":1,"a":2}', '{ "a":2, "b":1 }', { normalizer: NORMALIZERS.json });
+  assert.equal(res.ok, true);
+  assert.equal(res.normLeft, res.normRight);
+  assert.equal(res.normLeft, '{\n  "a": 2,\n  "b": 1\n}\n');
+});
+
+test('runCompare 恒等缝透传原文(纯文本永不回写)', () => {
+  const t = runCompare('x\ny', 'x\ny');
+  assert.equal(t.normLeft, 'x\ny');
+  assert.equal(t.normRight, 'x\ny');
+});

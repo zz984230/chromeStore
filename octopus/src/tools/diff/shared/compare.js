@@ -28,6 +28,6 @@ export function runCompare(leftText, rightText, { normalizer = NORMALIZERS.text,
   const b = normalizeSide(normalizer, rightText, 'right');
   if (!b.ok) return b;
   const ops = diffLines(a.text, b.text, { dCap });
-  if (ops === null) return { ok: true, degraded: true, ops: degradedLines(a.text, b.text) };
-  return { ok: true, degraded: false, ops };
+  if (ops === null) return { ok: true, degraded: true, ops: degradedLines(a.text, b.text), normLeft: a.text, normRight: b.text };
+  return { ok: true, degraded: false, ops, normLeft: a.text, normRight: b.text };
 }

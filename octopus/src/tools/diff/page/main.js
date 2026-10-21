@@ -100,7 +100,7 @@ function rejectMessage(rej) {
   return (table[rej.kind] ?? DIFF_STRINGS.syntaxFail).replace('{side}', side);
 }
 
-function compare() {
+function compare({ writeback = true } = {}) {
   const res = runCompare(leftBox.value, rightBox.value, {
     normalizer: NORMALIZERS[formatSel.value] ?? NORMALIZERS.text,
   });
@@ -113,6 +113,12 @@ function compare() {
     return;
   }
   compared = true;
+  // 对比时就地规范化:显式对比且文本有变才回写,撤销快照先行;自动重算不回写(防撤销回路)
+  if (writeback && (res.normLeft !== leftBox.value || res.normRight !== rightBox.value)) {
+    hist = nextHistory(hist, texts());
+    setBoxes({ left: res.normLeft, right: res.normRight });
+    renderBar();
+  }
   renderResult(res);
 }
 
@@ -122,7 +128,7 @@ function setBoxes(next) {
   saveSession(session, next.left, next.right);
 }
 
-function recompareIfActive() { if (compared) compare(); }
+function recompareIfActive() { if (compared) compare({ writeback: false }); }
 
 compareBtn.addEventListener('click', compare);
 formatSel.addEventListener('change', () => {
