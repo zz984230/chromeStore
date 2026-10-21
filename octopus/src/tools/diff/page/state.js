@@ -1,6 +1,6 @@
 // src/tools/diff/page/state.js — 工作页状态:合并撤销栈(快照式,裁定 5)+ 文本会话兜底(裁定 7)
 export const HISTORY_LIMIT = 100;
-export const SESSION_KEYS = Object.freeze({ left: 'diff.left', right: 'diff.right' });
+export const SESSION_KEYS = Object.freeze({ left: 'diff.left', right: 'diff.right', format: 'diff.format' });
 
 export function nextHistory(hist, snap) {
   return { undo: [...hist.undo, snap].slice(-HISTORY_LIMIT), redo: [] };
@@ -26,4 +26,17 @@ export function loadSession(store) {
     const right = store.getItem(SESSION_KEYS.right);
     return { left: typeof left === 'string' ? left : '', right: typeof right === 'string' ? right : '' };
   } catch { return { left: '', right: '' }; }
+}
+
+const FORMAT_CHOICES = ['text', 'json']; // YAML/TOML 波入驻时增补
+
+export function saveFormatChoice(store, fmt) {
+  try { store.setItem(SESSION_KEYS.format, fmt); } catch { /* 配额/隐私模式:兜底失败即静默 */ }
+}
+
+export function loadFormatChoice(store) {
+  try {
+    const v = store.getItem(SESSION_KEYS.format);
+    return FORMAT_CHOICES.includes(v) ? v : 'text';
+  } catch { return 'text'; }
 }

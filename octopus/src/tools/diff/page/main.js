@@ -1,16 +1,17 @@
 // src/tools/diff/page/main.js — 工作页控制器:DOM 接线薄层,逻辑全在 shared/(ADR-0005)
-import { runCompare } from '../shared/compare.js';
+import { runCompare, NORMALIZERS } from '../shared/compare.js';
 import { toChunks } from '../shared/chunker.js';
 import { applyChunk } from '../shared/merge.js';
 import { intralineChunk } from '../shared/intraline.js';
 import { PROCESSORS } from '../shared/processors.js';
 import { DIFF_STRINGS } from '../shared/strings.js';
-import { nextHistory, undoFrom, redoFrom, saveSession, loadSession } from './state.js';
+import { nextHistory, undoFrom, redoFrom, saveSession, loadSession, saveFormatChoice, loadFormatChoice } from './state.js';
 
 const $ = (id) => document.getElementById(id);
 const leftBox = $('diff-left');
 const rightBox = $('diff-right');
 const compareBtn = $('diff-compare');
+const formatSel = $('diff-format');
 const wrapToggle = $('diff-wrap');
 const swapBtn = $('diff-swap');
 const clearBtn = $('diff-clear');
@@ -85,14 +86,30 @@ function renderResult(res) {
   resultSec.hidden = false;
 }
 
+function rejectMessage(rej) {
+  const side = rej.side === 'left' ? DIFF_STRINGS.sideLeft : DIFF_STRINGS.sideRight;
+  const pos = rej.line == null ? '' : `（第 ${rej.line} 行${rej.col == null ? '' : ` 第 ${rej.col} 列`}附近）`;
+  const table = {
+    lines: DIFF_STRINGS.tooManyLines,
+    bytes: DIFF_STRINGS.tooManyBytes,
+    'expanded-lines': DIFF_STRINGS.expandedLines,
+    'expanded-bytes': DIFF_STRINGS.expandedBytes,
+    syntax: DIFF_STRINGS.syntaxFail.replace('{fmt}', DIFF_STRINGS.fmtJson).replace('{pos}', pos),
+    unsupported: DIFF_STRINGS.unsupportedFail.replace('{fmt}', DIFF_STRINGS.fmtJson).replace('{detail}', rej.detail ?? ''),
+  };
+  return (table[rej.kind] ?? DIFF_STRINGS.syntaxFail).replace('{side}', side);
+}
+
 function compare() {
-  const res = runCompare(leftBox.value, rightBox.value);
+  const res = runCompare(leftBox.value, rightBox.value, {
+    normalizer: NORMALIZERS[formatSel.value] ?? NORMALIZERS.text,
+  });
   if (!res.ok) {
     compared = false;
     lastChunks = null;
     resultSec.hidden = true;
     banner.hidden = true;
-    note.textContent = res.error === 'bytes' ? DIFF_STRINGS.tooManyBytes : DIFF_STRINGS.tooManyLines;
+    note.textContent = rejectMessage(res.rejected);
     return;
   }
   compared = true;
@@ -108,6 +125,10 @@ function setBoxes(next) {
 function recompareIfActive() { if (compared) compare(); }
 
 compareBtn.addEventListener('click', compare);
+formatSel.addEventListener('change', () => {
+  saveFormatChoice(session, formatSel.value);
+  recompareIfActive(); // 已对比则按新格式重算;未对比只记住选择
+});
 for (const ta of [leftBox, rightBox]) ta.addEventListener('input', saveSoon);
 wrapToggle.addEventListener('change', () => document.body.classList.toggle('df-wrap-on', wrapToggle.checked));
 swapBtn.addEventListener('click', () => {
@@ -183,5 +204,6 @@ resultSec.addEventListener('click', (e) => { // 合并:快照入栈 → 写回�
   const saved = loadSession(session);
   if (saved.left || saved.right) { leftBox.value = saved.left; rightBox.value = saved.right; }
   document.body.classList.toggle('df-wrap-on', wrapToggle.checked);
+  formatSel.value = loadFormatChoice(session);
   renderBar();
 })();

@@ -36,6 +36,10 @@
   .df-btn--primary { border-color: var(--gold); color: var(--gold); background: var(--gold-soft); }
   .df-check { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13px; cursor: pointer; }
   .df-check input { accent-color: var(--gold); }
+  .df-check select {
+    background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 9px; padding: 4px 8px; font: inherit; font-size: 13px; cursor: pointer;
+  }
   .df-note { color: var(--ink-3); font-size: 12.5px; margin: 10px 0 0; }
   .df-banner {
     margin-top: 10px; padding: 8px 12px; border: 1px solid var(--del-ink);
@@ -82,6 +86,12 @@
     <h1>对比</h1>
     <button id="diff-compare" class="df-btn df-btn--primary" type="button">对比</button>
     <label class="df-check"><input type="checkbox" id="diff-wrap" checked>自动换行</label>
+    <label class="df-check">格式
+      <select id="diff-format">
+        <option value="text" selected>纯文本</option>
+        <option value="json">JSON</option>
+      </select>
+    </label>
     <span class="df-spacer"></span>
     <button id="diff-undo" class="df-btn" type="button" disabled>撤销</button>
     <button id="diff-redo" class="df-btn" type="button" disabled>重做</button>
