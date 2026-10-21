@@ -1,9 +1,10 @@
-// src/tools/diff/shared/myers.js — 行级 Myers O(ND) + 公共前后缀裁剪(ADR-0004)。
-// 纯函数:无 DOM、无 chrome。D 超限时 diffLines 返回 null,由 compare.js 走降级。
+// src/tools/diff/shared/myers.js — 序列 Myers O(ND) 核心 + 行/字符双适配(ADR-0004/0006)。
+// 纯函数:无 DOM、无 chrome。D 超限时 diffLines/diffChars 返回 null,由调用方降级。
 // 逐轮快照只存活跃切片(k∈[-(d-1),d-1]),D=1000 时内存约 D² 级而非 D×N 级。
 import { splitLines } from './lines.js';
 
-function myers(a, b, dCap) {
+// 序列核心:吃任意数组(行/字符只是切分策略,ADR-0006)
+export function diffSeq(a, b, dCap) {
   const N = a.length, M = b.length;
   const MAX = N + M;
   if (MAX === 0) return [];
@@ -51,12 +52,12 @@ function trimCommon(a, b) {
   return { start, endA, endB };
 }
 
-// 主入口:文本进 → 带行号操作序出。dCap 触顶返回 null。
+// 行级适配:文本进 → 带行号操作序出。dCap 触顶返回 null。
 export function diffLines(aText, bText, { dCap = Infinity } = {}) {
   const a = splitLines(aText);
   const b = splitLines(bText);
   const { start, endA, endB } = trimCommon(a, b);
-  const mid = myers(a.slice(start, endA), b.slice(start, endB), dCap);
+  const mid = diffSeq(a.slice(start, endA), b.slice(start, endB), dCap);
   if (mid === null) return null;
   const ops = [];
   for (let i = 0; i < start; i++) ops.push({ t: '=', text: a[i], aLn: i + 1, bLn: i + 1 });
@@ -68,6 +69,29 @@ export function diffLines(aText, bText, { dCap = Infinity } = {}) {
   const tailB = endB - endA;
   for (let i = endA; i < a.length; i++) ops.push({ t: '=', text: a[i], aLn: i + 1, bLn: i + tailB + 1 });
   return ops;
+}
+
+// 字符级适配(ADR-0006):按码点切分,段式输出(无行号),相邻同侧合并;dCap 触顶返回 null。
+export function diffChars(aText, bText, { dCap = Infinity } = {}) {
+  const a = Array.from(aText);
+  const b = Array.from(bText);
+  const { start, endA, endB } = trimCommon(a, b);
+  const mid = diffSeq(a.slice(start, endA), b.slice(start, endB), dCap);
+  if (mid === null) return null;
+  const segs = [];
+  const push = (t, text) => {
+    const last = segs[segs.length - 1];
+    if (last && last.t === t) last.text += text;
+    else segs.push({ t, text });
+  };
+  for (let i = 0; i < start; i++) push('=', a[i]);
+  for (const op of mid) {
+    if (op.t === '=') push('=', a[start + op.x]);
+    else if (op.t === '-') push('-', a[start + op.x]);
+    else push('+', b[start + op.y]);
+  }
+  for (let i = endA; i < a.length; i++) push('=', a[i]);
+  return segs;
 }
 
 // 降级形(CONTEXT.md「降级」):公共首尾照裁,中间整块 -/+ 呈现
