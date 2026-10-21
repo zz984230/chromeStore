@@ -3,6 +3,7 @@
 // 数组恒多行、表体不缩进、日期时间分数尾零修剪;-0 归 0、inf/nan 发裸形。幂等由「同值同文本」保证。
 import { parseToml } from './toml-parse.js';
 import { cmpCodePoints } from './codepoint.js';
+import { emitInt, emitFloat } from './numbers.js';
 
 const BARE = /^[A-Za-z0-9_-]+$/;
 
@@ -27,22 +28,12 @@ function emitStr(s) {
 
 function emitKey(k) { return BARE.test(k) ? k : emitStr(k); }
 
-function emitFloat(n) {
-  if (Number.isNaN(n)) return 'nan';
-  if (n === Infinity) return 'inf';
-  if (n === -Infinity) return '-inf';
-  if (Object.is(n, -0)) n = 0;
-  let s = String(n);
-  if (!/[.eE]/.test(s)) s += '.0';
-  return s.replace('e+', 'e');
-}
-
 // 分数尾零修剪(解析器原文保留,发射层修):'.500'→'.5';全零 '.000' 连点删去;odt 的 Z 尾保留
 const trimFrac = (s) => s.replace(/\.(\d*?)0+(?=Z?$)/, (m, digits) => (digits === '' ? '' : '.' + digits));
 
 function emitValue(v, indent, inline = false) {
   switch (v.t) {
-    case 'int': return String(v.v);
+    case 'int': return emitInt(v.v);
     case 'float': return emitFloat(v.v);
     case 'bool': return String(v.v);
     case 'str': return inline ? emitBasic(v.v) : emitStr(v.v);
