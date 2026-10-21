@@ -117,6 +117,16 @@ test('parseToml 内联表闭合:[a] 表头同样拒并', () => {
   assert.ok(r.reason.detail.includes('内联表'), r.reason.detail);
 });
 
+test('parseToml 数组表建门:[[..]] 不认内联数组起源,真数组表追加不受扰', () => {
+  const r = parseToml('a = [{x = 1}]\n[[a]]\ny = 2\n');
+  assert.equal(r.ok, false);
+  assert.equal(r.reason.kind, 'syntax');
+  assert.ok(r.reason.detail.includes('内联'), r.reason.detail);
+  // 同名真数组表仍可追加,不过拒
+  const g = parseToml('[[a]]\nx = 1\n[[a]]\ny = 2\n');
+  assert.deepEqual(g.value.v.a, arr([tbl({ x: val('int', 1) }), tbl({ y: val('int', 2) })]));
+});
+
 test('parseToml CRLF 全谱:行尾等价 LF、多行串归一 \\n、裸 \\r 仍拒', () => {
   const lf = parseToml('a = 1\n[t]\nb = "x"\n');
   const crlf = parseToml('a = 1\r\n[t]\r\nb = "x"\r\n');

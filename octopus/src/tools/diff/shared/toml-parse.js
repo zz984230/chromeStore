@@ -367,9 +367,12 @@ export function parseToml(text) {
       const last = keys[keys.length - 1];
       const pv = parent.v;
       if (isArr) {
-        if (pv[last] === undefined) pv[last] = { t: 'arr', v: [] };
-        if (pv[last].t !== 'arr') return p.err('数组表撞非数组');
-        sets.aot.add(pv[last]); // 仅 [[..]] 建的数组可下钻;内联数组(a=[{..}])元素是闭合内联表,不可扩
+        if (pv[last] === undefined) { pv[last] = { t: 'arr', v: [] }; sets.aot.add(pv[last]); }
+        else {
+          if (pv[last].t !== 'arr') return p.err('数组表撞非数组');
+          // 仅 [[..]] 建的数组可扩;内联数组(a=[{..}])是闭合写法,不可追加
+          if (!sets.aot.has(pv[last])) return p.err('数组表撞内联数组');
+        }
         const el = { t: 'tbl', v: {} };
         pv[last].v.push(el);
         cur = el.v;
