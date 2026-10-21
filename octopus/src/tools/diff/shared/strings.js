@@ -9,6 +9,7 @@ export const DIFF_STRINGS = Object.freeze({
   sideLeft: '左栏',
   sideRight: '右栏',
   fmtJson: 'JSON',
+  fmtToml: 'TOML',
   tooManyLines: `{side}超出规模：单栏最多 ${GUARDS.MAX_LINES} 行`,
   tooManyBytes: `{side}超出规模：单栏最多 ${GUARDS.MAX_UTF16} 个字符（UTF-16 码元计）`,
   expandedLines: `{side}归一化后超限：展开超过 ${GUARDS.MAX_LINES} 行，无法对比`,

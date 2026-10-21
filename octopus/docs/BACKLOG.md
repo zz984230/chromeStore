@@ -4,7 +4,7 @@
 
 - [ ] **工具级硬禁用**:用 `scripting.registerContentScripts` 动态注册实现「禁用某工具 = 停止注入」。触发条件:出现真实的性能/隐私抱怨(ADR-0003 回退路径)。
 - [ ] **pace 工具栏信号**:badge text 通道(保持态、熔断态等);不动画盘根本,与换盘机制并行。
-- [ ] **对比 rejectMessage 波间递延**(2026-10-21 M4 wave-1 终审 triage;触发条件:TOML/YAML 归一化波开工时并案修):
+- [x] **对比 rejectMessage 波间递延**(2026-10-21 M4 wave-1 终审 triage;触发条件:TOML/YAML 归一化波开工时并案修)(2026-10-21 wave-2 Task 3 清偿:fmt 派生 + replacer 函数 + 回落无占位符):
   - `{detail}` 走字符串替换,V8 报错原文内嵌用户输入,含 `$&`/`` $` `` 会被当替换模式吞字(纯外观,textContent 无注入面;unsupported kind 本波不可产)——改 replacer 函数 `() => rej.detail`
   - 未知-kind 回落分支露字面 `{fmt}{pos}` 占位符 + syntax/unsupported 行写死 `fmtJson`——随「fmt 按格式选择派生」重构一并处理({fmt} 间接层已备)
 - [ ] **继承清扫**(2026-10-04 M0 关账已逐条并入;原始措辞与分组保留,出处见各分组标注;消化时逐条勾账,完成后移入「已完成」并注明出处):

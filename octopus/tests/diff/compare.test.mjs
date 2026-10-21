@@ -86,3 +86,16 @@ test('runCompare 恒等缝透传原文(纯文本永不回写)', () => {
   assert.equal(t.normLeft, 'x\ny');
   assert.equal(t.normRight, 'x\ny');
 });
+
+test('TOML 注册:同值异写两栏全等', () => {
+  const res = runCompare('[t]\nx = 0xff\n', 't.x = 255\n', { normalizer: NORMALIZERS.toml });
+  assert.equal(res.ok, true);
+  assert.ok(res.ops.every((o) => o.t === '='));
+});
+
+test('TOML 语法错拒绝按栏归属', () => {
+  const res = runCompare('x = 1\n', '[unclosed\n', { normalizer: NORMALIZERS.toml });
+  assert.equal(res.ok, false);
+  assert.equal(res.rejected.side, 'right');
+  assert.equal(res.rejected.kind, 'syntax');
+});

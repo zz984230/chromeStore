@@ -2,11 +2,13 @@
 import { GUARDS, checkSide } from './guards.js';
 import { diffLines, degradedLines } from './myers.js';
 import { normalizeJson } from './norm-json.js';
+import { normalizeToml } from './norm-toml.js';
 
-// 归一化缝(ADR-0007 结果对象契约):text 恒等;JSON 已入,YAML/TOML 后续各补一员,引擎不动
+// 归一化缝(ADR-0007 结果对象契约):text 恒等;YAML 后续补一员,引擎不动
 export const NORMALIZERS = Object.freeze({
   text: (t) => ({ ok: true, text: t }),
   json: normalizeJson,
+  toml: normalizeToml,
 });
 
 // 归一化一侧:失败按调用侧归属栏;产物过同一护栏,展开超限拒绝并区分(ADR-0007 双道护栏)

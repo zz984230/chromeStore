@@ -86,18 +86,22 @@ function renderResult(res) {
   resultSec.hidden = false;
 }
 
+// 拒绝文案:kinds → strings;fmt 按当前格式选择派生;行列能取到才拼(ADR-0007)
 function rejectMessage(rej) {
   const side = rej.side === 'left' ? DIFF_STRINGS.sideLeft : DIFF_STRINGS.sideRight;
+  const fmtLabel = { json: DIFF_STRINGS.fmtJson, toml: DIFF_STRINGS.fmtToml }[formatSel.value] ?? '';
   const pos = rej.line == null ? '' : `（第 ${rej.line} 行${rej.col == null ? '' : ` 第 ${rej.col} 列`}附近）`;
   const table = {
     lines: DIFF_STRINGS.tooManyLines,
     bytes: DIFF_STRINGS.tooManyBytes,
     'expanded-lines': DIFF_STRINGS.expandedLines,
     'expanded-bytes': DIFF_STRINGS.expandedBytes,
-    syntax: DIFF_STRINGS.syntaxFail.replace('{fmt}', DIFF_STRINGS.fmtJson).replace('{pos}', pos),
-    unsupported: DIFF_STRINGS.unsupportedFail.replace('{fmt}', DIFF_STRINGS.fmtJson).replace('{detail}', rej.detail ?? ''),
+    syntax: DIFF_STRINGS.syntaxFail.replace('{fmt}', fmtLabel).replace('{pos}', pos),
+    unsupported: DIFF_STRINGS.unsupportedFail.replace('{fmt}', fmtLabel).replace('{detail}', () => rej.detail ?? ''),
   };
-  return (table[rej.kind] ?? DIFF_STRINGS.syntaxFail).replace('{side}', side);
+  // 未知 kind 回落:syntaxFail 模板,fmt/pos 填空串——无字面占位符残留(递延①清偿)
+  const msg = table[rej.kind] ?? DIFF_STRINGS.syntaxFail.replace('{fmt}', '').replace('{pos}', '');
+  return msg.replace('{side}', side);
 }
 
 function compare({ writeback = true } = {}) {
