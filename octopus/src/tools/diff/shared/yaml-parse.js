@@ -192,7 +192,8 @@ function splitKey(text) {
   return null;
 }
 
-function scalarFromPlain(s) {
+// 导出供 norm-yaml plain-safe 判定同源复用(收口点 C:发射侧防再解析漂移)
+export function scalarFromPlain(s) {
   if (Object.hasOwn(BOOL_WORDS, s)) return { t: 'bool', v: BOOL_WORDS[s] };
   if (NULL_WORDS.has(s)) return { t: 'null' };
   if (INT_RX.test(s)) return { t: 'int', v: Number(s) };
