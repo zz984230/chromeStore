@@ -38,6 +38,11 @@ test('parseYaml 顶层:裸映射/裸序列/裸标量/空文档', () => {
   assert.deepEqual(parseYaml('---\nk: v\n...\n').value, map({ k: v('str', 'v') }));
 });
 
+test('parseYaml 文档标记行尾注释:裸标记不因 #c 误拒(复审 R10)', () => {
+  assert.deepEqual(parseYaml('k: v\n... # c\n').value, map({ k: v('str', 'v') }));
+  assert.deepEqual(parseYaml('--- # c\nk: v\n').value, map({ k: v('str', 'v') }));
+});
+
 test('parseYaml 类型推断 1.2 核心:bool/null/int/float/inf/nan;no/On 不是 bool', () => {
   const r = parseYaml('a: true\nb: False\nc: ~\nd: null\ne: -17\nf: 1.5\ng: 1e2\nh: .inf\ni: -.nan\nj: no\nk: On\n');
   const x = r.value.v;

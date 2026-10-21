@@ -99,11 +99,11 @@ function plainValue(s, l) {
 const marker = (l) => cutComment(l.text).trim();
 
 // 文档标记同行带内容('--- k: v' / '... k: v'):真 YAML 为「文档起 + 同行节点」,子集外拒——
-// 不拒会落 splitKey 成 '--- k' 形态键(静默错值);裸标记 + 行尾空白不算(仍归文档头/尾)
+// 不拒会落 splitKey 成 '--- k' 形态键(静默错值);裸标记 + 行尾空白/行尾注释不算(仍归文档头/尾)
 function rejectMarkerInline(l) {
   const t = l.text;
   if ((t.startsWith('---') || t.startsWith('...')) && (t[3] === ' ' || t[3] === '\t')
-    && t.slice(4).replace(/^[ \t]+/, '') !== '') {
+    && cutComment(t.slice(4)).replace(/^[ \t]+/, '') !== '') {
     throw new YErr('unsupported', '文档标记同行内容子集外', l.line, l.indent + 1);
   }
 }
