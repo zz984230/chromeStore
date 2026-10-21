@@ -14,14 +14,15 @@ function escChar(c) {
   return c;
 }
 
+const emitBasic = (s) => '"' + [...s].map(escChar).join('') + '"';
+
 function emitStr(s) {
-  if (!s.includes('\n')) return '"' + [...s].map(escChar).join('') + '"';
-  // 多行定稿(对照测试 3/7 实测收口):恒发「"""\n 内容 [\n]"""」。开定界后的载体换行
-  // 重解析必被裁,值首换行因此天然安全(无需转义);值不以 \n 结尾时补的尾换行即内容,
-  // 重解析值多一尾 \n,再发射复用之 → 一步收敛,幂等成立。内容换行一律字面,
-  // 其余字符走 escChar(" 须转义防撞定界)。
-  const lit = [...s].map((c) => (c === '\n' ? '\n' : escChar(c))).join('');
-  return '"""\n' + lit + (s.endsWith('\n') ? '' : '\n') + '"""';
+  if (!s.includes('\n')) return emitBasic(s);
+  // 多行定稿(载体式收正,探针实证):发「"""\n 内容原文 """」。开定界后的载体换行
+  // 重解析必被裁,内容即值原文,绝不补人工尾换行;值自身不以 \n 结尾时闭定界符紧随
+  // 末字符,以 \n 结尾时该换行紧贴闭定界符(合法且保值)。同值同文本,幂等平凡成立。
+  // 内容换行一律字面," 与 \ 走 escChar(防撞定界/行尾反斜杠歧义),其余控制符 \u 转义。
+  return '"""\n' + [...s].map((c) => (c === '\n' ? '\n' : escChar(c))).join('') + '"""';
 }
 
 function emitKey(k) { return BARE.test(k) ? k : emitStr(k); }
@@ -39,18 +40,27 @@ function emitFloat(n) {
 // 分数尾零修剪(解析器原文保留,发射层修):'.500'→'.5';全零 '.000' 连点删去;odt 的 Z 尾保留
 const trimFrac = (s) => s.replace(/\.(\d*?)0+(?=Z?$)/, (m, digits) => (digits === '' ? '' : '.' + digits));
 
-function emitValue(v, indent) {
+function emitValue(v, indent, inline = false) {
   switch (v.t) {
     case 'int': return String(v.v);
     case 'float': return emitFloat(v.v);
     case 'bool': return String(v.v);
-    case 'str': return emitStr(v.v);
+    case 'str': return inline ? emitBasic(v.v) : emitStr(v.v);
     case 'odt': case 'ldt': case 'ld': case 'lt': return trimFrac(v.v);
     case 'arr': {
       if (v.v.length === 0) return '[]';
+      if (inline) return '[' + v.v.map((x) => emitValue(x, '', true)).join(', ') + ']';
       const inner = indent + '  ';
       const items = v.v.map((x) => inner + emitValue(x, inner) + ',');
       return '[\n' + items.join('\n') + '\n' + indent + ']';
+    }
+    case 'tbl': {
+      // 内联发射(补全谱):表作为数组元素或嵌在内联表中时无节形可走,发内联形
+      // 「{ k = v, .. }」(键码点排序,值递归);TOML 1.0 禁内联表含换行,inline 旗
+      // 强制单行——数组收成 [1, 2]、串走基本串转义(\n 不落字面)。重解析仍得 tbl
+      // 节点且混合数组 isSection 为 false → 再发射复走此臂,幂等成立。
+      const keys = Object.keys(v.v).sort(cmpCodePoints);
+      return '{' + keys.map((k) => `${emitKey(k)} = ${emitValue(v.v[k], '', true)}`).join(', ') + '}';
     }
     default: throw new Error('unreachable');
   }
