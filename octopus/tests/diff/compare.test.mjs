@@ -99,3 +99,26 @@ test('TOML 语法错拒绝按栏归属', () => {
   assert.equal(res.rejected.side, 'right');
   assert.equal(res.rejected.kind, 'syntax');
 });
+
+test('YAML 注册:flow 与块同值异写两栏全等', () => {
+  const res = runCompare('a: [1, 2]\n', 'a:\n  - 1\n  - 2\n', { normalizer: NORMALIZERS.yaml });
+  assert.equal(res.ok, true);
+  assert.ok(res.ops.every((o) => o.t === '='));
+});
+
+test('YAML 子集外拒绝按栏归属 kind=unsupported', () => {
+  const res = runCompare('a: 1\n', 'b: &x 2\n', { normalizer: NORMALIZERS.yaml });
+  assert.equal(res.ok, false);
+  assert.equal(res.rejected.side, 'right');
+  assert.equal(res.rejected.kind, 'unsupported');
+});
+
+// 深嵌套实测校准(2026-10-21,本机 Node):JSON.parse 迭代式,≥50 万层仍成功;
+// canon/stringify 递归 N=3501 起 RangeError —— 窗口存在,N=5000 居中钉测(1 行 10001 字节,护栏之下)
+test('深嵌套:归一化器 RangeError 被缝接住 kind=overflow(BACKLOG 清偿)', () => {
+  const doc = '['.repeat(5000) + ']'.repeat(5000) + '\n';
+  const res = runCompare(doc, '1', { normalizer: NORMALIZERS.json });
+  assert.equal(res.ok, false);
+  assert.equal(res.rejected.kind, 'overflow');
+  assert.equal(res.rejected.side, 'left');
+});

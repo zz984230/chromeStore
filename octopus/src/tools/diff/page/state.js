@@ -28,7 +28,7 @@ export function loadSession(store) {
   } catch { return { left: '', right: '' }; }
 }
 
-const FORMAT_CHOICES = ['text', 'json', 'toml']; // YAML 波入驻时增补
+const FORMAT_CHOICES = ['text', 'json', 'toml', 'yaml'];
 
 export function saveFormatChoice(store, fmt) {
   try { store.setItem(SESSION_KEYS.format, fmt); } catch { /* 配额/隐私模式:兜底失败即静默 */ }

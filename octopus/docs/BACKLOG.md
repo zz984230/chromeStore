@@ -7,7 +7,7 @@
 - [x] **对比 rejectMessage 波间递延**(2026-10-21 M4 wave-1 终审 triage;触发条件:TOML/YAML 归一化波开工时并案修)(2026-10-21 wave-2 Task 4 清偿:fmt 派生 + replacer 函数 + 回落无占位符;注记初写 Task 3,插单重排后未同步,收口时改字):
   - `{detail}` 走字符串替换,V8 报错原文内嵌用户输入,含 `$&`/`` $` `` 会被当替换模式吞字(纯外观,textContent 无注入面;unsupported kind 本波不可产)——改 replacer 函数 `() => rej.detail`
   - 未知-kind 回落分支露字面 `{fmt}{pos}` 占位符 + syntax/unsupported 行写死 `fmtJson`——随「fmt 按格式选择派生」重构一并处理({fmt} 间接层已备)
-- [ ] **归一化器深嵌套未捕获**(2026-10-21 wave-2 终审发现;触发条件:YAML 波动归一化缝时并案修):~3-5k 层嵌套的 10KB 输入(护栏之下)使 parse/emit 递归抛 RangeError,越出 `{ok:false}` 结果对象契约,runCompare 直传到点击处理器无拒绝文案;wave-1 JSON 同病(canon/stringify 递归)。修法:在缝处统一接(compare.js normalizeSide 或各归一化器自包),一处覆盖 JSON/TOML/未来 YAML;须加拒绝 kind(如 overflow)与 strings 文案。
+- [x] **归一化器深嵌套未捕获**(2026-10-21 wave-2 终审发现;触发条件:YAML 波动归一化缝时并案修)(2026-10-21 wave-3 Task 4 清偿:normalizeSide 统一接 overflow):~3-5k 层嵌套的 10KB 输入(护栏之下)使 parse/emit 递归抛 RangeError,越出 `{ok:false}` 结果对象契约,runCompare 直传到点击处理器无拒绝文案;wave-1 JSON 同病(canon/stringify 递归)。修法:在缝处统一接(compare.js normalizeSide 或各归一化器自包),一处覆盖 JSON/TOML/未来 YAML;须加拒绝 kind(如 overflow)与 strings 文案。
   - `{detail}` 走字符串替换,V8 报错原文内嵌用户输入,含 `$&`/`` $` `` 会被当替换模式吞字(纯外观,textContent 无注入面;unsupported kind 本波不可产)——改 replacer 函数 `() => rej.detail`
   - 未知-kind 回落分支露字面 `{fmt}{pos}` 占位符 + syntax/unsupported 行写死 `fmtJson`——随「fmt 按格式选择派生」重构一并处理({fmt} 间接层已备)
 - [ ] **继承清扫**(2026-10-04 M0 关账已逐条并入;原始措辞与分组保留,出处见各分组标注;消化时逐条勾账,完成后移入「已完成」并注明出处):

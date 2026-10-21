@@ -3,17 +3,26 @@ import { GUARDS, checkSide } from './guards.js';
 import { diffLines, degradedLines } from './myers.js';
 import { normalizeJson } from './norm-json.js';
 import { normalizeToml } from './norm-toml.js';
+import { normalizeYaml } from './norm-yaml.js';
 
-// 归一化缝(ADR-0007 结果对象契约):text 恒等;YAML 后续补一员,引擎不动
+// 归一化缝(ADR-0007 结果对象契约):text 恒等
 export const NORMALIZERS = Object.freeze({
   text: (t) => ({ ok: true, text: t }),
   json: normalizeJson,
   toml: normalizeToml,
+  yaml: normalizeYaml,
 });
 
-// 归一化一侧:失败按调用侧归属栏;产物过同一护栏,展开超限拒绝并区分(ADR-0007 双道护栏)
+// 归一化一侧:失败按调用侧归属栏;深递归 RangeError 接为 overflow(BACKLOG 清偿);
+// 产物过同一护栏,展开超限拒绝并区分(ADR-0007 双道护栏)
 function normalizeSide(fn, text, side) {
-  const r = fn(text);
+  let r;
+  try {
+    r = fn(text);
+  } catch (err) {
+    if (err instanceof RangeError) return { ok: false, rejected: { side, kind: 'overflow' } };
+    throw err;
+  }
   if (!r.ok) return { ok: false, rejected: { side, ...r.reason } };
   const over = checkSide(r.text);
   if (over) return { ok: false, rejected: { side, kind: `expanded-${over}` } };
