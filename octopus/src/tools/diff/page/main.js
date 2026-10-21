@@ -2,6 +2,7 @@
 import { runCompare } from '../shared/compare.js';
 import { toChunks } from '../shared/chunker.js';
 import { applyChunk } from '../shared/merge.js';
+import { intralineChunk } from '../shared/intraline.js';
 import { PROCESSORS } from '../shared/processors.js';
 import { DIFF_STRINGS } from '../shared/strings.js';
 import { nextHistory, undoFrom, redoFrom, saveSession, loadSession } from './state.js';
@@ -18,8 +19,7 @@ const redoBtn = $('diff-redo');
 const note = $('diff-note');
 const banner = $('diff-banner');
 const resultSec = $('diff-result');
-const outLeft = $('diff-out-left');
-const outRight = $('diff-out-right');
+const outGrid = $('diff-out');
 const session = globalThis.sessionStorage;
 
 let hist = { undo: [], redo: [] };
@@ -40,33 +40,47 @@ function renderBar() {
   redoBtn.disabled = hist.redo.length === 0;
 }
 
-function rowHtml(op, side) {
+function rowHtml(op, side, segs) {
   const ln = side === 'left' ? (op.aLn ?? '') : (op.bLn ?? '');
   const cls = op.t === '-' ? ' is-del' : op.t === '+' ? ' is-add' : '';
   const sign = op.t === '=' ? ' ' : op.t;
-  return `<div class="df-row${cls}"><span class="df-ln">${ln}</span><span class="df-sign">${sign}</span><span class="df-text">${esc(op.text)}</span></div>`;
+  const body = segs
+    ? segs.map((s) => (s.hot ? `<span class="df-ch">${esc(s.text)}</span>` : esc(s.text))).join('')
+    : esc(op.text);
+  return `<div class="df-row${cls}"><span class="df-ln">${ln}</span><span class="df-sign">${sign}</span><span class="df-text">${body}</span></div>`;
 }
+
+const EMPTY_ROW = '<div class="df-row df-empty"></div>';
+const GAP_PLAIN = '<div class="df-gap"></div>';
 
 function renderResult(res) {
   banner.hidden = !res.degraded;
   const chunks = toChunks(res.ops);
   lastChunks = chunks;
   let nDiff = 0;
-  const leftHtml = [];
-  const rightHtml = [];
+  const cells = []; // 扁平三联(左/缝/右)入同一网格:换行涨高时配对行不失步,滚动天然联动
   chunks.forEach((c, i) => {
     if (c.kind === '=') {
-      for (const op of c.lines) { leftHtml.push(rowHtml(op, 'left')); rightHtml.push(rowHtml(op, 'right')); }
+      for (const op of c.lines) cells.push(rowHtml(op, 'left'), GAP_PLAIN, rowHtml(op, 'right'));
       return;
     }
     nDiff++;
-    leftHtml.push(`<div class="df-adopt"><button type="button" class="df-btn" data-chunk="${i}" data-winner="left">${DIFF_STRINGS.adoptLeft}</button></div>`);
-    for (const op of c.del) leftHtml.push(rowHtml(op, 'left'));
-    rightHtml.push(`<div class="df-adopt"><button type="button" class="df-btn" data-chunk="${i}" data-winner="right">${DIFF_STRINGS.adoptRight}</button></div>`);
-    for (const op of c.add) rightHtml.push(rowHtml(op, 'right'));
+    const hl = res.degraded ? null : intralineChunk(c); // 降级态不做字符级(ADR-0006)
+    const gapHead = `<div class="df-gap df-gap--ctl">`
+      + `<button type="button" class="df-arrow" data-chunk="${i}" data-winner="right" aria-label="${DIFF_STRINGS.adoptRight}" title="${DIFF_STRINGS.adoptRight}">⇜</button>`
+      + `<button type="button" class="df-arrow" data-chunk="${i}" data-winner="left" aria-label="${DIFF_STRINGS.adoptLeft}" title="${DIFF_STRINGS.adoptLeft}">⇝</button>`
+      + `</div>`;
+    for (let r = 0; r < Math.max(c.del.length, c.add.length); r++) {
+      const d = c.del[r];
+      const a = c.add[r];
+      cells.push(
+        d ? rowHtml(d, 'left', hl && hl.del[r]) : EMPTY_ROW,
+        r === 0 ? gapHead : GAP_PLAIN,
+        a ? rowHtml(a, 'right', hl && hl.add[r]) : EMPTY_ROW,
+      );
+    }
   });
-  outLeft.innerHTML = leftHtml.join('');
-  outRight.innerHTML = rightHtml.join('');
+  outGrid.innerHTML = cells.join('');
   note.textContent = nDiff === 0 ? DIFF_STRINGS.identical : DIFF_STRINGS.diffCount.replace('{n}', String(nDiff));
   resultSec.hidden = false;
 }

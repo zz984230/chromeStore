@@ -5,14 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>对比 · Octopus</title>
 <style>
-  /* veil 家族 token(与 popup.html 同源);diff 专属红绿语义为软底色,不强品牌色 */
+  /* veil 家族 token(与 popup.html 同源);diff 双层红绿(行底/字符块,ADR-0006)+ 中缝底 */
   :root {
     --bg: #12141c; --surface: #1a1e2a; --surface-2: #202634;
     --line: #2a3040; --line-soft: #232838;
     --ink: #e8ebf4; --ink-2: #9aa3b8; --ink-3: #6b7488;
     --gold: #e3c987; --gold-soft: rgba(227, 201, 135, .14);
-    --del-bg: rgba(226, 120, 110, .10); --del-ink: #e2a49a;
-    --add-bg: rgba(120, 200, 110, .10); --add-ink: #a8cfa2;
+    --del-bg: rgba(226, 120, 110, .19); --del-ink: #e2a49a; --del-ch: rgba(226, 120, 110, .44);
+    --add-bg: rgba(120, 200, 110, .19); --add-ink: #a8cfa2; --add-ch: rgba(120, 200, 110, .44);
+    --gap-bg: #161924;
     --radius: 10px;
     --font-serif: "Noto Serif SC", "Songti SC", serif;
     --font-sans: "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
@@ -52,22 +53,26 @@
   .df-procs .df-btn { padding: 4px 9px; font-size: 12px; }
   .df-procs-label { color: var(--ink-3); font-size: 11px; align-self: center; }
   .df-result { margin-top: 20px; }
-  .df-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; margin-top: 10px; }
-  .df-col {
-    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 8px 0; overflow-x: auto; min-width: 0;
-  }
+  .df-panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); margin-top: 10px; overflow-x: auto; }
+  .df-grid { display: grid; grid-template-columns: 1fr 56px 1fr; padding: 8px 0; }
   .df-row { display: flex; align-items: baseline; padding: 0 10px; font: 400 12.5px/1.7 ui-monospace, "SF Mono", Menlo, monospace; }
+  .df-empty { min-height: 1.7em; }
   .df-ln { flex: none; width: 3.4em; text-align: right; padding-right: 10px; color: var(--ink-3); font-variant-numeric: tabular-nums; user-select: none; }
   .df-sign { flex: none; width: 1.2em; user-select: none; }
   .df-text { flex: 1; min-width: 0; white-space: pre; }
   body.df-wrap-on .df-text { white-space: pre-wrap; overflow-wrap: anywhere; }
   .df-row.is-del { background: var(--del-bg); }
   .df-row.is-del .df-sign, .df-row.is-del .df-ln { color: var(--del-ink); }
+  .df-row.is-del .df-ch { background: var(--del-ch); }
   .df-row.is-add { background: var(--add-bg); }
   .df-row.is-add .df-sign, .df-row.is-add .df-ln { color: var(--add-ink); }
-  .df-adopt { padding: 2px 10px 4px; }
-  .df-adopt .df-btn { padding: 2px 10px; font-size: 12px; }
+  .df-row.is-add .df-ch { background: var(--add-ch); }
+  .df-ch { border-radius: 2px; }
+  .df-gap { background: var(--gap-bg); }
+  .df-gap--ctl { display: flex; align-items: center; justify-content: center; gap: 4px; }
+  .df-arrow { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--ink-2); font-size: 13px; line-height: 1; padding: 0; cursor: pointer; }
+  .df-arrow:hover { border-color: var(--gold); color: var(--gold); }
+  .df-arrow:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -118,9 +123,8 @@
     </div>
   </div>
   <section class="df-result" id="diff-result" hidden>
-    <div class="df-grid">
-      <div class="df-col" id="diff-out-left" aria-label="左侧结果"></div>
-      <div class="df-col" id="diff-out-right" aria-label="右侧结果"></div>
+    <div class="df-panel">
+      <div class="df-grid" id="diff-out" aria-label="对比结果"></div>
     </div>
   </section>
 </div>
