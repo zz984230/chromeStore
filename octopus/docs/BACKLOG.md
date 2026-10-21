@@ -8,6 +8,8 @@
   - `{detail}` 走字符串替换,V8 报错原文内嵌用户输入,含 `$&`/`` $` `` 会被当替换模式吞字(纯外观,textContent 无注入面;unsupported kind 本波不可产)——改 replacer 函数 `() => rej.detail`
   - 未知-kind 回落分支露字面 `{fmt}{pos}` 占位符 + syntax/unsupported 行写死 `fmtJson`——随「fmt 按格式选择派生」重构一并处理({fmt} 间接层已备)
 - [x] **归一化器深嵌套未捕获**(2026-10-21 wave-2 终审发现;触发条件:YAML 波动归一化缝时并案修)(2026-10-21 wave-3 Task 4 清偿:normalizeSide 统一接 overflow):~3-5k 层嵌套的 10KB 输入(护栏之下)使 parse/emit 递归抛 RangeError,越出 `{ok:false}` 结果对象契约,runCompare 直传到点击处理器无拒绝文案;wave-1 JSON 同病(canon/stringify 递归)。修法:在缝处统一接(compare.js normalizeSide 或各归一化器自包),一处覆盖 JSON/TOML/未来 YAML;须加拒绝 kind(如 overflow)与 strings 文案。
+- [ ] **≥1e21 整数一次振荡**(2026-10-21 wave-3 终审发现;触发条件:下次触碰 numbers.js 时并案):emitInt 裸 `String(n)`,`a: 9999999999999999999999` → `1e+22` → 再解析为 float → 第二次发射 `1e22`(第二步收敛,once≠twice);TOML 波遗留行为原样入 numbers.js,YAML 新可达,JSON 不受影响(stringify 往返 e+ 形)。值 >int64,本就在 >2^53 已裁知限类。一行修法:emitInt 遇 `String(n)` 含 `e` 时走 emitFloat 的 `e+`→`e` 规范化。
+- [ ] **非 RangeError 上抛无钉测**(2026-10-21 wave-3 终审 triage;触发条件:下次开 compare.test.mjs 时补):normalizeSide 对非 RangeError 原样上抛是设计行为(逃逸面较改动前严格缩小),今日以探针验证,缺 3 行钉测(assert.throws 断言 TypeError 穿透)。
   - `{detail}` 走字符串替换,V8 报错原文内嵌用户输入,含 `$&`/`` $` `` 会被当替换模式吞字(纯外观,textContent 无注入面;unsupported kind 本波不可产)——改 replacer 函数 `() => rej.detail`
   - 未知-kind 回落分支露字面 `{fmt}{pos}` 占位符 + syntax/unsupported 行写死 `fmtJson`——随「fmt 按格式选择派生」重构一并处理({fmt} 间接层已备)
 - [ ] **继承清扫**(2026-10-04 M0 关账已逐条并入;原始措辞与分组保留,出处见各分组标注;消化时逐条勾账,完成后移入「已完成」并注明出处):
