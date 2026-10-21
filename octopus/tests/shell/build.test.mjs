@@ -16,6 +16,8 @@ test('build produces a complete loadable extension directory', () => {
     'extension/tools/pace/content.js',
     'extension/tools/veil/nv-shadow-hook.js',
     'extension/tools/pace/content.css',
+    'extension/diff.js',
+    'extension/diff.html',
   ];
   for (const f of files) assert.ok(existsSync(f), `missing ${f}`);
 
@@ -29,8 +31,8 @@ test('build produces a complete loadable extension directory', () => {
   assert.deepEqual(manifest.host_permissions, ['<all_urls>']);
   assert.deepEqual(
     Object.keys(manifest.commands).sort(),
-    Object.keys(toolById('pace').manifest.commands).sort(),
-    'commands 命令名集必须与 pace 契约一致'
+    [...Object.keys(toolById('pace').manifest.commands), ...Object.keys(toolById('diff').manifest.commands)].sort(),
+    'commands 命令名集必须与 pace+diff 契约一致'
   );
 });
 

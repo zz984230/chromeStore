@@ -4,6 +4,7 @@ export const SHELL_STRINGS = Object.freeze({
   extensionDescription: '工具的瑞士军刀：暗色模式与视频倍速，更多工具持续加入。',
   popupTabVeil: '夜幕',
   popupTabPace: '倍速',
+  popupTabDiff: '对比',
   optionsHeading: 'Octopus 设置',
   generalNavLabel: '通用',
   generalHeading: '通用',

@@ -36,9 +36,11 @@ test('content_scripts 两条 entry 按注册顺序,逐字段保真', () => {
   assert.equal(pace.match_about_blank, undefined);
 });
 
-test('commands 7 条合并,WAR 仅 veil 一项', () => {
-  assert.equal(Object.keys(m.commands).length, 7);
+test('commands 8 条合并(pace 7 + diff 1),WAR 仅 veil 一项', () => {
+  assert.equal(Object.keys(m.commands).length, 8);
   assert.equal(m.commands['hold-toggle'].suggested_key.default, 'Alt+L');
+  assert.equal(m.commands['open-diff'].description, '打开对比工作页');
+  assert.equal(m.commands['open-diff'].suggested_key, undefined); // 裁定:无建议键,用户自绑
   assert.equal(m.web_accessible_resources.length, 1);
   assert.deepEqual(m.web_accessible_resources[0].resources, ['tools/veil/nv-shadow-hook.js']);
 });

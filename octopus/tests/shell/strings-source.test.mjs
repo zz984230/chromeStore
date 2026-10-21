@@ -16,4 +16,5 @@ test('装配 manifest 与壳文案一致;静态页 title 跟随', () => {
   assert.ok(popupHtml.includes(`<title>${SHELL_STRINGS.extensionName}</title>`));
   assert.ok(popupHtml.includes(`>${SHELL_STRINGS.popupTabVeil}</button>`));
   assert.ok(popupHtml.includes(`>${SHELL_STRINGS.popupTabPace}</button>`));
+  assert.ok(popupHtml.includes(`>${SHELL_STRINGS.popupTabDiff}</button>`));
 });

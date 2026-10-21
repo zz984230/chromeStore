@@ -17,8 +17,8 @@ test('zip:manifest 在包根,无 extension/ 前缀,无点文件', () => {
   assert.doesNotMatch(listing, /\.DS_Store/);
 });
 
-test('zip:五入口 + 章鱼图标在位', () => {
-  for (const f of ['background.js', 'popup.html', 'options.html', 'tools/veil/content.js', 'tools/pace/content.js', 'icons/toolbar/128.png']) {
+test('zip:六入口 + 章鱼图标在位', () => {
+  for (const f of ['background.js', 'popup.html', 'options.html', 'tools/veil/content.js', 'tools/pace/content.js', 'diff.js', 'diff.html', 'icons/toolbar/128.png']) {
     assert.match(listing, new RegExp(` ${f.replace(/\./g, '\\.')}$`, 'm'), f);
   }
 });

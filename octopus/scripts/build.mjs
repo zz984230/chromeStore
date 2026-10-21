@@ -18,6 +18,7 @@ const OPTIONS = {
     options: 'src/shell/options.js',
     'tools/veil/content': 'src/tools/veil/content/main.js',
     'tools/pace/content': 'src/tools/pace/content/main.js',
+    diff: 'src/tools/diff/page/main.js',
   },
   outdir: 'extension',
   bundle: true,

@@ -2,9 +2,14 @@
 import { loadShell, saveShellPatch } from './store.js';
 import '../tools/veil/popup/main.js';
 import '../tools/pace/popup/main.js';
+import '../tools/diff/popup/main.js';
 
 const buttons = [...document.querySelectorAll('#oct-tabs button')];
-const panels = { veil: document.getElementById('oct-panel-veil'), pace: document.getElementById('oct-panel-pace') };
+const panels = {
+  veil: document.getElementById('oct-panel-veil'),
+  pace: document.getElementById('oct-panel-pace'),
+  diff: document.getElementById('oct-panel-diff'),
+};
 
 function show(id) {
   for (const b of buttons) b.classList.toggle('is-active', b.dataset.tool === id);
