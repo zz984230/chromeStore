@@ -25,6 +25,11 @@ test('parseYaml 块序列:字面项/嵌套块/seq-of-map 紧凑形', () => {
   assert.deepEqual(c.value, arr([arr([v('int', 1), v('int', 2)])]));
 });
 
+test('parseYaml 併格序列:键下同缩进序列项即其值', () => {
+  const r = parseYaml('k:\n- 1\n- 2\n');
+  assert.deepEqual(r.value, map({ k: arr([v('int', 1), v('int', 2)]) }));
+});
+
 test('parseYaml 顶层:裸映射/裸序列/裸标量/空文档', () => {
   assert.deepEqual(parseYaml('k: v\n').value, map({ k: v('str', 'v') }));
   assert.deepEqual(parseYaml('- a\n').value, arr([v('str', 'a')]));
