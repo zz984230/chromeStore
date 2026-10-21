@@ -13,6 +13,7 @@
       'intro-minus': { description: '片头跳过 -5 秒（调到大于 0 自动启用）' },
       'intro-plus': { description: '片头跳过 +5 秒（调到大于 0 自动启用）' },
       'advance-now': { description: '立即续播（手动切下一个视频，不受总开关限制）' },
+      'open-diff': { description: '打开对比工作页' },
     },
   };
   const SEEDS = {

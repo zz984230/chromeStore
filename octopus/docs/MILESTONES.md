@@ -40,3 +40,14 @@
 - 实现全程 `18e090f`(设计稿)..`b60705d`(终审修波)共 11 commit(含用户手提 `d30e1b9` plans 转 ignore);测试 308→**317**;终审(opus)两轮 Ready to merge,修波 `b60705d`(listing 简述全角对齐 manifest 原文/下载路径真话化/zip 报错一行与深度点文件排除)经原审人复审闭合;实拍中顺手修 M1 带病缺陷 holdOnLine 叠印 ××(`255ecfb`)。
 - 上架件:`dist/octopus-1.0.0.zip`(`npm run zip`,包根 manifest/版本三处同步)、`docs/store/listing.zh.md`(含填表对照单,截图×5)、`docs/privacy.zh.md`(仓内,GitHub 链接)、`docs/store/assets/` 六资产(mock-chrome 完整模式实拍,1280×800×5 + 440×280)。提交边界:开发者账号($5)/CWS 表单/送审为手工事项,照 listing 填表对照单执行。
 - M3 种子:veil.settings 导入逐字段校验;zip 测试链失败可诊性(可选)。
+
+## M3 对比(diff)工具
+- [x] 实现与评审(SDD 流水线 8 任务,计划 docs/superpowers/plans/2026-10-18-m3-diff-tool.md;实现波 `1200f55`(grilling 立项)..`44c322a` 共 8 commit,Task 1-7 评审全清)——自研 diff 引擎(Myers + 归一化缝,ADR-0004)+ 双层护栏(尺寸/行数两态拒算)、差异块切分与块级合并、六文本处理器(排序/反向排序/去空行/去重/去首尾空格/换行换空格)、工作页(块级合并 + 撤销栈快照 + sessionStorage 会话兜底,独立工作页 ADR-0005)、壳接入第三 tab(字形 ⇄,纯启动器;DOM id `diff-` 前缀 + 命令 `open-diff` 无建议键)。测试 317→**355**;`npm run zip` 产出含 diff.js/diff.html
+- 验收:真机六项(收官门,**真机过目待执行**,由主会话控制器/用户过目):
+- [ ] ①popup ⇄ tab 打开工作页
+- [ ] ②双栏粘贴对比渲染
+- [ ] ③块级合并→撤销→重做
+- [ ] ④自动换行/交换/清空/打开文件
+- [ ] ⑤六处理器逐个
+- [ ] ⑥护栏两态+F5 恢复
+- 遗留:extensionDescription/listing 是否随新工具更新并重提商店,待用户裁定
