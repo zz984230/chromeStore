@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseYaml } from '../../src/tools/diff/shared/yaml-parse.js';
+import { normalizeYaml } from '../../src/tools/diff/shared/norm-yaml.js';
 
 const v = (t, x) => (t === 'null' ? { t } : { t, v: x });
 const map = (o) => ({ t: 'map', v: o });
@@ -192,4 +193,12 @@ test('parseYaml 裁定 3 引号注释让路钉测:引号区 # 字面/闭引号�
   assert.deepEqual(parseYaml('a: ["x # y", z] # c\n').value, map({ a: arr([v('str', 'x # y'), v('str', 'z')]) }));
   assert.deepEqual(parseYaml('a: "x" # c\n').value, map({ a: v('str', 'x') }));
   assert.deepEqual(parseYaml("a: 'x' # don't\n").value, map({ a: v('str', 'x') }));
+});
+
+// 终审 rider:块上下文曾把 " k " 修剪成 k(flow 保真 ' k ')——同文两写法两键,值等价⇒文本等价
+// 破坏(false-equal 方向)。quoted 键保真后两写法同键,规范形亦同文。
+test('parseYaml quoted 键保真:块形不修剪,与 flow 同值同文(终审 rider)', () => {
+  assert.deepEqual(parseYaml('" k ": 1\n').value, map({ ' k ': v('int', 1) }));
+  assert.deepEqual(parseYaml('{" k ": 1}\n').value, map({ ' k ': v('int', 1) }));
+  assert.equal(normalizeYaml('" k ": 1\n').text, normalizeYaml('{" k ": 1}\n').text); // 规范形收敛同文
 });

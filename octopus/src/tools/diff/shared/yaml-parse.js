@@ -559,7 +559,7 @@ function parseMap(c, indent) {
     rejectMarkerInline(l);
     const kp = parseMapKey(l);
     if (!kp) break; // 非映射行:交文档级裁决(多余内容/缩进无父)
-    const key = kp.key.trim();
+    const key = kp.quoted ? kp.key : kp.key.trim(); // quoted 键保真(与 flow {'" k "': 1} 同值同文)
     if (key === '') throw new YErr('unsupported', '空键(null 键)子集外', l.line, l.indent + 1);
     if (key === '<<') throw new YErr('unsupported', '合并键 << 子集外', l.line, l.indent + 1);
     if (!kp.quoted && KEY_LIKE_NONSTR(key)) throw new YErr('unsupported', `非字符串形态键:${key}`, l.line, l.indent + 1);

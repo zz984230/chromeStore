@@ -62,6 +62,29 @@ test('normalizeYaml 根形:空文档即 null,裸标量直发;plain-safe 守根�
   assert.equal(normalizeYaml('123\n').text, '123\n'); // int 根位裸形(emitInt)
   assert.equal(normalizeYaml('"123"\n').text, '"123"\n'); // str '123' 裸写会再解析成 int → 引
   assert.equal(normalizeYaml('- 1\n- 2\n').text, '- 1\n- 2\n'); // 根序列块形
+  assert.equal(normalizeYaml('true\n').text, 'true\n'); // bool 根位裸形
+  assert.equal(normalizeYaml('1.5\n').text, '1.5\n'); // float 根位裸形
+  assert.equal(normalizeYaml('.inf\n').text, '.inf\n'); // inf 根位裸形
   const t = normalizeYaml('just a string\n');
   assert.equal(normalizeYaml(t.text).text, t.text); // 根位幂等
+});
+
+// 终审 Critical(探针在案):'...' 标记族曾裸写落 node-start 位,再归一化即撞标记守卫——
+// '- "... x"' → '- ... x' 拒「文档标记同行内容」;根 '"..."' → '...' 静默漂 null(str→null
+// 值变更,值等价⇒文本等价破坏)。plainSafe 拒之 → 全位引号形,幂等成立。
+test('normalizeYaml ... 标记族全位引号形:seq 项/键/根,再归一化幂等', () => {
+  const shapes = ['- "... x"', '- "..."', '"... x": 1', '"... x"', '"..."'];
+  for (const src of shapes) {
+    const once = normalizeYaml(src);
+    assert.equal(once.ok, true);
+    assert.ok(once.text.includes('"...'), once.text); // 规范形含引号(非裸标记)
+    const twice = normalizeYaml(once.text);
+    assert.equal(twice.ok, true, once.text);
+    assert.equal(twice.text, once.text); // 幂等
+  }
+  assert.equal(normalizeYaml('- "... x"\n').text, '- "... x"\n'); // seq 项位
+  assert.equal(normalizeYaml('- "..."\n').text, '- "..."\n'); // seq 项位(裸标记全文)
+  assert.equal(normalizeYaml('"... x": 1\n').text, '"... x": 1\n'); // 键位
+  assert.equal(normalizeYaml('"... x"\n').text, '"... x"\n'); // 根位
+  assert.equal(normalizeYaml('"..."\n').text, '"..."\n'); // 根位:'...\n' 是错的(再解析漂 null)
 });

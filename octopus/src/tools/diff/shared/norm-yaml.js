@@ -20,6 +20,9 @@ const looksNumeric = (s) => NUM_LEAD.test(s) && NUM_BODY.test(s) && /\d/.test(s)
 function plainSafe(s) {
   if (s === '') return false; // 空 plain 即 null
   if (FIRST_INDICATOR.includes(s[0])) return false;
+  // 文档标记族('...' / '... x'):裸写落 node-start 位(seq 项/键/根)再解析即撞标记守卫
+  // (拒「文档标记同行内容」或根位静默漂 null),值位同门——终审 Critical
+  if (s === '...' || /^\.\.\.[ \t]/.test(s)) return false;
   for (const ch of s) {
     if (BODY_INDICATOR.includes(ch)) return false;
     const cp = ch.codePointAt(0);
