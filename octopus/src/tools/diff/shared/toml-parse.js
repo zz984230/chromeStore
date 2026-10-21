@@ -29,12 +29,14 @@ class P {
   eof() { return this.i >= this.s.length; }
   // 跳过空格与制表(不跨行)
   skipSp() { while (this.peek() === ' ' || this.peek() === '\t') this.i++; }
-  // 行尾:空白 + 可选注释 + 换行;非此形态即错
+  // 行尾:空白 + 可选注释 + 换行(LF 或 CRLF);非此形态即错
   endOfLine() {
     this.skipSp();
     if (this.peek() === '#') while (!this.eof() && this.peek() !== '\n') this.i++;
     if (this.eof()) return true;
-    if (this.take() === '\n') return true;
+    const c = this.take();
+    if (c === '\n') return true;
+    if (c === '\r') return this.take() === '\n'; // CRLF 合法;裸 \r 落此即 false
     return false;
   }
   match(rx) { const m = rx.exec(this.s.slice(this.i)); if (m) this.i += m[0].length; return m; }
@@ -105,6 +107,12 @@ function parseBasicString(p, multiline) {
       p.take(); out += '\n';
       continue;
     }
+    if (c === '\r' && multiline) {
+      // CRLF 归一为 \n(换行风格是写法差异,不进值树);裸 \r 非法
+      if (p.s[p.i + 1] !== '\n') return p.err('多行串含裸回车');
+      p.take(); p.take(); out += '\n';
+      continue;
+    }
     if (c === '\\') {
       p.i++;
       const e = p.take();
@@ -124,7 +132,11 @@ function parseBasicString(p, multiline) {
       } else if (multiline && (e === '\n' || isWsCh(e) || e === '\r')) {
         // 行尾反斜杠:连同换行吞到下一行非空白(TOML 1.0:含换行在内一并裁去)
         p.i--;
-        while (!p.eof() && (isWsCh(p.peek()) || p.peek() === '\r' || p.peek() === '\n')) p.take();
+        while (!p.eof()) {
+          if (p.peek() === '\r' && p.s[p.i + 1] === '\n') { p.take(); p.take(); continue; }
+          if (isWsCh(p.peek()) || p.peek() === '\n') { p.take(); continue; }
+          break;
+        }
         continue;
       } else return p.err(`非法转义 \\${e}`);
       continue;
@@ -146,15 +158,21 @@ function parseLiteralString(p, multiline) {
       continue;
     }
     if (c === '\n' && !multiline) return p.err('单行串含换行');
+    if (c === '\r' && multiline) {
+      // CRLF 归一为 \n;裸 \r 非法
+      if (p.s[p.i + 1] !== '\n') return p.err('多行串含裸回车');
+      p.take(); p.take(); out += '\n';
+      continue;
+    }
     if (c !== '\t' && c !== '\n' && c.charCodeAt(0) < 0x20) return p.err('字面串含控制字符');
     p.take(); out += c;
   }
 }
 
-function firstNewlineTrim(p, delimLen) {
-  // 多行串开定界后紧跟的换行被裁剪(定界已消费)
-  if (p.peek() === '\r' && p.s[p.i + 1] === '\n') p.i += 2;
-  else if (p.peek() === '\n') p.i += 1;
+function firstNewlineTrim(p) {
+  // 多行串开定界后紧跟的换行被裁剪(定界已消费;CRLF 归一同裁)
+  if (p.peek() === '\r' && p.s[p.i + 1] === '\n') { p.take(); p.take(); }
+  else if (p.peek() === '\n') p.take();
 }
 
 // —— 值 ——
@@ -199,7 +217,8 @@ function parseArray(p) {
 function skipWsAndComments(p) {
   for (;;) {
     const c = p.peek();
-    if (c === ' ' || c === '\t' || c === '\n' || c === '\r') { p.take(); continue; }
+    if (c === ' ' || c === '\t' || c === '\n') { p.take(); continue; }
+    if (c === '\r' && p.s[p.i + 1] === '\n') { p.take(); p.take(); continue; } // 裸 \r 不跳,交下游拒
     if (c === '#') { while (!p.eof() && p.peek() !== '\n') p.i++; continue; }
     return;
   }
@@ -302,12 +321,21 @@ function parseAtom(p) {
 
 // 沿点键走表;dotted=true 时创建中间表并以节点引用记入 dotted 集
 //(表头沿途的隐式超表不记,允许其后补 [a] 显式定义)
-function walk(obj, path, dottedCreate, sets) {
+// aotDescend(仅表头路径):遇数组表(aot 集)下钻到其最后元素(元素须全为表);
+// 点键值路径不穿数组表(对齐参考实现:同名前缀在当前表内新嵌套,撞到时按标量占位拒)
+function walk(obj, path, dottedCreate, sets, aotDescend) {
   let cur = obj;
   for (const k of path) {
     if (cur[k] === undefined) {
       cur[k] = { t: 'tbl', v: {} };
       if (dottedCreate && sets) sets.dotted.add(cur[k]);
+    } else if (cur[k].t === 'arr') {
+      const els = cur[k].v;
+      if (aotDescend && sets && sets.aot.has(cur[k]) && els.length && els.every((e) => e.t === 'tbl')) {
+        cur = els[els.length - 1].v; // 数组表下钻:子表挂最近定义的元素
+        continue;
+      }
+      return { ok: false, why: '标量占位' };
     } else if (cur[k].t !== 'tbl') return { ok: false, why: '标量占位' };
     else if (sets && sets.inlined.has(cur[k])) return { ok: false, why: '内联表闭合' };
     cur = cur[k].v;
@@ -318,8 +346,8 @@ function walk(obj, path, dottedCreate, sets) {
 export function parseToml(text) {
   const p = new P(text);
   const root = { t: 'tbl', v: {} };
-  // 集合均以节点引用(对象身份)记账:explicit=已显式定义表;dotted=点键创建表;inlined=内联表
-  const sets = { explicit: new Set(), dotted: new Set(), inlined: new Set() };
+  // 集合均以节点引用(对象身份)记账:explicit=已显式定义表;dotted=点键创建表;inlined=内联表;aot=[[..]]建的数组表
+  const sets = { explicit: new Set(), dotted: new Set(), inlined: new Set(), aot: new Set() };
   let cur = root.v;
   for (;;) {
     skipWsAndComments(p);
@@ -334,13 +362,14 @@ export function parseToml(text) {
       p.i += isArr ? 2 : 1;
       if (!p.endOfLine()) return p.err('表头后有多余内容');
       const keys = kp.v;
-      const parent = walk(root.v, keys.slice(0, -1), false, sets);
+      const parent = walk(root.v, keys.slice(0, -1), false, sets, true);
       if (!parent.ok) return p.err(parent.why);
       const last = keys[keys.length - 1];
       const pv = parent.v;
       if (isArr) {
         if (pv[last] === undefined) pv[last] = { t: 'arr', v: [] };
         if (pv[last].t !== 'arr') return p.err('数组表撞非数组');
+        sets.aot.add(pv[last]); // 仅 [[..]] 建的数组可下钻;内联数组(a=[{..}])元素是闭合内联表,不可扩
         const el = { t: 'tbl', v: {} };
         pv[last].v.push(el);
         cur = el.v;
@@ -349,6 +378,7 @@ export function parseToml(text) {
         else {
           const node = pv[last];
           if (node.t !== 'tbl') return p.err('表头撞标量');
+          if (sets.inlined.has(node)) return p.err('内联表闭合'); // 内联表闭合并:显式表头不得并入
           if (sets.explicit.has(node) || sets.dotted.has(node)) return p.err('重复定义表');
           // 隐式 super-table 后补定义:允许
         }

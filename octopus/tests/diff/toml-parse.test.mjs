@@ -91,6 +91,44 @@ test('parseToml 语法错带行列', () => {
   assert.equal(z.ok, false); // 前导零整数非法
 });
 
+test('parseToml 数组表下钻:表头路径穿数组表挂最后元素(规范惯用法)', () => {
+  const a = parseToml('[[fruit]]\nname = "apple"\n\n[fruit.physical]\ncolor = "red"\n');
+  assert.deepEqual(a.value.v.fruit, arr([
+    tbl({ name: val('str', 'apple'), physical: tbl({ color: val('str', 'red') }) }),
+  ]));
+  // 双元素:子表挂最后定义的元素,不污染前者
+  const b = parseToml('[[fruit]]\nname = "apple"\n\n[[fruit]]\nname = "banana"\n\n[fruit.physical]\ncolor = "yellow"\n');
+  assert.deepEqual(b.value.v.fruit, arr([
+    tbl({ name: val('str', 'apple') }),
+    tbl({ name: val('str', 'banana'), physical: tbl({ color: val('str', 'yellow') }) }),
+  ]));
+  // 点键值路径不穿数组表:同名键在当前表内新嵌套(对齐 tomllib);前缀撞到数组表则按标量占位拒
+  const c = parseToml('[[fruit]]\nfruit.physical.color = "red"\n');
+  assert.deepEqual(c.value.v.fruit, arr([tbl({ fruit: tbl({ physical: tbl({ color: val('str', 'red') }) }) })]));
+  const d = parseToml('[[fruit.physical]]\ncolor = "red"\n\n[fruit]\n\nphysical.shape = "round"\n');
+  assert.equal(d.ok, false);
+  assert.equal(d.reason.kind, 'syntax');
+});
+
+test('parseToml 内联表闭合:[a] 表头同样拒并', () => {
+  const r = parseToml('a = {x = 1}\n[a]\ny = 2\n');
+  assert.equal(r.ok, false);
+  assert.equal(r.reason.kind, 'syntax');
+  assert.ok(r.reason.detail.includes('内联表'), r.reason.detail);
+});
+
+test('parseToml CRLF 全谱:行尾等价 LF、多行串归一 \\n、裸 \\r 仍拒', () => {
+  const lf = parseToml('a = 1\n[t]\nb = "x"\n');
+  const crlf = parseToml('a = 1\r\n[t]\r\nb = "x"\r\n');
+  assert.deepEqual(crlf.value, lf.value);
+  const m = parseToml('x = """\r\nline1\r\nline2"""\r\ny = \'\'\'\r\nraw1\r\nraw2\'\'\'\r\n');
+  assert.deepEqual(m.value.v.x, val('str', 'line1\nline2'));
+  assert.deepEqual(m.value.v.y, val('str', 'raw1\nraw2'));
+  const cr = parseToml('a = 1\rb = 2\n');
+  assert.equal(cr.ok, false);
+  assert.equal(cr.reason.kind, 'syntax');
+});
+
 test('parseToml 注释丢弃、键引号与裸键同名同值、空表保形', () => {
   const a = parseToml('# 头注释\n"a-b" = 1\n');
   const b = parseToml('a-b = 1 # 尾注释\n');
