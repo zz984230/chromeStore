@@ -71,3 +71,11 @@
 - 冒烟实证:extension/ 产物 http 真浏览器——字符块双层色值(.19/.44)/扁平三联对齐/中缝箭头语义与文案单源/合并-撤销-重做/中文与 emoji 字符块/换行开关/降级态字符级归零+banner 逐项实测,hot/cold 段拼回原行逐字吻合。
 - 两处计划自述偏差如约落地:锁定滚动因统一面板固有同步而取消(意图以更强形式满足);中缝箭头并排保持行对齐。
 - M4 种子增补(并入 GUARDS 校准簇):diffSeq 缺省参 NaN 静默 null;CHAR_MAX 注释码点 vs 实际 UTF-16 码元(与 MAX_BYTES 同族);块预算恰好归零边界未钉测试。可选:结果区 aria-label 加 role=region。
+
+## M4 格式归一化(JSON/YAML/TOML)
+- [ ] GUARDS 前置波:种子清偿六条(文案数字单源/MAX_BYTES 码元命名/diffSeq 缺省参钉子/CHAR_MAX 注释/块预算归零边界/结果区 role=region)
+- [ ] JSON 归一化器 + 顶栏格式 select 端到端(缝契约升级 ADR-0007/banner 拒算/会话记忆)
+- [ ] TOML 归一化器(1.0 全谱;点键/内联表/引号风格同义归一)
+- [ ] YAML 归一化器(常用配置子集:块标量/flow/1.2 核心 schema;锚点/多文档等子集外拒算)
+- [ ] 关账波:商店件一趟清(manifest description/listing/截图/版本 1.1.0/zip)+ 真机过目
+- 验收:单测全绿 + 真机过目(三格式归一化对比/两类拒算 banner/归一化后超限/合并回写幂等)
