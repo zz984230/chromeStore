@@ -3,7 +3,7 @@
 import { diffChars } from './myers.js';
 import { GUARDS } from './guards.js';
 
-const CHAR_MAX = 2000; // 单行字符数(码点)超此跳过该对
+const CHAR_MAX = 2000; // 单行字符数(UTF-16 码元计,量 .length,emoji 代理对算 2)超此跳过该对
 const CHUNK_BUDGET = 40000; // 块内配对行字符总量预算,防大块累计卡顿
 
 // 一对配对行 → null | { del: Seg[], add: Seg[] };Seg = { hot, text }

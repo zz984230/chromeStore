@@ -3,8 +3,9 @@
 // 逐轮快照只存活跃切片(k∈[-(d-1),d-1]),D=1000 时内存约 D² 级而非 D×N 级。
 import { splitLines } from './lines.js';
 
-// 序列核心:吃任意数组(行/字符只是切分策略,ADR-0006)
-export function diffSeq(a, b, dCap) {
+// 序列核心:吃任意数组(行/字符只是切分策略,ADR-0006);dCap 缺省不封顶
+// (勿删缺省参:undefined 经 Math.min 得 NaN,循环不打,静默返回 null)
+export function diffSeq(a, b, dCap = Infinity) {
   const N = a.length, M = b.length;
   const MAX = N + M;
   if (MAX === 0) return [];

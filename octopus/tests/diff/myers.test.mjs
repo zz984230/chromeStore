@@ -130,3 +130,11 @@ test('diffChars 随机 500 对:段重放还原双串且段已合并', () => {
     for (let i = 1; i < segs.length; i++) assert.notEqual(segs[i].t, segs[i - 1].t);
   }
 });
+
+test('diffSeq 缺省 dCap 不封顶:直调返回操作序而非 null', () => {
+  const ops = diffSeq(['a', 'b', 'c'], ['a', 'x', 'c']);
+  assert.ok(Array.isArray(ops));
+  assert.equal(ops.filter((o) => o.t === '=').length, 2);
+  assert.equal(ops.filter((o) => o.t === '-').length, 1);
+  assert.equal(ops.filter((o) => o.t === '+').length, 1);
+});

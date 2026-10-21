@@ -62,3 +62,15 @@ test('intralineChunk 单侧块:n=0,两侧全 null 数组', () => {
   assert.equal(hl.add.length, 1);
   assert.equal(hl.add[0], null);
 });
+
+test('intralineChunk 预算恰好归零:末对仍计算,再负才停', () => {
+  const chunk = {
+    kind: '!',
+    del: [{ text: 'aa' }, { text: 'bb' }, { text: 'ee' }],
+    add: [{ text: 'cc' }, { text: 'dd' }, { text: 'ff' }],
+  };
+  const hl = intralineChunk(chunk, { chunkBudget: 8 }); // 8-4-4=0,恰归零不弃
+  assert.ok(Array.isArray(hl.del[1]));
+  assert.ok(Array.isArray(hl.add[1]));
+  assert.equal(hl.del[2], null); // 0-4<0,弃
+});

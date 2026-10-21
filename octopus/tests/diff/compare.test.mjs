@@ -6,7 +6,7 @@ import { runCompare, NORMALIZERS } from '../../src/tools/diff/shared/compare.js'
 
 test('GUARDS 单点常量与裁定一致', () => {
   assert.equal(GUARDS.MAX_LINES, 20000);
-  assert.equal(GUARDS.MAX_BYTES, 2 * 1024 * 1024);
+  assert.equal(GUARDS.MAX_UTF16, 2 * 1024 * 1024);
   assert.equal(GUARDS.D_CAP, 1000);
 });
 
@@ -14,8 +14,8 @@ test('checkSide:行数与字节双硬顶,恰在限内放行', () => {
   assert.equal(checkSide(''), null);
   assert.equal(checkSide(Array.from({ length: 20000 }, () => 'x').join('\n')), null); // 恰 20000 行
   assert.equal(checkSide(Array.from({ length: 20001 }, () => 'x').join('\n')), 'lines');
-  assert.equal(checkSide('a'.repeat(GUARDS.MAX_BYTES)), null);
-  assert.equal(checkSide('a'.repeat(GUARDS.MAX_BYTES + 1)), 'bytes');
+  assert.equal(checkSide('a'.repeat(GUARDS.MAX_UTF16)), null);
+  assert.equal(checkSide('a'.repeat(GUARDS.MAX_UTF16 + 1)), 'bytes');
 });
 
 test('runCompare 正常路:等价文本全等序,不降级', () => {
@@ -27,7 +27,7 @@ test('runCompare 正常路:等价文本全等序,不降级', () => {
 
 test('runCompare 护栏拒绝任一侧超限', () => {
   assert.deepEqual(runCompare('x\n'.repeat(20001), ''), { ok: false, error: 'lines' });
-  assert.deepEqual(runCompare('', 'a'.repeat(GUARDS.MAX_BYTES + 1)), { ok: false, error: 'bytes' });
+  assert.deepEqual(runCompare('', 'a'.repeat(GUARDS.MAX_UTF16 + 1)), { ok: false, error: 'bytes' });
 });
 
 test('runCompare D 超限走降级:前后缀照裁+整块', () => {
