@@ -26,6 +26,7 @@ class Cursor {
   constructor(text) {
     this.raw = text.split('\n');
     if (this.raw[this.raw.length - 1] === '') this.raw.pop(); // 尾 \n 的 split 残影非真行(块标量空行计数依赖此)
+    this.endsNL = text.endsWith('\n'); // 源末是否有真换行(块标量 EOF 幻影换行判定,复审 D1)
     this.pos = 0;
     this.cur = null; // 当前待解析行(seq 紧凑形会重写为虚拟行)
   }
@@ -305,7 +306,15 @@ function parseBlockScalar(c, parentIndent, header, l) {
   let blanks = 0;
   while (c.pos < c.raw.length) {
     const ln = c.load(c.pos);
-    if (ln.text === '') { blanks++; c.pos++; continue; } // 空行先计数,见内容行才入列
+    if (ln.text === '') {
+      if (contentIndent >= 0 && ln.indent > contentIndent) {
+        // 深空白行 = 内容行(复审 D2):超出内容缩进的空格按字面保留,且拥有一条真实断行
+        // (oracle:s: |\n  a\n   \n  b\n → 'a\n \nb\n';s: |\n  a\n   \n → 'a\n \n')
+        while (blanks > 0) { lines.push(''); blanks--; }
+        lines.push(' '.repeat(ln.indent - contentIndent));
+      } else blanks++; // 空行(真空/等深或更浅空白行)先计数,见内容行才入列
+      c.pos++; continue;
+    }
     if (ln.indent <= parentIndent) break; // 容器层级回归:块终结
     if (contentIndent < 0) contentIndent = ln.indent; // 首个内容行定级
     else if (ln.indent < contentIndent) throw new YErr('syntax', '块标量行缩进不足', ln.line, ln.indent + 1);
@@ -314,12 +323,18 @@ function parseBlockScalar(c, parentIndent, header, l) {
     c.pos++;
   }
   if (chomp === 'keep') while (blanks > 0) { lines.push(''); blanks--; } // keep:尾随空行入值
+  // EOF 幻影换行(复审 D1):末行无真换行则末断行不存在,不得追加。keep 的尾随空行行位由 join
+  // 分隔符携带其前断行,缺的是它自身那条;clip 仅当末内容行后无任何行(无尾随空行)才缺断行——
+  // 有尾随空行即末内容行断行真实存在,单尾 \n 照加(oracle:s: |\n  a → 'a';s: |+\n  a\n  → 'a\n\n';
+  // s: |\n  a\n   → 'a\n ';s: |+\n  a\n → 'a\n')
+  const noNL = c.pos >= c.raw.length && !c.endsNL && lines.length > 0;
   const body = header[0] === '>' ? foldLines(lines) : lines;
   let value;
-  if (chomp === 'keep') value = body.length > 0 ? body.join('\n') + '\n' : '';
+  if (chomp === 'keep') value = body.length > 0 ? body.join('\n') + (noNL ? '' : '\n') : '';
   else {
     while (body.length > 0 && body[body.length - 1] === '') body.pop();
-    value = chomp === 'strip' || body.length === 0 ? body.join('\n') : body.join('\n') + '\n';
+    value = chomp === 'strip' || body.length === 0 ? body.join('\n')
+      : body.join('\n') + (noNL && blanks === 0 ? '' : '\n');
   }
   c.cur = c.pos < c.raw.length ? c.load(c.pos++) : null; // 终结行装回 cur,交上层循环
   return { t: 'str', v: value };
@@ -332,6 +347,13 @@ function parseFlow(s, l) {
   const ws = () => { while (i < s.length && (s[i] === ' ' || s[i] === '\t')) i++; };
   const atSep = (k) => k >= s.length || ' \t,]}'.includes(s[k]);
   const unclosed = () => new YErr('unsupported', 'flow 跨行(行末未闭合)子集外', l.line, l.indent + 1);
+  // flow 内 plain 文本命中节点属性指示(锚点/别名/标签/复杂键)→ 与块路径同哨兵(复审 D3):
+  // 真语义是节点属性,静默当字符串是错值,故拒(oracle:a: [&x] py=[null] 而非 '&x')
+  const flowSentinel = (text, k) => {
+    const hit = text[0] === '&' ? '锚点' : text[0] === '*' ? '别名' : text[0] === '!' ? '标签'
+      : text.startsWith('? ') ? '复杂键' : null;
+    if (hit) throw new YErr('unsupported', `${hit}子集外`, l.line, col(k));
+  };
   // plain 项扫描:至项尾符;':' 后随空白/项尾才算键值分隔('a:b' 是词)
   function scanPlain() {
     while (i < s.length) {
@@ -348,6 +370,7 @@ function parseFlow(s, l) {
     scanPlain();
     const text = s.slice(start, i).replace(/[ \t]+$/, '');
     if (text === '') throw new YErr('syntax', 'flow 空项', l.line, col(start));
+    flowSentinel(text, start);
     return scalarFromPlain(text);
   }
   function flowKey() {
@@ -355,14 +378,15 @@ function parseFlow(s, l) {
       const q = readQuoted(s, i, l);
       if (q.unterminated) throw unclosed();
       i = q.end;
-      return q.v;
+      return { v: q.v, quoted: true };
     }
     const start = i;
     scanPlain();
     const text = s.slice(start, i).replace(/[ \t]+$/, '');
     if (text === '') throw new YErr('syntax', 'flow 空键', l.line, col(start));
+    flowSentinel(text, start);
     if (KEY_LIKE_NONSTR(text)) throw new YErr('unsupported', `非字符串形态键:${text}`, l.line, col(start));
-    return text;
+    return { v: text, quoted: false };
   }
   const guardKey = (key, k) => {
     if (key === '') throw new YErr('unsupported', '空键(null 键)子集外', l.line, col(k));
@@ -388,10 +412,12 @@ function parseFlow(s, l) {
     ws();
     if (s[i] === ']') { i++; return { t: 'arr', v: items }; }
     for (;;) {
+      const nStart = i;
       const n = node();
+      const nq = s[nStart] === '"' || s[nStart] === "'"; // quoted 项起位(键引号态由引号本身记录)
       let item = n;
       ws();
-      if (s[i] === ':' && atSep(i + 1)) { // [b: c] 单对映射
+      if (s[i] === ':' && (nq || atSep(i + 1))) { // [b: c] 单对映射;quoted 键后 JSON 形冒号(:1)容忍(复审 D4)
         const key = n.t === 'str' ? n.v : null;
         if (key === null) throw new YErr('unsupported', '非字符串形态键', l.line, col(i));
         guardKey(key, i);
@@ -413,11 +439,12 @@ function parseFlow(s, l) {
     for (;;) {
       ws();
       const start = i;
-      const key = flowKey();
+      const kf = flowKey();
+      const key = kf.v;
       guardKey(key, start);
       ws();
       let val = { t: 'null' }; // {x}:键无冒号 = null 值
-      if (s[i] === ':' && atSep(i + 1)) {
+      if (s[i] === ':' && (kf.quoted || atSep(i + 1))) { // quoted 键后 JSON 形冒号(:1)容忍(复审 D4);plain 键仍需空白/项尾
         i++;
         ws();
         val = s[i] === ',' || s[i] === '}' ? { t: 'null' } : node();

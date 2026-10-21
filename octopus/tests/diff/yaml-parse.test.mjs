@@ -138,3 +138,58 @@ test('parseYaml 引号键:去引号为字符串键并豁免非字符串形态门
   assert.equal(bad.ok, false);
   assert.equal(bad.reason.kind, 'unsupported');
 });
+
+test('parseYaml 块标量 EOF 无尾换行:clip/keep 不追加幻影换行,strip 不变(复审 D1)', () => {
+  assert.deepEqual(parseYaml('s: |\n  a').value.v.s, v('str', 'a')); // oracle:'a'
+  assert.deepEqual(parseYaml('s: |\n  a\n  b').value.v.s, v('str', 'a\nb'));
+  assert.deepEqual(parseYaml('s: >\n  a\n  b').value.v.s, v('str', 'a b'));
+  assert.deepEqual(parseYaml('s: |+\n  a').value.v.s, v('str', 'a'));
+  assert.deepEqual(parseYaml('s: |-\n  a').value.v.s, v('str', 'a')); // strip 不受扰
+  // 末行为浅空白行且无尾换行:内容行断行真实存在,其自身断行才是幻影(oracle:'a\n')
+  assert.deepEqual(parseYaml('s: |+\n  a\n ').value.v.s, v('str', 'a\n'));
+  // 有尾换行时深空白行于 EOF 是内容行,断行照算(oracle:'a\n \n')
+  assert.deepEqual(parseYaml('s: |\n  a\n   \n').value.v.s, v('str', 'a\n \n'));
+  assert.deepEqual(parseYaml('s: |+\n  a\n\n  b\n').value.v.s, v('str', 'a\n\nb\n')); // 复审标记探针
+});
+
+test('parseYaml 块标量深空白行:超出内容缩进的空格按字面保留(复审 D2)', () => {
+  assert.deepEqual(parseYaml('s: |\n  a\n   \n  b\n').value.v.s, v('str', 'a\n \nb\n'));
+  assert.deepEqual(parseYaml('s: >\n  a\n   \n  b\n  c\n').value.v.s, v('str', 'a\n \nb c\n'));
+  // 等深空白行仍是空行;更浅空白行亦然(oracle:'a\n\nb\n')
+  assert.deepEqual(parseYaml('s: |\n  a\n  \n  b\n').value.v.s, v('str', 'a\n\nb\n'));
+  assert.deepEqual(parseYaml('s: |\n  a\n \n  b\n').value.v.s, v('str', 'a\n\nb\n'));
+});
+
+test('parseYaml flow 哨兵补全:锚点/别名/标签/复杂键于 flow 项/键/值位拒(复审 D3)', () => {
+  for (const bad of [
+    'a: [&x]\n', // oracle py=[null],非 '&x'
+    'a: [*x]\n',
+    'a: [!!str 1]\n', // oracle py=['1'],非 '!!str 1'
+    'a: {!x}\n',
+    'a: {? k : v}\n', // oracle py={k:'v'},键非 '? k'
+    'a: {k: &v 1}\n', // 值位同哨兵(块路径 a: &x 1 既有行为对齐)
+  ]) {
+    const r = parseYaml(bad);
+    assert.equal(r.ok, false, bad);
+    assert.equal(r.reason.kind, 'unsupported', bad);
+    assert.ok(r.reason.detail.length > 0, bad);
+  }
+});
+
+test('parseYaml flow quoted 键后 JSON 形冒号:无空格紧随照收;plain 键规则不变(复审 D4)', () => {
+  assert.deepEqual(parseYaml('a: {"x":1}\n').value, map({ a: map({ x: v('int', 1) }) }));
+  assert.deepEqual(parseYaml('{"x":1}\n').value, map({ x: v('int', 1) })); // 根位
+  assert.deepEqual(parseYaml('a: ["x":1]\n').value, map({ a: arr([map({ x: v('int', 1) })]) }));
+  assert.deepEqual(parseYaml('a: {"x":1, "y":2}\n').value, map({ a: map({ x: v('int', 1), y: v('int', 2) }) }));
+  // plain 键仍需空白/项尾:k:v 整体是键(oracle:{'k:v': null}),k:1 同
+  assert.deepEqual(parseYaml('a: {k:v}\n').value, map({ a: map({ 'k:v': v('null') }) }));
+  assert.deepEqual(parseYaml('a: [{k:1}]\n').value, map({ a: arr([map({ 'k:1': v('null') })]) }));
+});
+
+test('parseYaml 裁定 3 引号注释让路钉测:引号区 # 字面/闭引号后行尾注释(复审)', () => {
+  assert.deepEqual(parseYaml('a: "x # y"\n').value, map({ a: v('str', 'x # y') }));
+  assert.deepEqual(parseYaml('a: {k: "x # y"}\n').value, map({ a: map({ k: v('str', 'x # y') }) }));
+  assert.deepEqual(parseYaml('a: ["x # y", z] # c\n').value, map({ a: arr([v('str', 'x # y'), v('str', 'z')]) }));
+  assert.deepEqual(parseYaml('a: "x" # c\n').value, map({ a: v('str', 'x') }));
+  assert.deepEqual(parseYaml("a: 'x' # don't\n").value, map({ a: v('str', 'x') }));
+});
