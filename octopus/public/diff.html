@@ -4,8 +4,126 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>对比 · Octopus</title>
+<style>
+  /* veil 家族 token(与 popup.html 同源);diff 专属红绿语义为软底色,不强品牌色 */
+  :root {
+    --bg: #12141c; --surface: #1a1e2a; --surface-2: #202634;
+    --line: #2a3040; --line-soft: #232838;
+    --ink: #e8ebf4; --ink-2: #9aa3b8; --ink-3: #6b7488;
+    --gold: #e3c987; --gold-soft: rgba(227, 201, 135, .14);
+    --del-bg: rgba(226, 120, 110, .10); --del-ink: #e2a49a;
+    --add-bg: rgba(120, 200, 110, .10); --add-ink: #a8cfa2;
+    --radius: 10px;
+    --font-serif: "Noto Serif SC", "Songti SC", serif;
+    --font-sans: "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 14px/1.6 var(--font-sans); }
+  .df-wrap { max-width: 1280px; margin: 0 auto; padding: 20px 24px 56px; }
+  h1 { font: 600 17px/1.4 var(--font-serif); letter-spacing: .04em; margin: 0; }
+  .df-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .df-bar + .df-bar { margin-top: 8px; }
+  .df-spacer { flex: 1; }
+  .df-btn {
+    padding: 6px 12px; border-radius: 9px; border: 1px solid var(--line);
+    background: transparent; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .df-btn:hover:not(:disabled) { border-color: var(--gold); }
+  .df-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .df-btn:disabled { opacity: .45; cursor: default; }
+  .df-btn--primary { border-color: var(--gold); color: var(--gold); background: var(--gold-soft); }
+  .df-check { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13px; cursor: pointer; }
+  .df-check input { accent-color: var(--gold); }
+  .df-note { color: var(--ink-3); font-size: 12.5px; margin: 10px 0 0; }
+  .df-banner {
+    margin-top: 10px; padding: 8px 12px; border: 1px solid var(--del-ink);
+    border-radius: var(--radius); color: var(--del-ink); background: var(--del-bg); font-size: 13px;
+  }
+  .df-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .df-ta {
+    width: 100%; min-height: 180px; resize: vertical;
+    background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 10px 12px;
+    font: 400 13px/1.55 var(--font-sans);
+  }
+  .df-ta:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .df-procs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .df-procs .df-btn { padding: 4px 9px; font-size: 12px; }
+  .df-procs-label { color: var(--ink-3); font-size: 11px; align-self: center; }
+  .df-result { margin-top: 20px; }
+  .df-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; margin-top: 10px; }
+  .df-col {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 8px 0; overflow-x: auto; min-width: 0;
+  }
+  .df-row { display: flex; align-items: baseline; padding: 0 10px; font: 400 12.5px/1.7 ui-monospace, "SF Mono", Menlo, monospace; }
+  .df-ln { flex: none; width: 3.4em; text-align: right; padding-right: 10px; color: var(--ink-3); font-variant-numeric: tabular-nums; user-select: none; }
+  .df-sign { flex: none; width: 1.2em; user-select: none; }
+  .df-text { flex: 1; min-width: 0; white-space: pre; }
+  body.df-wrap-on .df-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .df-row.is-del { background: var(--del-bg); }
+  .df-row.is-del .df-sign, .df-row.is-del .df-ln { color: var(--del-ink); }
+  .df-row.is-add { background: var(--add-bg); }
+  .df-row.is-add .df-sign, .df-row.is-add .df-ln { color: var(--add-ink); }
+  .df-adopt { padding: 2px 10px 4px; }
+  .df-adopt .df-btn { padding: 2px 10px; font-size: 12px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
 </head>
 <body>
+<div class="df-wrap">
+  <header class="df-bar">
+    <h1>对比</h1>
+    <button id="diff-compare" class="df-btn df-btn--primary" type="button">对比</button>
+    <label class="df-check"><input type="checkbox" id="diff-wrap" checked>自动换行</label>
+    <span class="df-spacer"></span>
+    <button id="diff-undo" class="df-btn" type="button" disabled>撤销</button>
+    <button id="diff-redo" class="df-btn" type="button" disabled>重做</button>
+  </header>
+  <div class="df-bar">
+    <button id="diff-open-left" class="df-btn" type="button">打开文件到左栏</button>
+    <button id="diff-open-right" class="df-btn" type="button">打开文件到右栏</button>
+    <button id="diff-swap" class="df-btn" type="button">交换两栏</button>
+    <button id="diff-clear" class="df-btn" type="button">清空</button>
+    <input type="file" id="diff-file-left" hidden>
+    <input type="file" id="diff-file-right" hidden>
+  </div>
+  <p class="df-note" id="diff-note">在两栏各粘贴一段文本，点「对比」</p>
+  <div class="df-banner" id="diff-banner" hidden>差异过大，已按整块呈现（公共首尾除外）</div>
+  <div class="df-inputs">
+    <div>
+      <textarea id="diff-left" class="df-ta" aria-label="左栏文本" placeholder="左栏"></textarea>
+      <div class="df-procs" data-side="left">
+        <span class="df-procs-label">文本处理</span>
+        <button class="df-btn" type="button" data-op="sort">排序</button>
+        <button class="df-btn" type="button" data-op="reverse">反向排序</button>
+        <button class="df-btn" type="button" data-op="dropEmpty">去空行</button>
+        <button class="df-btn" type="button" data-op="dedupe">去重</button>
+        <button class="df-btn" type="button" data-op="trim">去首尾空格</button>
+        <button class="df-btn" type="button" data-op="joinSpace">换行换空格</button>
+      </div>
+    </div>
+    <div>
+      <textarea id="diff-right" class="df-ta" aria-label="右栏文本" placeholder="右栏"></textarea>
+      <div class="df-procs" data-side="right">
+        <span class="df-procs-label">文本处理</span>
+        <button class="df-btn" type="button" data-op="sort">排序</button>
+        <button class="df-btn" type="button" data-op="reverse">反向排序</button>
+        <button class="df-btn" type="button" data-op="dropEmpty">去空行</button>
+        <button class="df-btn" type="button" data-op="dedupe">去重</button>
+        <button class="df-btn" type="button" data-op="trim">去首尾空格</button>
+        <button class="df-btn" type="button" data-op="joinSpace">换行换空格</button>
+      </div>
+    </div>
+  </div>
+  <section class="df-result" id="diff-result" hidden>
+    <div class="df-grid">
+      <div class="df-col" id="diff-out-left" aria-label="左侧结果"></div>
+      <div class="df-col" id="diff-out-right" aria-label="右侧结果"></div>
+    </div>
+  </section>
+</div>
 <script src="diff.js"></script>
 </body>
 </html>
