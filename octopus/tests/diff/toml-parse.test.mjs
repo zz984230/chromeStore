@@ -1,4 +1,4 @@
-// tests/diff/toml-parse.test.mjs — TOML 1.0 全谱解析(wave-2 Task 1;规范形见 norm-toml 测试)
+// tests/diff/toml-parse.test.mjs — TOML 1.0 全谱解析(wave-2 Task 2;规范形见 norm-toml 测试)
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseToml } from '../../src/tools/diff/shared/toml-parse.js';

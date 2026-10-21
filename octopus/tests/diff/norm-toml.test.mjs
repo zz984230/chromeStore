@@ -1,4 +1,4 @@
-// tests/diff/norm-toml.test.mjs — TOML 规范形(wave-2 Task 2;ADR-0007 值等价⇒文本等价/幂等)
+// tests/diff/norm-toml.test.mjs — TOML 规范形(wave-2 Task 3;ADR-0007 值等价⇒文本等价/幂等)
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeToml } from '../../src/tools/diff/shared/norm-toml.js';
